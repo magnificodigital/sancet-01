@@ -12,6 +12,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AutocompleteExames } from "@/components/catalogo/AutocompleteExames";
+import bannerSancet from "@/assets/banner-sancet.png";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -113,7 +114,7 @@ const Index = () => {
         className="-mt-28 min-h-[90vh] flex items-center bg-no-repeat"
         style={{
           backgroundImage:
-            "linear-gradient(90deg, rgba(15,35,71,0.85) 0%, rgba(15,35,71,0.55) 40%, rgba(15,35,71,0.1) 70%, rgba(15,35,71,0) 100%), url('https://diagmax.com/wp-content/uploads/2022/11/exames-laboratoriais.jpg')",
+            `linear-gradient(90deg, rgba(15,35,71,0.85) 0%, rgba(15,35,71,0.55) 40%, rgba(15,35,71,0.1) 70%, rgba(15,35,71,0) 100%), url(${bannerSancet})`,
           backgroundSize: "auto 100%",
           backgroundPosition: "right center",
         }}
