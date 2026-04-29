@@ -167,13 +167,13 @@ export const Header = () => {
                   Exames
                 </Link>
                 <Link
-                  to="/vacinas"
+                  to="/agendamentos?aba=preparo"
                   className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
                 >
-                  Vacinas
+                  Como se preparar
                 </Link>
                 <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Agendamentos
+                  Agendamento
                 </div>
                 {agendamentosItens.map((it) => (
                   <Link
