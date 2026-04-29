@@ -69,7 +69,7 @@ export const Header = () => {
 
   return (
     <header className="absolute top-0 left-0 right-0 z-50 w-full bg-transparent">
-      <div className="container flex h-16 items-center justify-between gap-4">
+      <div className="container flex h-16 items-center gap-6">
         <Logo dark={dark} />
 
         {/* Desktop nav */}
@@ -112,7 +112,7 @@ export const Header = () => {
           </DropdownMenu>
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {/* Sacola */}
           <Link
             to="/sacola"
