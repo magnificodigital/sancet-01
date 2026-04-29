@@ -137,12 +137,6 @@ const Index = () => {
               domicílio ou em nossas unidades.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start mb-10">
-              <Button
-                asChild
-                size="lg"
-                className="rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 h-12"
-              >
             <div className="mb-6 max-w-2xl mx-auto md:mx-0">
               <form
                 onSubmit={(e) => {
