@@ -82,6 +82,10 @@ export const Header = () => {
             Como se preparar
           </NavLink>
 
+          <NavLink to="/agendamentos?aba=resultados" className={navLinkClass}>
+            Resultados
+          </NavLink>
+
           {/* Agendamento dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
