@@ -16,244 +16,357 @@ export type Database = {
     Tables: {
       convenios_cache: {
         Row: {
-          ativo: boolean | null
+          ativo: boolean
+          atualizado_em: string | null
           codigo_shift: string
+          created_at: string | null
           id: string
           nome: string
-          ultima_sincronizacao: string | null
         }
         Insert: {
-          ativo?: boolean | null
+          ativo?: boolean
+          atualizado_em?: string | null
           codigo_shift: string
+          created_at?: string | null
           id?: string
           nome: string
-          ultima_sincronizacao?: string | null
         }
         Update: {
-          ativo?: boolean | null
+          ativo?: boolean
+          atualizado_em?: string | null
           codigo_shift?: string
+          created_at?: string | null
           id?: string
           nome?: string
-          ultima_sincronizacao?: string | null
         }
         Relationships: []
       }
       exames_cache: {
         Row: {
-          ativo: boolean | null
+          ativo: boolean
+          atualizado_em: string | null
+          categoria: string | null
           codigo_shift: string
+          created_at: string | null
+          descricao: string | null
+          disponivel_em_casa: boolean
+          disponivel_na_unidade: boolean
           id: string
-          jejum: string | null
-          material: string | null
+          imagem_url: string | null
           nome: string
-          orientacao: string | null
+          outros_nomes: string[] | null
           prazo_resultado: string | null
-          preco_particular_centavos: number | null
-          recipiente: string | null
-          sinonimos: string | null
-          slug: string
-          ultima_sincronizacao: string | null
+          preco_centavos: number | null
+          preparo: string | null
+          slug: string | null
         }
         Insert: {
-          ativo?: boolean | null
+          ativo?: boolean
+          atualizado_em?: string | null
+          categoria?: string | null
           codigo_shift: string
+          created_at?: string | null
+          descricao?: string | null
+          disponivel_em_casa?: boolean
+          disponivel_na_unidade?: boolean
           id?: string
-          jejum?: string | null
-          material?: string | null
+          imagem_url?: string | null
           nome: string
-          orientacao?: string | null
+          outros_nomes?: string[] | null
           prazo_resultado?: string | null
-          preco_particular_centavos?: number | null
-          recipiente?: string | null
-          sinonimos?: string | null
-          slug: string
-          ultima_sincronizacao?: string | null
+          preco_centavos?: number | null
+          preparo?: string | null
+          slug?: string | null
         }
         Update: {
-          ativo?: boolean | null
+          ativo?: boolean
+          atualizado_em?: string | null
+          categoria?: string | null
           codigo_shift?: string
+          created_at?: string | null
+          descricao?: string | null
+          disponivel_em_casa?: boolean
+          disponivel_na_unidade?: boolean
           id?: string
-          jejum?: string | null
-          material?: string | null
+          imagem_url?: string | null
           nome?: string
-          orientacao?: string | null
+          outros_nomes?: string[] | null
           prazo_resultado?: string | null
-          preco_particular_centavos?: number | null
-          recipiente?: string | null
-          sinonimos?: string | null
-          slug?: string
-          ultima_sincronizacao?: string | null
+          preco_centavos?: number | null
+          preparo?: string | null
+          slug?: string | null
+        }
+        Relationships: []
+      }
+      pacientes: {
+        Row: {
+          bairro: string | null
+          celular: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
+          cpf: string
+          created_at: string | null
+          data_nascimento: string
+          email: string | null
+          id: string
+          logradouro: string | null
+          nome: string | null
+          numero: string | null
+          sexo: string | null
+          uf: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bairro?: string | null
+          celular?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf: string
+          created_at?: string | null
+          data_nascimento: string
+          email?: string | null
+          id?: string
+          logradouro?: string | null
+          nome?: string | null
+          numero?: string | null
+          sexo?: string | null
+          uf?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bairro?: string | null
+          celular?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf?: string
+          created_at?: string | null
+          data_nascimento?: string
+          email?: string | null
+          id?: string
+          logradouro?: string | null
+          nome?: string | null
+          numero?: string | null
+          sexo?: string | null
+          uf?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
       pedidos: {
         Row: {
-          aceito_em: string | null
-          celular: string
-          cpf: string | null
-          created_at: string
-          data_nascimento: string | null
-          data_preferencial: string | null
-          email: string
-          exames: Json | null
-          gestante: boolean | null
+          convenio_codigo_shift: string | null
+          convenio_nome: string | null
+          created_at: string | null
+          endereco_coleta: Json | null
           id: string
-          id_pagamento_externo: string | null
-          metodo_pagamento: string | null
-          nacionalidade: string | null
-          nome_convenio: string | null
-          nome_paciente: string
-          nome_responsavel: string | null
+          itens: Json
+          modalidade_coleta: string
+          numero_carteirinha: string | null
           observacoes: string | null
-          passaporte: string | null
-          periodo_preferencial: string | null
+          paciente_cpf: string
+          paciente_id: string | null
+          paciente_nome: string | null
           protocolo: string
-          sexo_biologico: string | null
-          status: string | null
-          status_pagamento: string | null
-          termos_aceitos: boolean | null
-          tipo_solicitacao: string | null
-          total_centavos: number | null
-          unidade_id: string | null
+          status: string
+          status_pagamento: string
+          termos_aceitos: boolean
+          termos_aceitos_em: string | null
+          tipo_solicitacao: string
+          unidade_codigo_shift: string | null
           unidade_nome: string | null
-          updated_at: string
-          url_carteirinha_convenio: string | null
-          url_guia_autorizacao: string | null
-          url_identidade_frente: string | null
-          url_identidade_responsavel: string | null
-          url_identidade_verso: string | null
+          updated_at: string | null
+          url_carteirinha: string | null
+          url_identidade: string | null
           url_pedido_medico: string | null
-          url_relatorio_medico: string | null
-          urls_pedidos_adicionais: Json | null
+          url_receita: string | null
+          valor_total_centavos: number | null
         }
         Insert: {
-          aceito_em?: string | null
-          celular: string
-          cpf?: string | null
-          created_at?: string
-          data_nascimento?: string | null
-          data_preferencial?: string | null
-          email: string
-          exames?: Json | null
-          gestante?: boolean | null
+          convenio_codigo_shift?: string | null
+          convenio_nome?: string | null
+          created_at?: string | null
+          endereco_coleta?: Json | null
           id?: string
-          id_pagamento_externo?: string | null
-          metodo_pagamento?: string | null
-          nacionalidade?: string | null
-          nome_convenio?: string | null
-          nome_paciente: string
-          nome_responsavel?: string | null
+          itens?: Json
+          modalidade_coleta?: string
+          numero_carteirinha?: string | null
           observacoes?: string | null
-          passaporte?: string | null
-          periodo_preferencial?: string | null
-          protocolo: string
-          sexo_biologico?: string | null
-          status?: string | null
-          status_pagamento?: string | null
-          termos_aceitos?: boolean | null
-          tipo_solicitacao?: string | null
-          total_centavos?: number | null
-          unidade_id?: string | null
+          paciente_cpf: string
+          paciente_id?: string | null
+          paciente_nome?: string | null
+          protocolo?: string
+          status?: string
+          status_pagamento?: string
+          termos_aceitos?: boolean
+          termos_aceitos_em?: string | null
+          tipo_solicitacao?: string
+          unidade_codigo_shift?: string | null
           unidade_nome?: string | null
-          updated_at?: string
-          url_carteirinha_convenio?: string | null
-          url_guia_autorizacao?: string | null
-          url_identidade_frente?: string | null
-          url_identidade_responsavel?: string | null
-          url_identidade_verso?: string | null
+          updated_at?: string | null
+          url_carteirinha?: string | null
+          url_identidade?: string | null
           url_pedido_medico?: string | null
-          url_relatorio_medico?: string | null
-          urls_pedidos_adicionais?: Json | null
+          url_receita?: string | null
+          valor_total_centavos?: number | null
         }
         Update: {
-          aceito_em?: string | null
-          celular?: string
-          cpf?: string | null
-          created_at?: string
-          data_nascimento?: string | null
-          data_preferencial?: string | null
-          email?: string
-          exames?: Json | null
-          gestante?: boolean | null
+          convenio_codigo_shift?: string | null
+          convenio_nome?: string | null
+          created_at?: string | null
+          endereco_coleta?: Json | null
           id?: string
-          id_pagamento_externo?: string | null
-          metodo_pagamento?: string | null
-          nacionalidade?: string | null
-          nome_convenio?: string | null
-          nome_paciente?: string
-          nome_responsavel?: string | null
+          itens?: Json
+          modalidade_coleta?: string
+          numero_carteirinha?: string | null
           observacoes?: string | null
-          passaporte?: string | null
-          periodo_preferencial?: string | null
+          paciente_cpf?: string
+          paciente_id?: string | null
+          paciente_nome?: string | null
           protocolo?: string
-          sexo_biologico?: string | null
-          status?: string | null
-          status_pagamento?: string | null
-          termos_aceitos?: boolean | null
-          tipo_solicitacao?: string | null
-          total_centavos?: number | null
-          unidade_id?: string | null
+          status?: string
+          status_pagamento?: string
+          termos_aceitos?: boolean
+          termos_aceitos_em?: string | null
+          tipo_solicitacao?: string
+          unidade_codigo_shift?: string | null
           unidade_nome?: string | null
-          updated_at?: string
-          url_carteirinha_convenio?: string | null
-          url_guia_autorizacao?: string | null
-          url_identidade_frente?: string | null
-          url_identidade_responsavel?: string | null
-          url_identidade_verso?: string | null
+          updated_at?: string | null
+          url_carteirinha?: string | null
+          url_identidade?: string | null
           url_pedido_medico?: string | null
-          url_relatorio_medico?: string | null
-          urls_pedidos_adicionais?: Json | null
+          url_receita?: string | null
+          valor_total_centavos?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unidades_cache: {
         Row: {
-          ativo: boolean | null
+          aceita_domicilio: boolean
+          ativo: boolean
+          atualizado_em: string | null
           bairro: string | null
           cep: string | null
           cidade: string | null
           codigo_shift: string
+          created_at: string | null
+          email: string | null
           endereco: string | null
-          estado: string | null
-          horario_funcionamento: string | null
+          horarios: Json | null
           id: string
           latitude: number | null
           longitude: number | null
           nome: string
+          slug: string | null
           telefone: string | null
-          ultima_sincronizacao: string | null
+          uf: string | null
         }
         Insert: {
-          ativo?: boolean | null
+          aceita_domicilio?: boolean
+          ativo?: boolean
+          atualizado_em?: string | null
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
           codigo_shift: string
+          created_at?: string | null
+          email?: string | null
           endereco?: string | null
-          estado?: string | null
-          horario_funcionamento?: string | null
+          horarios?: Json | null
           id?: string
           latitude?: number | null
           longitude?: number | null
           nome: string
+          slug?: string | null
           telefone?: string | null
-          ultima_sincronizacao?: string | null
+          uf?: string | null
         }
         Update: {
-          ativo?: boolean | null
+          aceita_domicilio?: boolean
+          ativo?: boolean
+          atualizado_em?: string | null
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
           codigo_shift?: string
+          created_at?: string | null
+          email?: string | null
           endereco?: string | null
-          estado?: string | null
-          horario_funcionamento?: string | null
+          horarios?: Json | null
           id?: string
           latitude?: number | null
           longitude?: number | null
           nome?: string
+          slug?: string | null
           telefone?: string | null
-          ultima_sincronizacao?: string | null
+          uf?: string | null
+        }
+        Relationships: []
+      }
+      vacinas_cache: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string | null
+          categoria: string | null
+          codigo_shift: string
+          created_at: string | null
+          descricao: string | null
+          disponivel_em_casa: boolean
+          disponivel_na_unidade: boolean
+          id: string
+          imagem_url: string | null
+          nome: string
+          outros_nomes: string[] | null
+          prazo_resultado: string | null
+          preco_centavos: number | null
+          preparo: string | null
+          slug: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string | null
+          categoria?: string | null
+          codigo_shift: string
+          created_at?: string | null
+          descricao?: string | null
+          disponivel_em_casa?: boolean
+          disponivel_na_unidade?: boolean
+          id?: string
+          imagem_url?: string | null
+          nome: string
+          outros_nomes?: string[] | null
+          prazo_resultado?: string | null
+          preco_centavos?: number | null
+          preparo?: string | null
+          slug?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string | null
+          categoria?: string | null
+          codigo_shift?: string
+          created_at?: string | null
+          descricao?: string | null
+          disponivel_em_casa?: boolean
+          disponivel_na_unidade?: boolean
+          id?: string
+          imagem_url?: string | null
+          nome?: string
+          outros_nomes?: string[] | null
+          prazo_resultado?: string | null
+          preco_centavos?: number | null
+          preparo?: string | null
+          slug?: string | null
         }
         Relationships: []
       }
@@ -262,7 +375,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      gerar_protocolo_sancet: { Args: never; Returns: string }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
