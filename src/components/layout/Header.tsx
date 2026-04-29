@@ -73,7 +73,7 @@ export const Header = () => {
         <Logo dark={dark} />
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1 ml-auto">
           <NavLink to="/exames" className={navLinkClass}>
             Exames
           </NavLink>
