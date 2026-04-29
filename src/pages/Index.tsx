@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FlaskConical,
   Syringe,
@@ -6,10 +7,12 @@ import {
   Clock,
   Home,
   Search,
+  ScanLine,
   ClipboardList,
   MapPin,
   CheckCircle2,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -104,6 +107,12 @@ const SectionTag = ({ children }: { children: React.ReactNode }) => (
 );
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [buscaHero, setBuscaHero] = useState("");
+  const irParaBusca = () => {
+    const q = buscaHero.trim();
+    navigate(q ? `/exames?q=${encodeURIComponent(q)}` : "/exames");
+  };
   return (
     <PageShell>
       {/* SEÇÃO 1 — HERO */}
@@ -128,28 +137,44 @@ const Index = () => {
               domicílio ou em nossas unidades.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start mb-10">
-              <Button
-                asChild
-                size="lg"
-                className="rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 h-12"
+            <div className="mb-6 max-w-2xl mx-auto md:mx-0">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  irParaBusca();
+                }}
+                className="flex flex-col sm:flex-row gap-2 items-stretch bg-white/10 backdrop-blur p-2 rounded-2xl border border-white/20"
               >
-                <Link to="/exames">
-                  <FlaskConical className="h-5 w-5" />
-                  Agendar Exames
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="rounded-pill bg-transparent border-white text-white hover:bg-white/10 hover:text-white font-semibold px-8 h-12"
-              >
-                <Link to="/vacinas">
-                  <Syringe className="h-5 w-5" />
-                  Ver Vacinas
-                </Link>
-              </Button>
+                <div className="relative flex-1">
+                  <Search className="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-white/70" />
+                  <Input
+                    value={buscaHero}
+                    onChange={(e) => setBuscaHero(e.target.value)}
+                    placeholder="Digite o nome do exame (ex: Hemograma)"
+                    className="pl-12 h-12 rounded-pill bg-white text-foreground placeholder:text-muted-foreground border-0 focus-visible:ring-2 focus-visible:ring-white/40"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 h-12"
+                >
+                  <Search className="h-5 w-5" />
+                  Buscar
+                </Button>
+              </form>
+              <div className="mt-3 flex justify-center md:justify-start">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="rounded-pill bg-transparent border-white text-white hover:bg-white/10 hover:text-white font-semibold gap-2 h-11 px-5"
+                >
+                  <Link to="/enviar-pedido" aria-label="Escanear pedido médico">
+                    <ScanLine className="h-5 w-5" />
+                    Escanear pedido com IA
+                  </Link>
+                </Button>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-3 justify-center md:justify-start">

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SlidersHorizontal } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
@@ -14,10 +15,17 @@ import { ListaExames } from "@/components/catalogo/ListaExames";
 import { CATEGORIAS_EXAMES } from "@/components/catalogo/types";
 
 const Exames = () => {
-  const [busca, setBusca] = useState("");
+  const [searchParams] = useSearchParams();
+  const qInicial = searchParams.get("q") ?? "";
+  const [busca, setBusca] = useState(qInicial);
   const [emCasa, setEmCasa] = useState(false);
   const [categoriasSelecionadas, setCategoriasSelecionadas] = useState<string[]>([]);
   const [drawerAberto, setDrawerAberto] = useState(false);
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q !== null) setBusca(q);
+  }, [searchParams]);
 
   const toggleCategoria = (c: string) => {
     setCategoriasSelecionadas((prev) =>
