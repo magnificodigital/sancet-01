@@ -106,12 +106,6 @@ const SectionTag = ({ children }: { children: React.ReactNode }) => (
 );
 
 const Index = () => {
-  const navigate = useNavigate();
-  const [buscaHero, setBuscaHero] = useState("");
-  const irParaBusca = () => {
-    const q = buscaHero.trim();
-    navigate(q ? `/exames?q=${encodeURIComponent(q)}` : "/exames");
-  };
   return (
     <PageShell>
       {/* SEÇÃO 1 — HERO */}
