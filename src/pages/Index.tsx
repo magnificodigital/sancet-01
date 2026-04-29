@@ -138,28 +138,9 @@ const Index = () => {
             </p>
 
             <div className="mb-6 max-w-2xl mx-auto md:mx-0 flex flex-col sm:flex-row gap-3 items-stretch">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  irParaBusca();
-                }}
-                className="relative flex-1"
-              >
-                <Search className="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                <Input
-                  value={buscaHero}
-                  onChange={(e) => setBuscaHero(e.target.value)}
-                  placeholder="Digite o nome do exame (ex: Hemograma)"
-                  className="pl-12 pr-28 h-14 rounded-pill bg-white text-foreground placeholder:text-muted-foreground border-0 shadow-lg focus-visible:ring-2 focus-visible:ring-primary/40"
-                />
-                <Button
-                  type="submit"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-11 rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-5"
-                >
-                  <Search className="h-4 w-4" />
-                  Buscar
-                </Button>
-              </form>
+              <div className="flex-1">
+                <AutocompleteExames placeholder="Digite o exame (ex: Hemograma)" />
+              </div>
               <Button
                 asChild
                 className="h-14 rounded-pill bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold gap-2 px-6 shadow-lg"
