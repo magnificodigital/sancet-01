@@ -1,12 +1,15 @@
 import { Link, NavLink } from "react-router-dom";
-import { ShoppingBag, Menu, ChevronDown } from "lucide-react";
+import { ShoppingBag, Menu, ChevronDown, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePaciente } from "@/hooks/usePaciente";
 import {
   Sheet,
   SheetContent,
@@ -46,6 +49,14 @@ const agendamentosItens = [
 
 export const Header = () => {
   const quantidade = useSacola((s) => s.quantidade());
+  const { paciente, logado, logout } = usePaciente();
+  const iniciais = (paciente?.nome ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0]?.toUpperCase() ?? "")
+    .join("") || "??";
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur border-b border-border">
@@ -97,13 +108,40 @@ export const Header = () => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Entrar */}
-          <Button
-            asChild
-            className="hidden md:inline-flex rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6"
-          >
-            <Link to="/entrar">Entrar</Link>
-          </Button>
+          {/* Entrar / Conta */}
+          {!logado ? (
+            <Button
+              asChild
+              className="hidden md:inline-flex rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6"
+            >
+              <Link to="/entrar">Entrar</Link>
+            </Button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="hidden md:inline-flex rounded-pill font-semibold gap-2 px-4"
+                >
+                  <UserCircle className="h-5 w-5" />
+                  <span>{iniciais}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  Olá,{" "}
+                  <span className="font-semibold">
+                    {paciente?.nome?.split(" ")[0] ?? ""}
+                  </span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           {/* Mobile menu */}
           <Sheet>
