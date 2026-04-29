@@ -30,15 +30,6 @@ const Logo = ({ dark }: { dark: boolean }) => (
     >
       Sancet
     </span>
-    <span className={cn("hidden sm:inline", dark ? "text-white/40" : "text-foreground/30")}>|</span>
-    <span
-      className={cn(
-        "hidden sm:inline text-sm font-medium",
-        dark ? "text-white/90" : "text-foreground/80"
-      )}
-    >
-      Atendimento Digital
-    </span>
   </Link>
 );
 
@@ -87,6 +78,10 @@ export const Header = () => {
             Exames
           </NavLink>
 
+          <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
+            Como se preparar
+          </NavLink>
+
           {/* Agendamento dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -111,10 +106,6 @@ export const Header = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
-            Como se preparar
-          </NavLink>
         </nav>
 
         <div className="flex items-center gap-2">
