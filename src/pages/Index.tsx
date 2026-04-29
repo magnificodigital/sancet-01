@@ -7,10 +7,12 @@ import {
   Clock,
   Home,
   Search,
+  ScanLine,
   ClipboardList,
   MapPin,
   CheckCircle2,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import {
