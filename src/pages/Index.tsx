@@ -12,6 +12,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AutocompleteExames } from "@/components/catalogo/AutocompleteExames";
+import bannerSancet from "@/assets/banner-sancet.png";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import {
