@@ -1,12 +1,15 @@
 import { Link, NavLink } from "react-router-dom";
-import { ShoppingBag, Menu, ChevronDown } from "lucide-react";
+import { ShoppingBag, Menu, ChevronDown, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePaciente } from "@/hooks/usePaciente";
 import {
   Sheet,
   SheetContent,
