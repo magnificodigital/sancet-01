@@ -110,10 +110,12 @@ const Index = () => {
     <PageShell>
       {/* SEÇÃO 1 — HERO */}
       <section
-        className="-mt-28 min-h-[90vh] flex items-center bg-cover bg-center bg-no-repeat"
+        className="-mt-28 min-h-[90vh] flex items-center bg-no-repeat"
         style={{
           backgroundImage:
-            "linear-gradient(120deg, rgba(27,58,107,0.85) 0%, rgba(15,35,71,0.85) 100%), url('https://diagmax.com/wp-content/uploads/2022/11/exames-laboratoriais.jpg')",
+            "linear-gradient(90deg, rgba(15,35,71,0.85) 0%, rgba(15,35,71,0.55) 40%, rgba(15,35,71,0.1) 70%, rgba(15,35,71,0) 100%), url('https://diagmax.com/wp-content/uploads/2022/11/exames-laboratoriais.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "right center",
         }}
       >
         <div className="container py-20 md:py-24 text-center md:text-left">
