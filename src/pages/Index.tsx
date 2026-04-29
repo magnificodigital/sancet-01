@@ -1,16 +1,21 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { PageShell } from "@/components/layout/PageShell";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <PageShell>
+      <section className="container py-24 md:py-32 flex flex-col items-center text-center">
+        <span className="inline-block px-4 py-1.5 rounded-pill bg-muted text-secondary text-xs font-semibold uppercase tracking-wider mb-6">
+          Atendimento Digital
+        </span>
+        <h1 className="text-4xl md:text-6xl font-extrabold text-secondary mb-4 tracking-tight">
+          Sancet — Em construção
+        </h1>
+        <p className="text-lg md:text-xl text-muted-foreground max-w-xl">
+          Em breve você poderá agendar seus exames e vacinas aqui.
+        </p>
+      </section>
+    </PageShell>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
