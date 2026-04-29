@@ -20,25 +20,40 @@ import {
 import { useSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
 
-const Logo = () => (
+const Logo = ({ dark }: { dark: boolean }) => (
   <Link to="/" className="flex items-center gap-3 shrink-0">
-    <span className="text-2xl font-extrabold italic text-white tracking-tight drop-shadow">
+    <span
+      className={cn(
+        "text-2xl font-extrabold italic tracking-tight drop-shadow",
+        dark ? "text-white" : "text-secondary"
+      )}
+    >
       Sancet
     </span>
-    <span className="hidden sm:inline text-white/40">|</span>
-    <span className="hidden sm:inline text-sm font-medium text-white/90">
+    <span className={cn("hidden sm:inline", dark ? "text-white/40" : "text-foreground/30")}>|</span>
+    <span
+      className={cn(
+        "hidden sm:inline text-sm font-medium",
+        dark ? "text-white/90" : "text-foreground/80"
+      )}
+    >
       Atendimento Digital
     </span>
   </Link>
 );
 
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  cn(
-    "px-3 py-2 text-sm font-semibold rounded-md transition-colors",
-    isActive
-      ? "text-white"
-      : "text-white/85 hover:text-white"
-  );
+const makeNavLinkClass = (dark: boolean) =>
+  ({ isActive }: { isActive: boolean }) =>
+    cn(
+      "px-3 py-2 text-sm font-semibold rounded-md transition-colors",
+      dark
+        ? isActive
+          ? "text-white"
+          : "text-white/85 hover:text-white"
+        : isActive
+          ? "text-foreground"
+          : "text-foreground/80 hover:text-foreground"
+    );
 
 const agendamentosItens = [
   { label: "Reagendar", to: "/agendamentos?aba=reagendar" },
