@@ -58,7 +58,7 @@ export const Header = () => {
     .join("") || "??";
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur border-b border-border">
+    <header className="absolute top-0 left-0 right-0 z-50 w-full bg-gradient-to-b from-black/70 via-black/30 to-transparent">
       <div className="container flex h-16 items-center justify-between gap-4">
         <Logo />
 
@@ -67,8 +67,29 @@ export const Header = () => {
           <NavLink to="/exames" className={navLinkClass}>
             Exames
           </NavLink>
-          <NavLink to="/vacinas" className={navLinkClass}>
-            Vacinas
+
+          {/* Agendamento dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="text-white/85 hover:text-white hover:bg-white/10 font-semibold gap-1 px-3"
+              >
+                Agendamento
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {agendamentosItens.map((it) => (
+                <DropdownMenuItem key={it.to} asChild>
+                  <Link to={it.to}>{it.label}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
+            Como se preparar
           </NavLink>
         </nav>
 
@@ -77,9 +98,9 @@ export const Header = () => {
           <Link
             to="/sacola"
             aria-label="Ver sacola"
-            className="relative p-2 rounded-full hover:bg-muted transition-colors"
+            className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
           >
-            <ShoppingBag className="h-5 w-5 text-secondary" />
+            <ShoppingBag className="h-5 w-5 text-white" />
             {quantidade > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                 {quantidade}
