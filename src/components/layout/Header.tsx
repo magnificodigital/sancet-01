@@ -78,6 +78,10 @@ export const Header = () => {
             Exames
           </NavLink>
 
+          <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
+            Como se preparar
+          </NavLink>
+
           {/* Agendamento dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -102,10 +106,6 @@ export const Header = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
-            Como se preparar
-          </NavLink>
         </nav>
 
         <div className="flex items-center gap-2">
