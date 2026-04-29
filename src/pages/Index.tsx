@@ -108,7 +108,7 @@ const Index = () => {
     <PageShell>
       {/* SEÇÃO 1 — HERO */}
       <section
-        className="min-h-[90vh] flex items-center"
+        className="-mt-20 min-h-[90vh] flex items-center"
         style={{
           background:
             "linear-gradient(120deg, #1B3A6B 0%, #0f2347 100%)",
