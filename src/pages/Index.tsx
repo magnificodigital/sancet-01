@@ -115,8 +115,8 @@ const Index = () => {
         style={{
           backgroundImage:
             `linear-gradient(90deg, rgba(15,35,71,0.85) 0%, rgba(15,35,71,0.55) 40%, rgba(15,35,71,0.1) 70%, rgba(15,35,71,0) 100%), url(${bannerSancet})`,
-          backgroundSize: "auto 100%",
-          backgroundPosition: "right center",
+          backgroundSize: "cover",
+          backgroundPosition: "center center",
         }}
       >
         <div className="container py-20 md:py-24 text-center md:text-left">
