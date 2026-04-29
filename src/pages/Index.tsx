@@ -130,7 +130,7 @@ const Index = () => {
               Atendimento Digital · Exames e Vacinas
             </span>
             <h1 className="text-white font-bold tracking-tight text-[36px] md:text-[56px] leading-[1.1] mb-5">
-              Seus exames e vacinas com a comodidade que você merece
+              Seus exames com a comodidade que você merece
             </h1>
             <p className="text-white/70 text-lg md:text-xl max-w-2xl mx-auto md:mx-0 mb-8">
               Agende online, retire resultados digitais e conte com coleta em
