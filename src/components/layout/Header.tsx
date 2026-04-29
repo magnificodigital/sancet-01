@@ -108,26 +108,6 @@ export const Header = () => {
             )}
           </Link>
 
-          {/* Agendamentos dropdown - desktop */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="hidden md:inline-flex text-secondary font-semibold gap-1"
-              >
-                Agendamentos
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {agendamentosItens.map((it) => (
-                <DropdownMenuItem key={it.to} asChild>
-                  <Link to={it.to}>{it.label}</Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {/* Entrar / Conta */}
           {!logado ? (
             <Button
@@ -141,7 +121,7 @@ export const Header = () => {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="hidden md:inline-flex rounded-pill font-semibold gap-2 px-4"
+                  className="hidden md:inline-flex rounded-pill font-semibold gap-2 px-4 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
                 >
                   <UserCircle className="h-5 w-5" />
                   <span>{iniciais}</span>
@@ -169,7 +149,7 @@ export const Header = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden"
+                className="md:hidden text-white hover:bg-white/10 hover:text-white"
                 aria-label="Abrir menu"
               >
                 <Menu className="h-5 w-5" />
