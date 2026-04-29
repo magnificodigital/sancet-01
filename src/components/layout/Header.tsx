@@ -22,11 +22,11 @@ import { cn } from "@/lib/utils";
 
 const Logo = () => (
   <Link to="/" className="flex items-center gap-3 shrink-0">
-    <span className="text-2xl font-extrabold italic text-primary tracking-tight">
+    <span className="text-2xl font-extrabold italic text-white tracking-tight drop-shadow">
       Sancet
     </span>
-    <span className="hidden sm:inline text-border">|</span>
-    <span className="hidden sm:inline text-sm font-medium text-secondary">
+    <span className="hidden sm:inline text-white/40">|</span>
+    <span className="hidden sm:inline text-sm font-medium text-white/90">
       Atendimento Digital
     </span>
   </Link>
@@ -36,14 +36,13 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
     "px-3 py-2 text-sm font-semibold rounded-md transition-colors",
     isActive
-      ? "text-primary"
-      : "text-secondary hover:text-primary"
+      ? "text-white"
+      : "text-white/85 hover:text-white"
   );
 
 const agendamentosItens = [
-  { label: "Ver agendamentos", to: "/agendamentos" },
-  { label: "Como me preparar", to: "/agendamentos?aba=preparo" },
   { label: "Reagendar", to: "/agendamentos?aba=reagendar" },
+  { label: "Ver agendamentos", to: "/agendamentos" },
   { label: "Cancelar agendamento", to: "/agendamentos?aba=cancelar" },
 ];
 
