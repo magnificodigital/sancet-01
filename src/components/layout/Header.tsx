@@ -204,6 +204,12 @@ export const Header = () => {
                 >
                   Como se preparar
                 </Link>
+                <Link
+                  to="/agendamentos?aba=resultados"
+                  className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
+                >
+                  Resultados
+                </Link>
                 <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Agendamento
                 </div>
