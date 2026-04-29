@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { ShoppingBag, Menu, ChevronDown, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
