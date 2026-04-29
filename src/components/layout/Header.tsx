@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { ShoppingBag, Menu, ChevronDown, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,25 +20,40 @@ import {
 import { useSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
 
-const Logo = () => (
+const Logo = ({ dark }: { dark: boolean }) => (
   <Link to="/" className="flex items-center gap-3 shrink-0">
-    <span className="text-2xl font-extrabold italic text-white tracking-tight drop-shadow">
+    <span
+      className={cn(
+        "text-2xl font-extrabold italic tracking-tight drop-shadow",
+        dark ? "text-white" : "text-secondary"
+      )}
+    >
       Sancet
     </span>
-    <span className="hidden sm:inline text-white/40">|</span>
-    <span className="hidden sm:inline text-sm font-medium text-white/90">
+    <span className={cn("hidden sm:inline", dark ? "text-white/40" : "text-foreground/30")}>|</span>
+    <span
+      className={cn(
+        "hidden sm:inline text-sm font-medium",
+        dark ? "text-white/90" : "text-foreground/80"
+      )}
+    >
       Atendimento Digital
     </span>
   </Link>
 );
 
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  cn(
-    "px-3 py-2 text-sm font-semibold rounded-md transition-colors",
-    isActive
-      ? "text-white"
-      : "text-white/85 hover:text-white"
-  );
+const makeNavLinkClass = (dark: boolean) =>
+  ({ isActive }: { isActive: boolean }) =>
+    cn(
+      "px-3 py-2 text-sm font-semibold rounded-md transition-colors",
+      dark
+        ? isActive
+          ? "text-white"
+          : "text-white/85 hover:text-white"
+        : isActive
+          ? "text-foreground"
+          : "text-foreground/80 hover:text-foreground"
+    );
 
 const agendamentosItens = [
   { label: "Reagendar", to: "/agendamentos?aba=reagendar" },
@@ -49,6 +64,10 @@ const agendamentosItens = [
 export const Header = () => {
   const quantidade = useSacola((s) => s.quantidade());
   const { paciente, logado, logout } = usePaciente();
+  const { pathname } = useLocation();
+  // Páginas com hero/fundo escuro usam tema claro no header.
+  const dark = pathname === "/";
+  const navLinkClass = makeNavLinkClass(dark);
   const iniciais = (paciente?.nome ?? "")
     .trim()
     .split(/\s+/)
@@ -58,9 +77,16 @@ export const Header = () => {
     .join("") || "??";
 
   return (
-    <header className="absolute top-0 left-0 right-0 z-50 w-full bg-gradient-to-b from-black/90 via-black/60 to-transparent">
+    <header
+      className={cn(
+        "absolute top-0 left-0 right-0 z-50 w-full",
+        dark
+          ? "bg-gradient-to-b from-black/90 via-black/60 to-transparent"
+          : "bg-transparent"
+      )}
+    >
       <div className="container flex h-16 items-center justify-between gap-4">
-        <Logo />
+        <Logo dark={dark} />
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
@@ -73,7 +99,12 @@ export const Header = () => {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="text-white/85 hover:text-white hover:bg-white/10 font-semibold gap-1 px-3"
+                className={cn(
+                  "font-semibold gap-1 px-3",
+                  dark
+                    ? "text-white/85 hover:text-white hover:bg-white/10"
+                    : "text-foreground/80 hover:text-foreground hover:bg-foreground/5"
+                )}
               >
                 Agendamento
                 <ChevronDown className="h-4 w-4" />
@@ -98,9 +129,12 @@ export const Header = () => {
           <Link
             to="/sacola"
             aria-label="Ver sacola"
-            className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
+            className={cn(
+              "relative p-2 rounded-full transition-colors",
+              dark ? "hover:bg-white/10" : "hover:bg-foreground/5"
+            )}
           >
-            <ShoppingBag className="h-5 w-5 text-white" />
+            <ShoppingBag className={cn("h-5 w-5", dark ? "text-white" : "text-foreground")} />
             {quantidade > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                 {quantidade}
@@ -121,7 +155,12 @@ export const Header = () => {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="hidden md:inline-flex rounded-pill font-semibold gap-2 px-4 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
+                  className={cn(
+                    "hidden md:inline-flex rounded-pill font-semibold gap-2 px-4",
+                    dark
+                      ? "bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
+                      : "bg-transparent border-foreground/20 text-foreground hover:bg-foreground/5 hover:text-foreground"
+                  )}
                 >
                   <UserCircle className="h-5 w-5" />
                   <span>{iniciais}</span>
@@ -149,7 +188,12 @@ export const Header = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden text-white hover:bg-white/10 hover:text-white"
+                className={cn(
+                  "md:hidden",
+                  dark
+                    ? "text-white hover:bg-white/10 hover:text-white"
+                    : "text-foreground hover:bg-foreground/5 hover:text-foreground"
+                )}
                 aria-label="Abrir menu"
               >
                 <Menu className="h-5 w-5" />
