@@ -12,7 +12,7 @@ import {
   MapPin,
   CheckCircle2,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { AutocompleteExames } from "@/components/catalogo/AutocompleteExames";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import {
