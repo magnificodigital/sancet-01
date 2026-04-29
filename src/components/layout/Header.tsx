@@ -77,14 +77,7 @@ export const Header = () => {
     .join("") || "??";
 
   return (
-    <header
-      className={cn(
-        "absolute top-0 left-0 right-0 z-50 w-full",
-        dark
-          ? "bg-gradient-to-b from-black/90 via-black/60 to-transparent"
-          : "bg-transparent"
-      )}
-    >
+    <header className="absolute top-0 left-0 right-0 z-50 w-full bg-transparent">
       <div className="container flex h-16 items-center justify-between gap-4">
         <Logo dark={dark} />
 
