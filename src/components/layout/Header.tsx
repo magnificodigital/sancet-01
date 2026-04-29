@@ -22,11 +22,11 @@ import { cn } from "@/lib/utils";
 
 const Logo = () => (
   <Link to="/" className="flex items-center gap-3 shrink-0">
-    <span className="text-2xl font-extrabold italic text-primary tracking-tight">
+    <span className="text-2xl font-extrabold italic text-white tracking-tight drop-shadow">
       Sancet
     </span>
-    <span className="hidden sm:inline text-border">|</span>
-    <span className="hidden sm:inline text-sm font-medium text-secondary">
+    <span className="hidden sm:inline text-white/40">|</span>
+    <span className="hidden sm:inline text-sm font-medium text-white/90">
       Atendimento Digital
     </span>
   </Link>
@@ -36,14 +36,13 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
     "px-3 py-2 text-sm font-semibold rounded-md transition-colors",
     isActive
-      ? "text-primary"
-      : "text-secondary hover:text-primary"
+      ? "text-white"
+      : "text-white/85 hover:text-white"
   );
 
 const agendamentosItens = [
-  { label: "Ver agendamentos", to: "/agendamentos" },
-  { label: "Como me preparar", to: "/agendamentos?aba=preparo" },
   { label: "Reagendar", to: "/agendamentos?aba=reagendar" },
+  { label: "Ver agendamentos", to: "/agendamentos" },
   { label: "Cancelar agendamento", to: "/agendamentos?aba=cancelar" },
 ];
 
@@ -59,7 +58,7 @@ export const Header = () => {
     .join("") || "??";
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur border-b border-border">
+    <header className="absolute top-0 left-0 right-0 z-50 w-full bg-gradient-to-b from-black/70 via-black/30 to-transparent">
       <div className="container flex h-16 items-center justify-between gap-4">
         <Logo />
 
@@ -68,8 +67,29 @@ export const Header = () => {
           <NavLink to="/exames" className={navLinkClass}>
             Exames
           </NavLink>
-          <NavLink to="/vacinas" className={navLinkClass}>
-            Vacinas
+
+          {/* Agendamento dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="text-white/85 hover:text-white hover:bg-white/10 font-semibold gap-1 px-3"
+              >
+                Agendamento
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {agendamentosItens.map((it) => (
+                <DropdownMenuItem key={it.to} asChild>
+                  <Link to={it.to}>{it.label}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
+            Como se preparar
           </NavLink>
         </nav>
 
@@ -78,35 +98,15 @@ export const Header = () => {
           <Link
             to="/sacola"
             aria-label="Ver sacola"
-            className="relative p-2 rounded-full hover:bg-muted transition-colors"
+            className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
           >
-            <ShoppingBag className="h-5 w-5 text-secondary" />
+            <ShoppingBag className="h-5 w-5 text-white" />
             {quantidade > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                 {quantidade}
               </span>
             )}
           </Link>
-
-          {/* Agendamentos dropdown - desktop */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="hidden md:inline-flex text-secondary font-semibold gap-1"
-              >
-                Agendamentos
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {agendamentosItens.map((it) => (
-                <DropdownMenuItem key={it.to} asChild>
-                  <Link to={it.to}>{it.label}</Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           {/* Entrar / Conta */}
           {!logado ? (
@@ -121,7 +121,7 @@ export const Header = () => {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="hidden md:inline-flex rounded-pill font-semibold gap-2 px-4"
+                  className="hidden md:inline-flex rounded-pill font-semibold gap-2 px-4 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
                 >
                   <UserCircle className="h-5 w-5" />
                   <span>{iniciais}</span>
@@ -149,7 +149,7 @@ export const Header = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden"
+                className="md:hidden text-white hover:bg-white/10 hover:text-white"
                 aria-label="Abrir menu"
               >
                 <Menu className="h-5 w-5" />
@@ -167,13 +167,13 @@ export const Header = () => {
                   Exames
                 </Link>
                 <Link
-                  to="/vacinas"
+                  to="/agendamentos?aba=preparo"
                   className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
                 >
-                  Vacinas
+                  Como se preparar
                 </Link>
                 <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Agendamentos
+                  Agendamento
                 </div>
                 {agendamentosItens.map((it) => (
                   <Link
