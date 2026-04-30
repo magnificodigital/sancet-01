@@ -34,7 +34,7 @@ import {
 } from "@/lib/mascaras";
 import { salvarPaciente } from "@/hooks/usePaciente";
 
-const IMAGEM = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600";
+const IMAGEM = bannerSancet;
 
 const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB",
