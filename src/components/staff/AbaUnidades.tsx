@@ -122,15 +122,13 @@ export const AbaUnidades = () => {
     setSalvando(true);
 
     const payload: any = {
-      codigo_shift:     form.codigo_shift.trim(),
+      codigo_shift:     form.codigo_shift.trim() || null,
       nome:             form.nome.trim(),
       endereco:         form.endereco.trim() || null,
       bairro:           form.bairro.trim() || null,
       cidade:           form.cidade.trim() || null,
       uf:               form.uf || null,
-      cep:              form.cep.trim() || null,
       telefone:         form.telefone.trim() || null,
-      email:            form.email.trim() || null,
       horarios:         form.horario.trim() ? { texto: form.horario.trim() } : null,
       aceita_domicilio: form.aceita_domicilio,
       ativo:            form.ativo,
