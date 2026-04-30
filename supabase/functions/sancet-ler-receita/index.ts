@@ -1,140 +1,146 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
+const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    // 1. Ler configurações do Supabase
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: configRows } = await supabase
+      .from("configuracoes")
+      .select("chave, valor")
+      .in("chave", ["OPENROUTER_API_KEY", "OPENROUTER_MODELO"]);
+
+    const cfg: Record<string, string> = {};
+    (configRows ?? []).forEach((r: any) => { cfg[r.chave] = r.valor; });
+
+    const apiKey = cfg["OPENROUTER_API_KEY"];
+    const modelo = cfg["OPENROUTER_MODELO"] || "google/gemini-2.5-flash-preview:free";
+
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "ANTHROPIC_API_KEY não configurada" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "OPENROUTER_API_KEY não configurada no painel admin." }),
+        { status: 400, headers: cors }
       );
     }
 
+    // 2. Ler FormData
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-    const catalogoJson = formData.get("catalogo") as string | null;
+    const catalogoRaw = formData.get("catalogo") as string | null;
 
-    if (!file || !catalogoJson) {
+    if (!file || !catalogoRaw) {
       return new Response(
-        JSON.stringify({ error: "Arquivo ou catálogo ausente" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Arquivo ou catálogo ausente." }),
+        { status: 400, headers: cors }
       );
     }
 
-    const fileBytes = new Uint8Array(await file.arrayBuffer());
-    // base64 em chunks para evitar estouro de stack
+    // 3. Converter arquivo para base64 (em chunks, p/ evitar estouro de stack)
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
     let binary = "";
     const chunk = 0x8000;
-    for (let i = 0; i < fileBytes.length; i += chunk) {
+    for (let i = 0; i < bytes.length; i += chunk) {
       binary += String.fromCharCode.apply(
         null,
-        Array.from(fileBytes.subarray(i, i + chunk)) as unknown as number[],
+        Array.from(bytes.subarray(i, i + chunk)) as unknown as number[],
       );
     }
     const base64 = btoa(binary);
+    const mimeType = file.type || "image/jpeg";
+    const dataUrl = `data:${mimeType};base64,${base64}`;
 
-    const isPdf = file.type === "application/pdf";
-    const sourceBlock = isPdf
-      ? {
-          type: "document" as const,
-          source: {
-            type: "base64" as const,
-            media_type: "application/pdf",
-            data: base64,
-          },
-        }
-      : {
-          type: "image" as const,
-          source: {
-            type: "base64" as const,
-            media_type: file.type || "image/jpeg",
-            data: base64,
-          },
-        };
+    // 4. Montar catálogo enxuto
+    const catalogo = JSON.parse(catalogoRaw);
+    const catalogoTexto = catalogo
+      .map((c: any) => {
+        const outros = (c.outros_nomes ?? []).join(", ");
+        return `${c.codigo_shift} | ${c.nome}${outros ? ` | ${outros}` : ""}`;
+      })
+      .join("\n");
 
-    const promptText =
-      `Você é um assistente de laboratório. Analise este pedido médico e identifique os exames e vacinas solicitados.
+    // 5. Prompt para o modelo
+    const systemPrompt = `Você é um especialista em pedidos médicos brasileiros. Analise a imagem ou PDF fornecido — pode ser um pedido escrito à mão com letra de médico, impresso ou digital.
 
-Compare com este catálogo disponível (array JSON): ${catalogoJson}
+Sua tarefa:
+1. Identifique TODOS os exames laboratoriais, procedimentos e vacinas solicitados no documento, mesmo com letra difícil.
+2. Compare cada exame identificado com o catálogo abaixo (formato: codigo_shift | nome | outros_nomes).
+3. Use correspondência inteligente: "hemograma" → "Hemograma Completo", "TSH" → "TSH Ultrassensível", "glicose" → "Glicemia em Jejum", etc.
 
-Retorne APENAS um JSON válido com este formato:
+CATÁLOGO DISPONÍVEL:
+${catalogoTexto}
+
+Responda SOMENTE com um JSON válido, sem markdown, sem explicações:
 {
   "encontrados": ["codigo_shift_1", "codigo_shift_2"],
-  "nao_encontrados": ["nome do exame que não está no catálogo"]
-}
+  "nao_encontrados": ["Nome exato como aparece no pedido para exames não encontrados"]
+}`;
 
-Encontrados = exames do pedido que existem no catálogo (retorne o codigo_shift).
-Não encontrados = exames do pedido que NÃO existem no catálogo (retorne o nome como aparece no pedido).
-Não invente exames. Só retorne o JSON, sem explicações.`;
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // 6. Chamar OpenRouter
+    const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://sancet.com.br",
+        "X-Title": "Sancet Leitor de Receitas",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-5",
-        max_tokens: 1024,
+        model: modelo,
         messages: [
           {
             role: "user",
-            content: [sourceBlock, { type: "text", text: promptText }],
+            content: [
+              {
+                type: "image_url",
+                image_url: { url: dataUrl },
+              },
+              {
+                type: "text",
+                text: systemPrompt,
+              },
+            ],
           },
         ],
+        temperature: 0.1,
+        max_tokens: 1000,
       }),
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Anthropic API error:", response.status, errText);
-      return new Response(
-        JSON.stringify({ error: "Falha na leitura do pedido" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    if (!orRes.ok) {
+      const errText = await orRes.text();
+      throw new Error(`OpenRouter error ${orRes.status}: ${errText}`);
     }
 
-    const data = await response.json();
-    const text: string = data?.content?.[0]?.text ?? "";
+    const orData = await orRes.json();
+    const content = orData.choices?.[0]?.message?.content ?? "";
 
-    // Extrai o primeiro bloco JSON da resposta (à prova de prefixos/markdown)
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) {
-      return new Response(
-        JSON.stringify({ error: "Resposta inválida da IA" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+    // 7. Extrair JSON da resposta (remove possível markdown)
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Resposta da IA não contém JSON válido.");
 
-    let resultado: { encontrados: string[]; nao_encontrados: string[] };
-    try {
-      resultado = JSON.parse(match[0]);
-    } catch {
-      return new Response(
-        JSON.stringify({ error: "JSON inválido retornado pela IA" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+    const resultado = JSON.parse(jsonMatch[0]);
 
     return new Response(JSON.stringify(resultado), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
-  } catch (err) {
+
+  } catch (err: any) {
     console.error("sancet-ler-receita error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: err.message ?? "Erro interno" }),
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
+    );
   }
 });
