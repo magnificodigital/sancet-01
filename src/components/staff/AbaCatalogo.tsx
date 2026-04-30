@@ -1,10 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Pencil, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -14,27 +30,67 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatarPreco } from "./utils";
+import {
+  CATEGORIAS_EXAMES,
+  CATEGORIAS_VACINAS,
+} from "@/components/catalogo/types";
 
 type Item = {
   id: string;
   nome: string;
   codigo_shift: string;
+  outros_nomes: string[] | null;
   categoria: string | null;
   preco_centavos: number | null;
+  prazo_resultado: string | null;
+  preparo: string | null;
   disponivel_na_unidade: boolean;
   disponivel_em_casa: boolean;
   ativo: boolean;
 };
 
+type FormState = {
+  nome: string;
+  codigo_shift: string;
+  outros_nomes: string;
+  categoria: string;
+  preco_reais: string;
+  prazo_resultado: string;
+  preparo: string;
+  disponivel_na_unidade: boolean;
+  disponivel_em_casa: boolean;
+  ativo: boolean;
+};
+
+const formVazio: FormState = {
+  nome: "",
+  codigo_shift: "",
+  outros_nomes: "",
+  categoria: "",
+  preco_reais: "",
+  prazo_resultado: "",
+  preparo: "",
+  disponivel_na_unidade: true,
+  disponivel_em_casa: false,
+  ativo: true,
+};
+
 const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
   const [itens, setItens] = useState<Item[]>([]);
   const [busca, setBusca] = useState("");
+  const [drawerAberto, setDrawerAberto] = useState(false);
+  const [editando, setEditando] = useState<Item | null>(null);
+  const [form, setForm] = useState<FormState>(formVazio);
+  const [salvando, setSalvando] = useState(false);
+
+  const categorias =
+    tabela === "exames_cache" ? CATEGORIAS_EXAMES : CATEGORIAS_VACINAS;
 
   const carregar = async () => {
     const { data } = await supabase
       .from(tabela)
       .select(
-        "id, nome, codigo_shift, categoria, preco_centavos, disponivel_na_unidade, disponivel_em_casa, ativo",
+        "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo",
       )
       .order("nome");
     setItens((data as Item[]) ?? []);
@@ -56,6 +112,72 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
     toast.success(novo ? "Ativado" : "Desativado");
   };
 
+  const abrirNovo = () => {
+    setEditando(null);
+    setForm(formVazio);
+    setDrawerAberto(true);
+  };
+
+  const abrirEdicao = (item: Item) => {
+    setEditando(item);
+    setForm({
+      nome: item.nome ?? "",
+      codigo_shift: item.codigo_shift ?? "",
+      outros_nomes: (item.outros_nomes ?? []).join(", "),
+      categoria: item.categoria ?? "",
+      preco_reais:
+        item.preco_centavos != null ? (item.preco_centavos / 100).toFixed(2) : "",
+      prazo_resultado: item.prazo_resultado ?? "",
+      preparo: item.preparo ?? "",
+      disponivel_na_unidade: item.disponivel_na_unidade,
+      disponivel_em_casa: item.disponivel_em_casa,
+      ativo: item.ativo,
+    });
+    setDrawerAberto(true);
+  };
+
+  const salvar = async () => {
+    if (!form.nome.trim() || !form.codigo_shift.trim()) {
+      toast.error("Nome e Código Shift são obrigatórios");
+      return;
+    }
+    setSalvando(true);
+
+    const outros = form.outros_nomes
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const precoNum = parseFloat(form.preco_reais.replace(",", "."));
+    const preco_centavos = isNaN(precoNum) ? null : Math.round(precoNum * 100);
+
+    const payload = {
+      nome: form.nome.trim(),
+      codigo_shift: form.codigo_shift.trim(),
+      outros_nomes: outros.length ? outros : null,
+      categoria: form.categoria || null,
+      preco_centavos,
+      prazo_resultado: form.prazo_resultado.trim() || null,
+      preparo: form.preparo.trim() || null,
+      disponivel_na_unidade: form.disponivel_na_unidade,
+      disponivel_em_casa: form.disponivel_em_casa,
+      ativo: form.ativo,
+    };
+
+    const { error } = editando
+      ? await supabase.from(tabela).update(payload).eq("id", editando.id)
+      : await supabase.from(tabela).insert(payload);
+
+    setSalvando(false);
+    if (error) {
+      toast.error(error.message ?? "Erro ao salvar");
+      return;
+    }
+    toast.success(editando ? "Item atualizado" : "Item criado");
+    setDrawerAberto(false);
+    carregar();
+  };
+
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
     if (!q) return itens;
@@ -64,14 +186,24 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
 
   return (
     <div className="space-y-4">
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome..."
-          className="pl-9"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome..."
+            className="pl-9"
+          />
+        </div>
+        <Button
+          onClick={abrirNovo}
+          className="gap-2 text-white hover:opacity-90"
+          style={{ backgroundColor: "#C8102E" }}
+        >
+          <Plus className="h-4 w-4" />
+          Novo item
+        </Button>
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-white">
@@ -85,6 +217,7 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
               <TableHead>Unidade</TableHead>
               <TableHead>Em casa</TableHead>
               <TableHead>Ativo</TableHead>
+              <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -102,11 +235,22 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
                     onCheckedChange={(v) => toggleAtivo(i, v)}
                   />
                 </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => abrirEdicao(i)}
+                    className="gap-1"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
             {filtrados.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                   Nenhum item.
                 </TableCell>
               </TableRow>
@@ -114,6 +258,132 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
           </TableBody>
         </Table>
       </div>
+
+      <Sheet open={drawerAberto} onOpenChange={setDrawerAberto}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>{editando ? "Editar item" : "Novo item"}</SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nome *</Label>
+              <Input
+                value={form.nome}
+                onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Código Shift *</Label>
+              <Input
+                value={form.codigo_shift}
+                onChange={(e) => setForm({ ...form, codigo_shift: e.target.value })}
+                className="font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Outros nomes (separados por vírgula)</Label>
+              <Input
+                value={form.outros_nomes}
+                onChange={(e) => setForm({ ...form, outros_nomes: e.target.value })}
+                placeholder="ex: hemograma, CBC"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Categoria</Label>
+              <Select
+                value={form.categoria}
+                onValueChange={(v) => setForm({ ...form, categoria: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {categorias.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Preço (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.preco_reais}
+                onChange={(e) => setForm({ ...form, preco_reais: e.target.value })}
+                placeholder="0,00"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Prazo do resultado</Label>
+              <Input
+                value={form.prazo_resultado}
+                onChange={(e) => setForm({ ...form, prazo_resultado: e.target.value })}
+                placeholder="ex: 1 dia útil"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Preparo</Label>
+              <Textarea
+                value={form.preparo}
+                onChange={(e) => setForm({ ...form, preparo: e.target.value })}
+                rows={4}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <Label className="cursor-pointer">Disponível na unidade</Label>
+              <Switch
+                checked={form.disponivel_na_unidade}
+                onCheckedChange={(v) => setForm({ ...form, disponivel_na_unidade: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <Label className="cursor-pointer">Disponível em casa</Label>
+              <Switch
+                checked={form.disponivel_em_casa}
+                onCheckedChange={(v) => setForm({ ...form, disponivel_em_casa: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <Label className="cursor-pointer">Ativo</Label>
+              <Switch
+                checked={form.ativo}
+                onCheckedChange={(v) => setForm({ ...form, ativo: v })}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                onClick={salvar}
+                disabled={salvando}
+                className="flex-1 text-white hover:opacity-90"
+                style={{ backgroundColor: "#C8102E" }}
+              >
+                {salvando ? "Salvando..." : "Salvar"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setDrawerAberto(false)}
+                disabled={salvando}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
