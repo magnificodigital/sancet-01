@@ -15,10 +15,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const MODELOS_OPENROUTER = [
-  { value: "anthropic/claude-3-5-sonnet", label: "Claude 3.5 Sonnet (melhor para docs)" },
-  { value: "openai/gpt-4o", label: "GPT-4o (OpenAI)" },
-  { value: "google/gemini-flash-1.5", label: "Gemini 1.5 Flash (rápido e barato)" },
-  { value: "deepseek/deepseek-chat", label: "DeepSeek Chat (econômico)" },
+  { value: "google/gemini-2.5-flash-preview:free", label: "Gemini Flash 2.5 (gratuito — padrão)" },
+  { value: "anthropic/claude-3-5-haiku", label: "Claude 3.5 Haiku (pago — melhor para receitas)" },
+  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (pago — econômico)" },
+  { value: "google/gemini-1.5-pro", label: "Gemini 1.5 Pro (pago)" },
+  { value: "deepseek/deepseek-chat", label: "DeepSeek V3 (pago — sem visão, não usar para imagens)" },
 ];
 
 type Configs = Record<string, string>;
@@ -29,9 +30,22 @@ const CHAVES = [
   "SHIFT_SENHA",
   "OPENROUTER_API_KEY",
   "OPENROUTER_MODELO",
+  "GATEWAY_ATIVO",
+  "ASAAS_API_KEY",
+  "MERCADOPAGO_ACCESS_TOKEN",
+  "PAGHIPER_API_KEY",
+  "PAGHIPER_TOKEN",
 ];
 
-const SENSIVEIS = new Set(["SHIFT_SENHA", "OPENROUTER_API_KEY", "SHIFT_USER_ID"]);
+const SENSIVEIS = new Set([
+  "SHIFT_SENHA",
+  "OPENROUTER_API_KEY",
+  "SHIFT_USER_ID",
+  "ASAAS_API_KEY",
+  "MERCADOPAGO_ACCESS_TOKEN",
+  "PAGHIPER_API_KEY",
+  "PAGHIPER_TOKEN",
+]);
 
 export const AbaConfiguracoes = () => {
   const [configs, setConfigs] = useState<Configs>({});
@@ -143,7 +157,7 @@ export const AbaConfiguracoes = () => {
           <div className="space-y-1.5">
             <Label>Modelo para leitura de receitas</Label>
             <Select
-              value={configs["OPENROUTER_MODELO"] ?? ""}
+              value={configs["OPENROUTER_MODELO"] ?? "google/gemini-2.5-flash-preview:free"}
               onValueChange={(v) => set("OPENROUTER_MODELO", v)}
             >
               <SelectTrigger>
