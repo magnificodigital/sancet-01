@@ -142,6 +142,15 @@ export const Header = () => {
                   </span>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Agendamento
+                </DropdownMenuLabel>
+                {agendamentosItens.map((it) => (
+                  <DropdownMenuItem key={it.to} asChild>
+                    <Link to={it.to}>{it.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="cursor-pointer">
                   Sair
                 </DropdownMenuItem>
