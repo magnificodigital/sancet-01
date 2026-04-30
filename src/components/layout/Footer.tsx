@@ -1,8 +1,14 @@
+import logoLight from "@/assets/logo-sancet-light.png";
+
 export const Footer = () => {
   return (
     <footer className="bg-footer text-footer-foreground mt-auto">
       <div className="container py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-        <span className="text-2xl font-extrabold italic">Sancet</span>
+        <img
+          src={logoLight}
+          alt="Sancet Medicina Diagnóstica"
+          className="h-9 w-auto"
+        />
         <p className="text-sm text-center md:text-right text-footer-foreground/80">
           Feito com <span className="text-primary">❤</span> por Sancet Laboratórios — Todos os Direitos Reservados
           {" | "}
