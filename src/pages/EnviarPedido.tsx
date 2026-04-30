@@ -88,7 +88,11 @@ const EnviarPedido = () => {
 
       localStorage.setItem("sancet-ultimo-protocolo", data.protocolo);
       limpar();
-      navigate(`/pronto/${data.protocolo}`);
+      if (tipo === "particular") {
+        navigate(`/pagamento/${data.protocolo}`);
+      } else {
+        navigate(`/pronto/${data.protocolo}`);
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Não foi possível enviar o pedido.");
     } finally {
