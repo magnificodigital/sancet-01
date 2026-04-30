@@ -89,30 +89,6 @@ export const Header = () => {
             Resultados
           </NavLink>
 
-          {/* Agendamento dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "font-semibold gap-1 px-3",
-                  dark
-                    ? "text-white/85 hover:text-white hover:bg-white/10"
-                    : "text-foreground/80 hover:text-foreground hover:bg-foreground/5"
-                )}
-              >
-                Agendamento
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              {agendamentosItens.map((it) => (
-                <DropdownMenuItem key={it.to} asChild>
-                  <Link to={it.to}>{it.label}</Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </nav>
 
         <div className="flex items-center gap-2 ml-auto md:ml-0">
@@ -165,6 +141,15 @@ export const Header = () => {
                     {paciente?.nome?.split(" ")[0] ?? ""}
                   </span>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Agendamento
+                </DropdownMenuLabel>
+                {agendamentosItens.map((it) => (
+                  <DropdownMenuItem key={it.to} asChild>
+                    <Link to={it.to}>{it.label}</Link>
+                  </DropdownMenuItem>
+                ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="cursor-pointer">
                   Sair
@@ -219,24 +204,39 @@ export const Header = () => {
                 >
                   Resultados
                 </Link>
-                <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Agendamento
-                </div>
-                {agendamentosItens.map((it) => (
-                  <Link
-                    key={it.to}
-                    to={it.to}
-                    className="px-3 py-2.5 rounded-md text-sm text-foreground hover:bg-muted"
+                {logado && (
+                  <>
+                    <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Agendamento
+                    </div>
+                    {agendamentosItens.map((it) => (
+                      <Link
+                        key={it.to}
+                        to={it.to}
+                        className="px-3 py-2.5 rounded-md text-sm text-foreground hover:bg-muted"
+                      >
+                        {it.label}
+                      </Link>
+                    ))}
+                  </>
+                )}
+                {!logado && (
+                  <Button
+                    asChild
+                    className="mt-6 rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                   >
-                    {it.label}
-                  </Link>
-                ))}
-                <Button
-                  asChild
-                  className="mt-6 rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                >
-                  <Link to="/entrar">Entrar</Link>
-                </Button>
+                    <Link to="/entrar">Entrar</Link>
+                  </Button>
+                )}
+                {logado && (
+                  <Button
+                    onClick={logout}
+                    variant="outline"
+                    className="mt-6 rounded-pill font-semibold"
+                  >
+                    Sair
+                  </Button>
+                )}
               </nav>
             </SheetContent>
           </Sheet>
