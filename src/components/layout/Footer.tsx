@@ -10,7 +10,7 @@ export const Footer = () => {
           className="h-14 w-auto"
         />
         <p className="text-sm text-center md:text-right text-footer-foreground/80">
-          Feito com <span className="text-primary">❤</span> por Sancet Laboratórios — Todos os Direitos Reservados
+          Feito com <span className="text-primary">❤</span> por magnificodigital.com — Todos os Direitos Reservados
           {" | "}
           <a href="#" className="hover:text-primary-foreground underline-offset-2 hover:underline">
             Portal de Privacidade
