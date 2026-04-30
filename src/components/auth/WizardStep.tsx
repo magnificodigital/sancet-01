@@ -26,44 +26,47 @@ export const WizardStep = ({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div>{children}</div>
+
+      <div className="flex flex-col gap-3 pt-2">
         <Button
           type="button"
-          variant="outline"
-          size="icon"
-          onClick={onAnterior}
-          disabled={etapaAtual === 1 || carregando}
-          aria-label="Etapa anterior"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        <span className="text-sm font-semibold text-secondary">
-          {etapaAtual}/{totalEtapas}
-        </span>
-
-        <Button
-          type="button"
-          size="icon"
           onClick={onProximo}
           disabled={!podeAvancar || carregando}
           className={cn(
-            "bg-[#C8102E] hover:bg-[#a80d26] text-white",
-            ultima && "w-auto px-4"
+            "w-full h-12 text-base font-bold bg-[#C8102E] hover:bg-[#a80d26] text-white shadow-lg shadow-[#C8102E]/30 transition-transform hover:scale-[1.02]"
           )}
-          aria-label={ultima ? "Finalizar cadastro" : "Próxima etapa"}
         >
           {carregando ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : ultima ? (
-            "OK"
+            "Finalizar cadastro"
           ) : (
-            <ChevronRight className="h-4 w-4" />
+            <>
+              Próximo
+              <ChevronRight className="h-5 w-5 ml-1" />
+            </>
           )}
         </Button>
-      </div>
 
-      <div>{children}</div>
+        <div className="flex items-center justify-between">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onAnterior}
+            disabled={etapaAtual === 1 || carregando}
+            className="text-muted-foreground hover:text-secondary"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Voltar
+          </Button>
+
+          <span className="text-sm font-semibold text-secondary">
+            Etapa {etapaAtual} de {totalEtapas}
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
