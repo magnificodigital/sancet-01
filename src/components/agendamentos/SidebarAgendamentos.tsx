@@ -48,15 +48,6 @@ export const SidebarAgendamentos = ({ ativa, onMudar }: Props) => {
         })}
       </nav>
 
-      <div className="rounded-xl bg-[#F5F5F5] p-4 space-y-2 mt-auto">
-        <p className="text-sm font-bold text-secondary">Acesse pelo celular!</p>
-        <div className="w-20 h-20 bg-[#1B3A6B] rounded-lg flex items-center justify-center text-white font-bold">
-          QR
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Agendamentos, resultados e muito mais em um só lugar.
-        </p>
-      </div>
     </aside>
   );
 };
