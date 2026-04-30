@@ -96,18 +96,16 @@ export const AbaUnidades = () => {
   const abrirEditar = (u: Un) => {
     setEditando(u);
     setForm({
-      codigo_shift:     u.codigo_shift ?? "",
-      nome:             u.nome,
-      endereco:         u.endereco ?? "",
-      bairro:           u.bairro ?? "",
-      cidade:           u.cidade ?? "",
-      uf:               u.uf ?? "",
-      cep:              u.cep ?? "",
-      telefone:         u.telefone ?? "",
-      email:            u.email ?? "",
-      horario:          u.horario ?? "",
+      codigo_shift:    u.codigo_shift ?? "",
+      nome:            u.nome,
+      endereco:        u.endereco ?? "",
+      bairro:          u.bairro ?? "",
+      cidade:          u.cidade ?? "",
+      uf:              u.uf ?? "",
+      telefone:        u.telefone ?? "",
+      horario:         u.horario ?? "",
       aceita_domicilio: u.aceita_domicilio,
-      ativo:            u.ativo,
+      ativo:           u.ativo,
     });
     setDrawerAberto(true);
   };
