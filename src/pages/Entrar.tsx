@@ -150,17 +150,6 @@ const Entrar = () => {
                 <Link to="/cadastro">Fazer cadastro</Link>
               </Button>
             </form>
-          </div>
-
-          {/* Coluna direita — decorativa */}
-          <div className="hidden md:block">
-            <div className="rounded-2xl overflow-hidden bg-[#F5F5F5] h-full min-h-[500px]">
-              <img
-                src={IMAGEM}
-                alt="Pessoa usando celular para agendar exames"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
             </div>
           </div>
         </div>
