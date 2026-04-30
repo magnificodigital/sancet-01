@@ -7,7 +7,7 @@ export const Footer = () => {
         <img
           src={logoLight}
           alt="Sancet Medicina Diagnóstica"
-          className="h-9 w-auto"
+          className="h-14 w-auto"
         />
         <p className="text-sm text-center md:text-right text-footer-foreground/80">
           Feito com <span className="text-primary">❤</span> por Sancet Laboratórios — Todos os Direitos Reservados
