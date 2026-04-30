@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import logoLight from "@/assets/logo-sancet-light.png";
 
 const StaffLogin = () => {
   const navigate = useNavigate();
@@ -39,25 +40,38 @@ const StaffLogin = () => {
     navigate("/staff/dashboard", { replace: true });
   };
 
+  const esqueciSenha = async () => {
+    if (!email.trim()) {
+      toast.error("Informe seu e-mail acima para receber o link de redefinição");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/staff/alterar-senha`,
+    });
+    if (error) {
+      toast.error("Não foi possível enviar o e-mail de redefinição");
+      return;
+    }
+    toast.success("E-mail de redefinição enviado");
+  };
+
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ backgroundColor: "#1B3A6B" }}
+      style={{ backgroundColor: "#000000" }}
     >
       <div
         className="w-full max-w-[400px] rounded-2xl bg-white p-10"
         style={{ boxShadow: "0 25px 50px -12px rgba(0,0,0,0.4)" }}
       >
-        <div className="mb-2">
-          <h1 className="text-2xl font-bold" style={{ color: "#C8102E" }}>
-            Sancet
-          </h1>
+        <div className="mb-2 flex flex-col items-center gap-3">
+          <img src={logoLight} alt="Sancet" className="h-14 w-auto bg-black rounded-md p-2" />
           <p className="text-xs text-muted-foreground">Painel Interno</p>
         </div>
 
         <hr className="my-5 border-border" />
 
-        <h2 className="text-lg font-semibold text-secondary">Acesso restrito</h2>
+        <h2 className="text-lg font-semibold text-foreground">Acesso restrito</h2>
 
         <form onSubmit={onSubmit} className="mt-5 space-y-4">
           <div className="space-y-1.5">
@@ -115,6 +129,14 @@ const StaffLogin = () => {
               "Entrar"
             )}
           </Button>
+
+          <button
+            type="button"
+            onClick={esqueciSenha}
+            className="block w-full text-center text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+          >
+            Esqueci minha senha
+          </button>
         </form>
 
         <p className="mt-5 text-center text-xs text-muted-foreground">
