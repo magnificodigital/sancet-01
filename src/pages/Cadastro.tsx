@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, HelpCircle, Loader2 } from "lucide-react";
-import { PageShell } from "@/components/layout/PageShell";
+import bannerSancet from "@/assets/banner-sancet.png";
 import { WizardStep } from "@/components/auth/WizardStep";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
