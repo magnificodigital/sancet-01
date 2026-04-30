@@ -317,7 +317,7 @@ const Index = () => {
 
       {/* SEÇÃO 5 — FAQ */}
       <section className="bg-muted py-20">
-        <div className="container max-w-3xl">
+        <div className="container max-w-6xl">
           <div className="text-center mb-10">
             <SectionTag>Dúvidas</SectionTag>
             <h2 className="text-3xl md:text-4xl font-bold text-secondary">
@@ -325,12 +325,16 @@ const Index = () => {
             </h2>
           </div>
 
-          <Accordion type="single" collapsible className="w-full space-y-3">
+          <Accordion
+            type="single"
+            collapsible
+            className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full"
+          >
             {faqs.map((f, i) => (
               <AccordionItem
                 key={i}
                 value={`item-${i}`}
-                className="bg-background rounded-xl border border-border px-5"
+                className="bg-background rounded-xl border border-border px-5 h-fit"
               >
                 <AccordionTrigger className="text-left font-semibold text-secondary hover:no-underline">
                   {f.q}
