@@ -64,7 +64,7 @@ export const AbaUnidades = () => {
   const carregar = async () => {
     const { data } = await supabase
       .from("unidades_cache")
-      .select("id, codigo_shift, nome, endereco, bairro, cidade, uf, cep, telefone, email, horarios, aceita_domicilio, ativo")
+      .select("id, codigo_shift, nome, endereco, bairro, cidade, uf, telefone, horarios, aceita_domicilio, ativo")
       .order("nome");
 
     const mapped: Un[] = (data ?? []).map((u: any) => ({
