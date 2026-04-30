@@ -137,23 +137,13 @@ export const AbaConfiguracoes = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Modelo de IA (via OpenRouter)</CardTitle>
+          <CardTitle>Modelo de IA</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Um único API key dá acesso a Claude, GPT-4o, Gemini e DeepSeek.{" "}
-            Crie sua chave em{" "}
-            <a
-              href="https://openrouter.ai/keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline"
-            >
-              openrouter.ai/keys
-            </a>
-            .
+            Um único API key dá acesso a Claude, GPT-4o, Gemini e DeepSeek.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {campo("OPENROUTER_API_KEY", "OpenRouter API Key", "sk-or-...")}
+          {campo("OPENROUTER_API_KEY", "API Key", "sk-or-...")}
           <div className="space-y-1.5">
             <Label>Modelo para leitura de receitas</Label>
             <Select
