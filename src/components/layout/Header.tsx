@@ -89,30 +89,6 @@ export const Header = () => {
             Resultados
           </NavLink>
 
-          {/* Agendamento dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "font-semibold gap-1 px-3",
-                  dark
-                    ? "text-white/85 hover:text-white hover:bg-white/10"
-                    : "text-foreground/80 hover:text-foreground hover:bg-foreground/5"
-                )}
-              >
-                Agendamento
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              {agendamentosItens.map((it) => (
-                <DropdownMenuItem key={it.to} asChild>
-                  <Link to={it.to}>{it.label}</Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </nav>
 
         <div className="flex items-center gap-2 ml-auto md:ml-0">
