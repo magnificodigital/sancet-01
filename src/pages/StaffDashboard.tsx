@@ -9,6 +9,7 @@ import { AbaPacientes } from "@/components/staff/AbaPacientes";
 import { AbaCatalogo } from "@/components/staff/AbaCatalogo";
 import { AbaUnidades } from "@/components/staff/AbaUnidades";
 import { AbaSync } from "@/components/staff/AbaSync";
+import { AbaConfiguracoes } from "@/components/staff/AbaConfiguracoes";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
@@ -57,6 +58,7 @@ const StaffDashboard = () => {
       {aba === "catalogo" && <AbaCatalogo />}
       {aba === "unidades" && <AbaUnidades />}
       {aba === "sync" && <AbaSync />}
+      {aba === "config" && <AbaConfiguracoes />}
     </StaffShell>
   );
 };
