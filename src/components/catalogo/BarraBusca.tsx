@@ -23,13 +23,13 @@ export const BarraBusca = ({ busca, setBusca, placeholder = "Buscar exame" }: Pr
         />
       </div>
       <Button
-        onClick={() => navigate("/enviar-pedido")}
+        onClick={() => navigate("/receita")}
         className="h-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground px-5 hidden sm:inline-flex"
       >
         <ScanLine className="h-4 w-4" /> Ler pedido
       </Button>
       <Button
-        onClick={() => navigate("/enviar-pedido")}
+        onClick={() => navigate("/receita")}
         size="icon"
         className="h-12 w-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground sm:hidden"
         aria-label="Ler pedido"

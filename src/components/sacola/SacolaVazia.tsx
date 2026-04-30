@@ -11,7 +11,7 @@ export const SacolaVazia = () => (
     </p>
     <div className="flex flex-col gap-3 w-full">
       <Button asChild className="bg-[#C8102E] hover:bg-[#a80d26] text-white">
-        <Link to="/enviar-pedido">Enviar pedido médico</Link>
+        <Link to="/receita">Enviar pedido médico</Link>
       </Button>
       <Button asChild variant="outline">
         <Link to="/exames">Buscar exames e vacinas</Link>
