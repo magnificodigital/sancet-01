@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
+import bannerSancet from "@/assets/banner-sancet.png";
 
 const StaffLogin = () => {
   const navigate = useNavigate();
@@ -57,11 +57,12 @@ const StaffLogin = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ backgroundColor: "#000000" }}
+      className="min-h-screen flex items-center justify-center px-4 bg-cover bg-center relative"
+      style={{ backgroundImage: `url(${bannerSancet})` }}
     >
+      <div className="absolute inset-0 bg-black/60" />
       <div
-        className="w-full max-w-[400px] rounded-2xl bg-white p-10"
+        className="relative w-full max-w-[400px] rounded-2xl bg-white p-10"
         style={{ boxShadow: "0 25px 50px -12px rgba(0,0,0,0.4)" }}
       >
         <div className="mb-2">
