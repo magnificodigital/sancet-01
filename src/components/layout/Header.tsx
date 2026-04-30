@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePaciente } from "@/hooks/usePaciente";
+import logoDark from "@/assets/logo-sancet-dark.png";
+import logoLight from "@/assets/logo-sancet-light.png";
 import {
   Sheet,
   SheetContent,
@@ -21,15 +23,12 @@ import { useSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
 
 const Logo = ({ dark }: { dark: boolean }) => (
-  <Link to="/" className="flex items-center gap-3 shrink-0">
-    <span
-      className={cn(
-        "text-2xl font-extrabold italic tracking-tight drop-shadow",
-        dark ? "text-white" : "text-secondary"
-      )}
-    >
-      Sancet
-    </span>
+  <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="Sancet">
+    <img
+      src={dark ? logoLight : logoDark}
+      alt="Sancet Medicina Diagnóstica"
+      className="h-9 w-auto drop-shadow"
+    />
   </Link>
 );
 
