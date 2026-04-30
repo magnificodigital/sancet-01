@@ -123,7 +123,7 @@ const Index = () => {
           <div className="max-w-3xl mx-auto md:mx-0">
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-pill bg-white/10 text-white text-xs font-semibold mb-6 backdrop-blur">
               <FlaskConical className="h-4 w-4" />
-              Atendimento Digital · Exames e Vacinas
+              Atendimento Digital
             </span>
             <h1 className="text-white font-bold tracking-tight text-[36px] md:text-[56px] leading-[1.1] mb-5">
               Seus exames com a comodidade que você merece
