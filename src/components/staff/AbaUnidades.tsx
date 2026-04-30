@@ -29,9 +29,7 @@ type Un = {
   bairro: string | null;
   cidade: string | null;
   uf: string | null;
-  cep: string | null;
   telefone: string | null;
-  email: string | null;
   horario: string | null;
   aceita_domicilio: boolean;
   ativo: boolean;
@@ -44,17 +42,15 @@ type Form = {
   bairro: string;
   cidade: string;
   uf: string;
-  cep: string;
   telefone: string;
-  email: string;
   horario: string;
   aceita_domicilio: boolean;
   ativo: boolean;
 };
 
 const FORM_VAZIO: Form = {
-  codigo_shift: "", nome: "", endereco: "", bairro: "", cidade: "",
-  uf: "", cep: "", telefone: "", email: "", horario: "",
+  codigo_shift: "", nome: "", endereco: "", bairro: "",
+  cidade: "", uf: "", telefone: "", horario: "",
   aceita_domicilio: true, ativo: true,
 };
 
@@ -68,7 +64,7 @@ export const AbaUnidades = () => {
   const carregar = async () => {
     const { data } = await supabase
       .from("unidades_cache")
-      .select("id, codigo_shift, nome, endereco, bairro, cidade, uf, cep, telefone, email, horarios, aceita_domicilio, ativo")
+      .select("id, codigo_shift, nome, endereco, bairro, cidade, uf, telefone, horarios, aceita_domicilio, ativo")
       .order("nome");
 
     const mapped: Un[] = (data ?? []).map((u: any) => ({
@@ -79,9 +75,7 @@ export const AbaUnidades = () => {
       bairro: u.bairro ?? null,
       cidade: u.cidade ?? null,
       uf: u.uf ?? null,
-      cep: u.cep ?? null,
       telefone: u.telefone ?? null,
-      email: u.email ?? null,
       horario: typeof u.horarios === "string" ? u.horarios : (u.horarios?.texto ?? null),
       aceita_domicilio: !!u.aceita_domicilio,
       ativo: !!u.ativo,
@@ -100,18 +94,16 @@ export const AbaUnidades = () => {
   const abrirEditar = (u: Un) => {
     setEditando(u);
     setForm({
-      codigo_shift:     u.codigo_shift ?? "",
-      nome:             u.nome,
-      endereco:         u.endereco ?? "",
-      bairro:           u.bairro ?? "",
-      cidade:           u.cidade ?? "",
-      uf:               u.uf ?? "",
-      cep:              u.cep ?? "",
-      telefone:         u.telefone ?? "",
-      email:            u.email ?? "",
-      horario:          u.horario ?? "",
+      codigo_shift:    u.codigo_shift ?? "",
+      nome:            u.nome,
+      endereco:        u.endereco ?? "",
+      bairro:          u.bairro ?? "",
+      cidade:          u.cidade ?? "",
+      uf:              u.uf ?? "",
+      telefone:        u.telefone ?? "",
+      horario:         u.horario ?? "",
       aceita_domicilio: u.aceita_domicilio,
-      ativo:            u.ativo,
+      ativo:           u.ativo,
     });
     setDrawerAberto(true);
   };
@@ -128,15 +120,13 @@ export const AbaUnidades = () => {
     setSalvando(true);
 
     const payload: any = {
-      codigo_shift:     form.codigo_shift.trim(),
+      codigo_shift:     form.codigo_shift.trim() || null,
       nome:             form.nome.trim(),
       endereco:         form.endereco.trim() || null,
       bairro:           form.bairro.trim() || null,
       cidade:           form.cidade.trim() || null,
       uf:               form.uf || null,
-      cep:              form.cep.trim() || null,
       telefone:         form.telefone.trim() || null,
-      email:            form.email.trim() || null,
       horarios:         form.horario.trim() ? { texto: form.horario.trim() } : null,
       aceita_domicilio: form.aceita_domicilio,
       ativo:            form.ativo,
@@ -293,30 +283,11 @@ export const AbaUnidades = () => {
             </div>
 
             <div className="space-y-1.5">
-              <Label>CEP</Label>
-              <Input
-                value={form.cep}
-                onChange={(e) => set("cep", e.target.value)}
-                placeholder="00000-000"
-              />
-            </div>
-
-            <div className="space-y-1.5">
               <Label>Telefone</Label>
               <Input
                 value={form.telefone}
                 onChange={(e) => set("telefone", e.target.value)}
                 placeholder="(11) 3000-0000"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>E-mail</Label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
-                placeholder="contato@unidade.com.br"
               />
             </div>
 
