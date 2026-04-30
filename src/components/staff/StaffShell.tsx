@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  RefreshCw,
   Users,
   X,
 } from "lucide-react";
@@ -19,7 +20,8 @@ export type StaffTab =
   | "pedidos"
   | "pacientes"
   | "catalogo"
-  | "unidades";
+  | "unidades"
+  | "sync";
 
 const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "visao", label: "Visão Geral", icon: LayoutDashboard },
@@ -27,6 +29,7 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "pacientes", label: "Pacientes", icon: Users },
   { id: "catalogo", label: "Catálogo", icon: FlaskConical },
   { id: "unidades", label: "Unidades", icon: Building2 },
+  { id: "sync", label: "Sync Shift", icon: RefreshCw },
 ];
 
 type Props = {
