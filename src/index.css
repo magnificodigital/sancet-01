@@ -23,8 +23,8 @@
     --primary: 351 85% 42%;
     --primary-foreground: 0 0% 100%;
 
-    /* Azul Sancet #1B3A6B */
-    --secondary: 215 60% 26%;
+    /* Preto (era azul Sancet) */
+    --secondary: 0 0% 0%;
     --secondary-foreground: 0 0% 100%;
 
     /* Cinza claro #F5F5F5 */
@@ -32,7 +32,7 @@
     --muted-foreground: 0 0% 40%;
 
     --accent: 0 0% 96%;
-    --accent-foreground: 215 60% 26%;
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 351 85% 42%;
     --destructive-foreground: 0 0% 100%;
