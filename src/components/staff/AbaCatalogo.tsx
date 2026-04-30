@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -184,9 +185,72 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
     return itens.filter((i) => i.nome.toLowerCase().includes(q));
   }, [itens, busca]);
 
+  const baixarModelo = () => {
+    const colunas = [
+      "nome", "codigo_shift", "outros_nomes", "categoria",
+      "preco_reais", "prazo_resultado", "preparo",
+      "disponivel_na_unidade", "disponivel_em_casa", "ativo"
+    ];
+    const exemplo = [{
+      nome: "Hemograma Completo",
+      codigo_shift: "EX001",
+      outros_nomes: "Hemograma, CBC",
+      categoria: tabela === "exames_cache" ? "Sangue e urina" : "Adolescentes e Adultos",
+      preco_reais: "45.00",
+      prazo_resultado: "1 dia útil",
+      preparo: "Jejum não necessário.",
+      disponivel_na_unidade: "SIM",
+      disponivel_em_casa: "SIM",
+      ativo: "SIM",
+    }];
+    const ws = XLSX.utils.json_to_sheet(exemplo, { header: colunas });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Modelo");
+    XLSX.writeFile(wb, `modelo-${tabela === "exames_cache" ? "exames" : "vacinas"}.xlsx`);
+  };
+
+  const importarPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows: any[] = XLSX.utils.sheet_to_json(ws);
+
+    if (rows.length === 0) { toast.error("Planilha vazia."); return; }
+
+    const registros = rows.map((r) => ({
+      nome:                  String(r.nome ?? "").trim(),
+      codigo_shift:          String(r.codigo_shift ?? "").trim(),
+      outros_nomes:          r.outros_nomes
+                               ? String(r.outros_nomes).split(",").map((s: string) => s.trim()).filter(Boolean)
+                               : [],
+      categoria:             r.categoria ? String(r.categoria).trim() : null,
+      preco_centavos:        r.preco_reais ? Math.round(parseFloat(String(r.preco_reais).replace(",", ".")) * 100) : null,
+      prazo_resultado:       r.prazo_resultado ? String(r.prazo_resultado).trim() : null,
+      preparo:               r.preparo ? String(r.preparo).trim() : null,
+      disponivel_na_unidade: String(r.disponivel_na_unidade ?? "").toUpperCase() === "SIM",
+      disponivel_em_casa:    String(r.disponivel_em_casa ?? "").toUpperCase() === "SIM",
+      ativo:                 String(r.ativo ?? "SIM").toUpperCase() !== "NAO",
+      atualizado_em:         new Date().toISOString(),
+    })).filter((r) => r.nome && r.codigo_shift);
+
+    if (registros.length === 0) { toast.error("Nenhum registro válido encontrado."); return; }
+
+    const { error } = await supabase
+      .from(tabela)
+      .upsert(registros, { onConflict: "codigo_shift" });
+
+    if (error) { toast.error("Erro ao importar: " + error.message); return; }
+    toast.success(`${registros.length} itens importados com sucesso!`);
+    carregar();
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
         <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -196,14 +260,33 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
             className="pl-9"
           />
         </div>
-        <Button
-          onClick={abrirNovo}
-          className="gap-2 text-white hover:opacity-90"
-          style={{ backgroundColor: "#C8102E" }}
-        >
-          <Plus className="h-4 w-4" />
-          Novo item
-        </Button>
+
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={baixarModelo} className="gap-1.5">
+            <Download className="h-4 w-4" /> Baixar modelo
+          </Button>
+
+          <label>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={importarPlanilha}
+            />
+            <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer" asChild>
+              <span><Upload className="h-4 w-4" /> Importar planilha</span>
+            </Button>
+          </label>
+
+          <Button
+            size="sm"
+            onClick={() => { setEditando(null); setDrawerAberto(true); }}
+            className="gap-1.5 text-white"
+            style={{ backgroundColor: "#C8102E" }}
+          >
+            <Plus className="h-4 w-4" /> Novo item
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-white">
