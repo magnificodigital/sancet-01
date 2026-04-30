@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
