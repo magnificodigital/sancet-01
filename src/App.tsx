@@ -8,6 +8,7 @@ import Exames from "./pages/Exames.tsx";
 import Vacinas from "./pages/Vacinas.tsx";
 import Sacola from "./pages/Sacola.tsx";
 import EnviarPedido from "./pages/EnviarPedido.tsx";
+import EnviarReceita from "./pages/EnviarReceita.tsx";
 import Cadastro from "./pages/Cadastro.tsx";
 import Entrar from "./pages/Entrar.tsx";
 import Agendamentos from "./pages/Agendamentos.tsx";
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/vacinas" element={<Vacinas />} />
           <Route path="/sacola" element={<Sacola />} />
           <Route path="/enviar-pedido" element={<EnviarPedido />} />
+          <Route path="/receita" element={<EnviarReceita />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/entrar" element={<Entrar />} />
           <Route path="/agendamentos" element={<Agendamentos />} />
