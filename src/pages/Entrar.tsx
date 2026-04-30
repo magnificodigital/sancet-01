@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +14,9 @@ import {
   validarCPF,
 } from "@/lib/mascaras";
 import { salvarPaciente } from "@/hooks/usePaciente";
+import bannerSancet from "@/assets/banner-sancet.png";
 
-const IMAGEM = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600";
+const IMAGEM = bannerSancet;
 
 const Entrar = () => {
   const navigate = useNavigate();
