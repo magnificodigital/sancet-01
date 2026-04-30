@@ -204,24 +204,39 @@ export const Header = () => {
                 >
                   Resultados
                 </Link>
-                <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Agendamento
-                </div>
-                {agendamentosItens.map((it) => (
-                  <Link
-                    key={it.to}
-                    to={it.to}
-                    className="px-3 py-2.5 rounded-md text-sm text-foreground hover:bg-muted"
+                {logado && (
+                  <>
+                    <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Agendamento
+                    </div>
+                    {agendamentosItens.map((it) => (
+                      <Link
+                        key={it.to}
+                        to={it.to}
+                        className="px-3 py-2.5 rounded-md text-sm text-foreground hover:bg-muted"
+                      >
+                        {it.label}
+                      </Link>
+                    ))}
+                  </>
+                )}
+                {!logado && (
+                  <Button
+                    asChild
+                    className="mt-6 rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                   >
-                    {it.label}
-                  </Link>
-                ))}
-                <Button
-                  asChild
-                  className="mt-6 rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                >
-                  <Link to="/entrar">Entrar</Link>
-                </Button>
+                    <Link to="/entrar">Entrar</Link>
+                  </Button>
+                )}
+                {logado && (
+                  <Button
+                    onClick={logout}
+                    variant="outline"
+                    className="mt-6 rounded-pill font-semibold"
+                  >
+                    Sair
+                  </Button>
+                )}
               </nav>
             </SheetContent>
           </Sheet>
