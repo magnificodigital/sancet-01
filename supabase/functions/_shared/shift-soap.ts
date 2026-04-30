@@ -40,14 +40,26 @@ export function getter(bloco: string) {
   };
 }
 
-export function requireShiftEnv() {
-  const endpoint = Deno.env.get("SHIFT_ENDPOINT");
-  const userId = Deno.env.get("SHIFT_USER_ID");
-  const senha = Deno.env.get("SHIFT_SENHA");
-  if (!endpoint || !userId || !senha) {
-    throw new Error(
-      "Credenciais Shift ausentes. Configure SHIFT_ENDPOINT, SHIFT_USER_ID e SHIFT_SENHA nos Secrets das Edge Functions.",
-    );
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+export async function loadShiftConfig(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("configuracoes")
+    .select("chave, valor")
+    .in("chave", ["SHIFT_ENDPOINT", "SHIFT_USER_ID", "SHIFT_SENHA"]);
+
+  if (error) throw new Error("Erro ao ler configurações Shift: " + error.message);
+
+  const cfg: Record<string, string> = {};
+  (data ?? []).forEach((r: any) => { cfg[r.chave] = r.valor; });
+
+  const endpoint = cfg["SHIFT_ENDPOINT"];
+  const userId   = cfg["SHIFT_USER_ID"];
+  const senha    = cfg["SHIFT_SENHA"];
+
+  if (!endpoint || !userId || !senha || userId === "PENDENTE" || senha === "PENDENTE") {
+    throw new Error("Credenciais Shift não configuradas. Acesse o painel admin → Configurações.");
   }
+
   return { endpoint, userId, senha };
 }
