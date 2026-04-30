@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      configuracoes: {
+        Row: {
+          atualizado_em: string
+          chave: string
+          created_at: string
+          id: string
+          valor: string
+        }
+        Insert: {
+          atualizado_em?: string
+          chave: string
+          created_at?: string
+          id?: string
+          valor?: string
+        }
+        Update: {
+          atualizado_em?: string
+          chave?: string
+          created_at?: string
+          id?: string
+          valor?: string
+        }
+        Relationships: []
+      }
       convenios_cache: {
         Row: {
           ativo: boolean
