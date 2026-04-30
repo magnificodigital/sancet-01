@@ -29,9 +29,7 @@ type Un = {
   bairro: string | null;
   cidade: string | null;
   uf: string | null;
-  cep: string | null;
   telefone: string | null;
-  email: string | null;
   horario: string | null;
   aceita_domicilio: boolean;
   ativo: boolean;
@@ -44,17 +42,15 @@ type Form = {
   bairro: string;
   cidade: string;
   uf: string;
-  cep: string;
   telefone: string;
-  email: string;
   horario: string;
   aceita_domicilio: boolean;
   ativo: boolean;
 };
 
 const FORM_VAZIO: Form = {
-  codigo_shift: "", nome: "", endereco: "", bairro: "", cidade: "",
-  uf: "", cep: "", telefone: "", email: "", horario: "",
+  codigo_shift: "", nome: "", endereco: "", bairro: "",
+  cidade: "", uf: "", telefone: "", horario: "",
   aceita_domicilio: true, ativo: true,
 };
 
