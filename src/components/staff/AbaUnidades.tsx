@@ -285,30 +285,11 @@ export const AbaUnidades = () => {
             </div>
 
             <div className="space-y-1.5">
-              <Label>CEP</Label>
-              <Input
-                value={form.cep}
-                onChange={(e) => set("cep", e.target.value)}
-                placeholder="00000-000"
-              />
-            </div>
-
-            <div className="space-y-1.5">
               <Label>Telefone</Label>
               <Input
                 value={form.telefone}
                 onChange={(e) => set("telefone", e.target.value)}
                 placeholder="(11) 3000-0000"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>E-mail</Label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
-                placeholder="contato@unidade.com.br"
               />
             </div>
 
