@@ -47,7 +47,7 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "config", label: "Configurações", icon: Settings2 },
 ];
 
-const SIDEBAR_BG = "#1B3A6B";
+const SIDEBAR_BG = "#0B1F3A";
 
 type Props = {
   children: ReactNode;
