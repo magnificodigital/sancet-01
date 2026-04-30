@@ -355,23 +355,15 @@ const Index = () => {
             Pronto para cuidar da sua saúde?
           </h2>
           <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto">
-            Agende agora seus exames e vacinas de forma rápida e segura
+            Agende agora seus exames de forma rápida e segura
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex justify-center">
             <Button
               asChild
               size="lg"
               className="rounded-pill bg-background text-primary hover:bg-background/90 font-semibold px-8 h-12"
             >
               <Link to="/exames">Agendar Exames</Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="rounded-pill bg-transparent border-white text-white hover:bg-white/10 hover:text-white font-semibold px-8 h-12"
-            >
-              <Link to="/vacinas">Ver Vacinas</Link>
             </Button>
           </div>
         </div>
