@@ -2,19 +2,31 @@ import { ReactNode, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Building2,
+  ChevronDown,
   ClipboardList,
   FlaskConical,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
   RefreshCw,
   Settings2,
+  UserCircle,
   Users,
   X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import logoLight from "@/assets/logo-sancet-light.png";
 
 export type StaffTab =
   | "visao"
@@ -35,6 +47,8 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "config", label: "Configurações", icon: Settings2 },
 ];
 
+const SIDEBAR_BG = "#0A0A0A";
+
 type Props = {
   children: ReactNode;
   abaAtiva: StaffTab;
@@ -54,10 +68,10 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
   const Sidebar = (
     <aside
       className="flex w-60 shrink-0 flex-col text-white"
-      style={{ backgroundColor: "#1B3A6B" }}
+      style={{ backgroundColor: SIDEBAR_BG }}
     >
-      <div className="px-5 py-6">
-        <p className="text-xl font-bold">Sancet</p>
+      <div className="flex flex-col items-start gap-2 px-5 py-6">
+        <img src={logoLight} alt="Sancet" className="h-10 w-auto" />
         <p className="text-xs text-white/60">Painel Interno</p>
       </div>
       <hr className="border-white/15" />
@@ -85,20 +99,37 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
         })}
       </nav>
 
-      <div className="border-t border-white/15 p-4">
-        {emailUsuario && (
-          <p className="mb-2 truncate text-xs text-white/70" title={emailUsuario}>
-            {emailUsuario}
-          </p>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={sair}
-          className="w-full justify-start gap-2 text-white hover:bg-white/10 hover:text-white"
-        >
-          <LogOut className="h-4 w-4" /> Sair
-        </Button>
+      <div className="border-t border-white/15 p-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-white/10"
+              aria-label="Minha conta"
+            >
+              <UserCircle className="h-5 w-5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate" title={emailUsuario ?? ""}>
+                {emailUsuario ?? "Minha conta"}
+              </span>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-56">
+            <DropdownMenuLabel className="font-normal text-xs text-muted-foreground">
+              Minha conta
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => navigate("/staff/alterar-senha")}
+              className="cursor-pointer"
+            >
+              <KeyRound className="mr-2 h-4 w-4" /> Alterar senha
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={sair} className="cursor-pointer text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" /> Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   );
@@ -132,7 +163,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
           >
             {mobileAberto ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <p className="text-sm font-bold" style={{ color: "#1B3A6B" }}>
+          <p className="text-sm font-bold text-foreground">
             Sancet · Painel Interno
           </p>
         </header>

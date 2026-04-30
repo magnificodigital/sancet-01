@@ -15,6 +15,7 @@ import Agendamentos from "./pages/Agendamentos.tsx";
 import Pronto from "./pages/Pronto.tsx";
 import StaffLogin from "./pages/StaffLogin.tsx";
 import StaffDashboard from "./pages/StaffDashboard.tsx";
+import StaffAlterarSenha from "./pages/StaffAlterarSenha.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/pronto/:protocolo" element={<Pronto />} />
           <Route path="/staff/login" element={<StaffLogin />} />
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
+          <Route path="/staff/alterar-senha" element={<StaffAlterarSenha />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
