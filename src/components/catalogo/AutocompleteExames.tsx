@@ -118,7 +118,7 @@ export const AutocompleteExames = ({
         )}
         <Button
           type="submit"
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 h-11 rounded-pill bg-black hover:bg-black/90 text-white font-semibold px-5"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 h-11 rounded-pill bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold px-5"
         >
           <Search className="h-4 w-4" />
           Buscar
