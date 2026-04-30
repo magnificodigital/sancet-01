@@ -72,10 +72,14 @@ const Entrar = () => {
 
   return (
     <PageShell>
-      <div className="container py-8 md:py-12">
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-stretch">
-          {/* Coluna esquerda — formulário */}
-          <div className="flex flex-col">
+      <div
+        className="relative min-h-[calc(100vh-7rem)] bg-cover bg-center"
+        style={{ backgroundImage: `url(${IMAGEM})` }}
+      >
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="relative container py-8 md:py-12">
+          <div className="max-w-md mx-auto md:mx-0 bg-white/95 backdrop-blur rounded-2xl p-6 md:p-8 shadow-xl">
+            <div className="flex flex-col">
             <button
               type="button"
               onClick={() => navigate(-1)}
