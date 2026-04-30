@@ -64,8 +64,7 @@ const StaffLogin = () => {
         className="w-full max-w-[400px] rounded-2xl bg-white p-10"
         style={{ boxShadow: "0 25px 50px -12px rgba(0,0,0,0.4)" }}
       >
-        <div className="mb-2 flex flex-col items-center gap-3">
-          <img src={logoLight} alt="Sancet" className="h-14 w-auto bg-black rounded-md p-2" />
+        <div className="mb-2">
           <p className="text-xs text-muted-foreground">Painel Interno</p>
         </div>
 
