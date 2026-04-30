@@ -139,11 +139,11 @@ const Index = () => {
               </div>
               <Button
                 asChild
-                className="h-14 rounded-pill bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold gap-2 px-6 shadow-lg"
+                className="h-14 rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold gap-2 px-6 shadow-lg"
               >
                 <Link to="/enviar-pedido" aria-label="Escanear pedido médico">
                   <ScanLine className="h-5 w-5" />
-                  Escanear pedido com IA
+                  Escanear pedido
                 </Link>
               </Button>
             </div>
