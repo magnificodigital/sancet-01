@@ -175,6 +175,49 @@ export const AbaConfiguracoes = () => {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Gateway de Pagamento</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Selecione o gateway ativo e preencha as chaves correspondentes. O cliente deverá inserir suas próprias credenciais.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-1.5">
+            <Label>Gateway ativo</Label>
+            <Select
+              value={configs["GATEWAY_ATIVO"] ?? ""}
+              onValueChange={(v) => set("GATEWAY_ATIVO", v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o gateway..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asaas">Asaas</SelectItem>
+                <SelectItem value="mercadopago">Mercado Pago</SelectItem>
+                <SelectItem value="paghiper">Paghiper</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Asaas</p>
+            {campo("ASAAS_API_KEY", "API Key", "$aact_...")}
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Mercado Pago</p>
+            {campo("MERCADOPAGO_ACCESS_TOKEN", "Access Token", "APP_USR-...")}
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Paghiper</p>
+            {campo("PAGHIPER_API_KEY", "API Key", "apk_...")}
+            {campo("PAGHIPER_TOKEN", "Token", "...")}
+          </div>
+        </CardContent>
+      </Card>
+
       <Button
         onClick={salvar}
         disabled={salvando}
