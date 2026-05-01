@@ -203,7 +203,13 @@ const Cadastro = () => {
       toast.success("Cadastro realizado com sucesso!");
       navigate("/agendamentos");
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao cadastrar.");
+      if (err?.code === "23505") {
+        toast.error("Este CPF já possui cadastro. Faça login para continuar.", {
+          action: { label: "Entrar", onClick: () => navigate("/entrar") },
+        });
+      } else {
+        toast.error(err?.message ?? "Erro ao cadastrar.");
+      }
       console.error(err);
     } finally {
       setCarregando(false);
