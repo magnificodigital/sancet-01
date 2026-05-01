@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Loader2, ImageOff, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ type Un = {
   horario: string | null;
   aceita_domicilio: boolean;
   ativo: boolean;
+  foto_url: string | null;
 };
 
 type Form = {
@@ -46,12 +47,13 @@ type Form = {
   horario: string;
   aceita_domicilio: boolean;
   ativo: boolean;
+  foto_url: string;
 };
 
 const FORM_VAZIO: Form = {
   codigo_shift: "", nome: "", endereco: "", bairro: "",
   cidade: "", uf: "", telefone: "", horario: "",
-  aceita_domicilio: true, ativo: true,
+  aceita_domicilio: true, ativo: true, foto_url: "",
 };
 
 export const AbaUnidades = () => {
@@ -60,11 +62,12 @@ export const AbaUnidades = () => {
   const [editando, setEditando] = useState<Un | null>(null);
   const [form, setForm] = useState<Form>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const carregar = async () => {
     const { data } = await supabase
       .from("unidades_cache")
-      .select("id, codigo_shift, nome, endereco, bairro, cidade, uf, telefone, horarios, aceita_domicilio, ativo")
+      .select("id, codigo_shift, nome, endereco, bairro, cidade, uf, telefone, horarios, aceita_domicilio, ativo, foto_url")
       .order("nome");
 
     const mapped: Un[] = (data ?? []).map((u: any) => ({
@@ -79,6 +82,7 @@ export const AbaUnidades = () => {
       horario: typeof u.horarios === "string" ? u.horarios : (u.horarios?.texto ?? null),
       aceita_domicilio: !!u.aceita_domicilio,
       ativo: !!u.ativo,
+      foto_url: u.foto_url ?? null,
     }));
     setUnidades(mapped);
   };
@@ -104,6 +108,7 @@ export const AbaUnidades = () => {
       horario:         u.horario ?? "",
       aceita_domicilio: u.aceita_domicilio,
       ativo:           u.ativo,
+      foto_url:        u.foto_url ?? "",
     });
     setDrawerAberto(true);
   };
@@ -130,6 +135,7 @@ export const AbaUnidades = () => {
       horarios:         form.horario.trim() ? { texto: form.horario.trim() } : null,
       aceita_domicilio: form.aceita_domicilio,
       ativo:            form.ativo,
+      foto_url:         form.foto_url || null,
       atualizado_em:    new Date().toISOString(),
     };
 
@@ -156,6 +162,26 @@ export const AbaUnidades = () => {
     toast.success(novo ? "Ativada" : "Desativada");
   };
 
+  const onSelecionarFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const path = `unidades/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage
+        .from("imagens-exames")
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("imagens-exames").getPublicUrl(path);
+      set("foto_url", data.publicUrl);
+    } catch {
+      toast.error("Erro ao enviar foto");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -174,6 +200,7 @@ export const AbaUnidades = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[60px]">Foto</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Endereço</TableHead>
               <TableHead>Cidade/UF</TableHead>
@@ -187,6 +214,15 @@ export const AbaUnidades = () => {
           <TableBody>
             {unidades.map((u) => (
               <TableRow key={u.id}>
+                <TableCell>
+                  {u.foto_url ? (
+                    <img src={u.foto_url} alt={u.nome} className="h-10 w-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                      <ImageOff className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="max-w-[220px] truncate">{u.nome}</TableCell>
                 <TableCell className="max-w-[220px] truncate">{u.endereco ?? "—"}</TableCell>
                 <TableCell>{u.cidade ? `${u.cidade}${u.uf ? "/" + u.uf : ""}` : "—"}</TableCell>
@@ -205,7 +241,7 @@ export const AbaUnidades = () => {
             ))}
             {unidades.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                   Nenhuma unidade. Clique em "Nova unidade" para adicionar.
                 </TableCell>
               </TableRow>
@@ -298,6 +334,33 @@ export const AbaUnidades = () => {
                 onChange={(e) => set("horario", e.target.value)}
                 placeholder="Seg–Sex 7h–17h / Sáb 7h–12h"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Foto da unidade</Label>
+              {form.foto_url && (
+                <img
+                  src={form.foto_url}
+                  alt="Prévia da foto da unidade"
+                  className="max-h-32 w-full rounded-lg object-cover"
+                />
+              )}
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground hover:bg-muted">
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Enviando...
+                  </>
+                ) : (
+                  <>Escolher imagem</>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={onSelecionarFoto}
+                />
+              </label>
             </div>
 
             <div className="flex items-center justify-between rounded-md border p-3">

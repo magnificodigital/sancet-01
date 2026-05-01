@@ -286,6 +286,7 @@ export type Database = {
           created_at: string | null
           email: string | null
           endereco: string | null
+          foto_url: string | null
           horarios: Json | null
           id: string
           latitude: number | null
@@ -306,6 +307,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           endereco?: string | null
+          foto_url?: string | null
           horarios?: Json | null
           id?: string
           latitude?: number | null
@@ -326,6 +328,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           endereco?: string | null
+          foto_url?: string | null
           horarios?: Json | null
           id?: string
           latitude?: number | null
