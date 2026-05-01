@@ -93,9 +93,13 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
       .order("created_at", { ascending: false });
     setResultados((data as any) ?? []);
   };
+
+  useEffect(() => {
     if (!pedido) return;
     setNovoStatus(pedido.status);
     setPaciente(null);
+    setResultados([]);
+    carregarResultados(pedido.protocolo);
     if (pedido.paciente_id) {
       supabase
         .from("pacientes")
