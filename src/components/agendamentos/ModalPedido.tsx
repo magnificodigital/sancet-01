@@ -37,6 +37,20 @@ const ETAPAS = [
 
 export const ModalPedido = ({ pedido, onClose }: Props) => {
   const qc = useQueryClient();
+  const [resultados, setResultados] = useState<
+    Array<{ id: string; nome_arquivo: string; arquivo_url: string; created_at: string }>
+  >([]);
+
+  useEffect(() => {
+    if (!pedido) return;
+    setResultados([]);
+    supabase
+      .from("resultados")
+      .select("id, nome_arquivo, arquivo_url, created_at")
+      .eq("pedido_protocolo", pedido.protocolo)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setResultados((data as any) ?? []));
+  }, [pedido]);
 
   const cancelar = async () => {
     if (!pedido) return;
