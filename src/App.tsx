@@ -12,6 +12,7 @@ import EnviarReceita from "./pages/EnviarReceita.tsx";
 import Cadastro from "./pages/Cadastro.tsx";
 import Entrar from "./pages/Entrar.tsx";
 import Agendamentos from "./pages/Agendamentos.tsx";
+import Unidades from "./pages/Unidades.tsx";
 import Pronto from "./pages/Pronto.tsx";
 import Pagamento from "./pages/Pagamento.tsx";
 import StaffLogin from "./pages/StaffLogin.tsx";
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/entrar" element={<Entrar />} />
           <Route path="/agendamentos" element={<Agendamentos />} />
+          <Route path="/unidades" element={<Unidades />} />
           <Route path="/pronto/:protocolo" element={<Pronto />} />
           <Route path="/pagamento/:protocolo" element={<Pagamento />} />
           <Route path="/staff/login" element={<StaffLogin />} />

@@ -1,5 +1,8 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
+  Building2,
   FlaskConical,
   Syringe,
   ShieldCheck,
@@ -9,6 +12,7 @@ import {
   ScanLine,
   ClipboardList,
   MapPin,
+  Phone,
   CheckCircle2,
 } from "lucide-react";
 import { AutocompleteExames } from "@/components/catalogo/AutocompleteExames";
@@ -55,23 +59,15 @@ const passos = [
   },
 ];
 
-const unidades = [
-  {
-    nome: "Unidade Centro",
-    endereco: "Rua das Flores, 123 — Centro",
-    horario: "Seg–Sex 07h–18h · Sáb 07h–13h",
-  },
-  {
-    nome: "Unidade Norte",
-    endereco: "Av. Brasil, 456 — Bairro Norte",
-    horario: "Seg–Sex 07h–18h · Sáb 07h–13h",
-  },
-  {
-    nome: "Unidade Sul",
-    endereco: "Rua das Palmeiras, 789 — Bairro Sul",
-    horario: "Seg–Sex 07h–17h",
-  },
-];
+type UnidadeHome = {
+  id: string;
+  nome: string;
+  cidade: string | null;
+  uf: string | null;
+  telefone: string | null;
+  foto_url: string | null;
+  horario: string | null;
+};
 
 const faqs = [
   {
@@ -107,6 +103,29 @@ const SectionTag = ({ children }: { children: React.ReactNode }) => (
 );
 
 const Index = () => {
+  const [unidades, setUnidades] = useState<UnidadeHome[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("unidades_cache")
+        .select("id, nome, cidade, uf, telefone, foto_url, horarios")
+        .eq("ativo", true)
+        .order("nome")
+        .limit(3);
+      const lista: UnidadeHome[] = (data ?? []).map((u: any) => ({
+        id: u.id,
+        nome: u.nome,
+        cidade: u.cidade,
+        uf: u.uf,
+        telefone: u.telefone,
+        foto_url: u.foto_url,
+        horario: typeof u.horarios === "string" ? u.horarios : (u.horarios?.texto ?? null),
+      }));
+      setUnidades(lista);
+    })();
+  }, []);
+
   return (
     <PageShell>
       {/* SEÇÃO 1 — HERO */}
@@ -284,34 +303,52 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
             {unidades.map((u) => (
               <div
-                key={u.nome}
-                className="border border-border rounded-xl p-6 flex flex-col gap-3 bg-background"
+                key={u.id}
+                className="border border-border rounded-xl overflow-hidden flex flex-col bg-background"
               >
-                <MapPin className="h-7 w-7 text-primary" />
-                <h3 className="font-bold text-secondary text-lg">{u.nome}</h3>
-                <p className="text-sm text-muted-foreground">{u.endereco}</p>
-                <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4 mt-0.5 shrink-0" />
-                  <span>{u.horario}</span>
+                {u.foto_url ? (
+                  <img src={u.foto_url} alt={u.nome} className="h-40 w-full object-cover" />
+                ) : (
+                  <div className="h-40 w-full bg-muted flex items-center justify-center">
+                    <Building2 className="h-12 w-12 text-muted-foreground/40" />
+                  </div>
+                )}
+                <div className="p-5 flex flex-col gap-2">
+                  <h3 className="font-bold text-secondary text-lg">{u.nome}</h3>
+                  {(u.cidade || u.uf) && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <MapPin className="h-4 w-4 shrink-0" />
+                      {[u.cidade, u.uf].filter(Boolean).join(" / ")}
+                    </p>
+                  )}
+                  {u.telefone && (
+                    <a href={`tel:${u.telefone}`} className="text-sm flex items-center gap-2 hover:underline">
+                      <Phone className="h-4 w-4 shrink-0" />
+                      {u.telefone}
+                    </a>
+                  )}
+                  {u.horario && (
+                    <p className="text-sm text-muted-foreground flex items-start gap-2">
+                      <Clock className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>{u.horario}</span>
+                    </p>
+                  )}
                 </div>
-                <a
-                  href="#"
-                  className="text-sm font-semibold text-primary hover:underline mt-1"
-                >
-                  Ver no mapa →
-                </a>
               </div>
             ))}
           </div>
 
           <div className="flex justify-center">
             <Button
+              asChild
               variant="outline"
-              className="rounded-pill border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground px-8"
+              className="rounded-pill px-8"
+              style={{ borderColor: "#1B3A6B", color: "#1B3A6B" }}
             >
-              Ver todas as unidades
+              <Link to="/unidades">Ver todas as unidades →</Link>
             </Button>
           </div>
+
         </div>
       </section>
 
