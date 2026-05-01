@@ -136,6 +136,7 @@ export const AbaUnidades = () => {
       cidade:           form.cidade.trim() || null,
       uf:               form.uf || null,
       telefone:         form.telefone.trim() || null,
+      email:            form.email.trim() || null,
       horarios:         form.horario.trim() ? { texto: form.horario.trim() } : null,
       aceita_domicilio: form.aceita_domicilio,
       ativo:            form.ativo,
