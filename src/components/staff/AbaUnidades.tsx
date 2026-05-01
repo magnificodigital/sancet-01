@@ -108,6 +108,7 @@ export const AbaUnidades = () => {
       cidade:          u.cidade ?? "",
       uf:              u.uf ?? "",
       telefone:        u.telefone ?? "",
+      email:           u.email ?? "",
       horario:         u.horario ?? "",
       aceita_domicilio: u.aceita_domicilio,
       ativo:           u.ativo,
