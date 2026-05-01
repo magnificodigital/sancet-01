@@ -30,6 +30,7 @@ type Un = {
   cidade: string | null;
   uf: string | null;
   telefone: string | null;
+  email: string | null;
   horario: string | null;
   aceita_domicilio: boolean;
   ativo: boolean;
@@ -44,6 +45,7 @@ type Form = {
   cidade: string;
   uf: string;
   telefone: string;
+  email: string;
   horario: string;
   aceita_domicilio: boolean;
   ativo: boolean;
@@ -52,7 +54,7 @@ type Form = {
 
 const FORM_VAZIO: Form = {
   codigo_shift: "", nome: "", endereco: "", bairro: "",
-  cidade: "", uf: "", telefone: "", horario: "",
+  cidade: "", uf: "", telefone: "", email: "", horario: "",
   aceita_domicilio: true, ativo: true, foto_url: "",
 };
 
