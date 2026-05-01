@@ -162,6 +162,26 @@ export const AbaUnidades = () => {
     toast.success(novo ? "Ativada" : "Desativada");
   };
 
+  const onSelecionarFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const path = `unidades/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage
+        .from("imagens-exames")
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("imagens-exames").getPublicUrl(path);
+      set("foto_url", data.publicUrl);
+    } catch {
+      toast.error("Erro ao enviar foto");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
