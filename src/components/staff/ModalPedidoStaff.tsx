@@ -334,6 +334,59 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                 </>
               )}
           </TabsContent>
+
+          <TabsContent value="resultados" className="space-y-3 pt-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,image/*"
+              className="hidden"
+              onChange={onSelecionarArquivo}
+            />
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadando}
+            >
+              {uploadando ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {uploadando ? "Enviando..." : "Upload de resultado"}
+            </Button>
+
+            {resultados.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum resultado enviado</p>
+            ) : (
+              <ul className="divide-y rounded-lg border bg-white">
+                {resultados.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{r.nome_arquivo}</p>
+                      <p className="text-xs text-muted-foreground">{formatarData(r.created_at)}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(r.arquivo_url, "_blank", "noopener,noreferrer")}
+                    >
+                      Abrir
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => excluirResultado(r.id, r.arquivo_url)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>
