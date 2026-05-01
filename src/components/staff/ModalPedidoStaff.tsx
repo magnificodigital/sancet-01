@@ -79,8 +79,20 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const [novoStatus, setNovoStatus] = useState<string>(pedido?.status ?? "novo");
   const [salvando, setSalvando] = useState(false);
   const [paciente, setPaciente] = useState<PacienteFull | null>(null);
+  const [resultados, setResultados] = useState<
+    Array<{ id: string; nome_arquivo: string; arquivo_url: string; created_at: string }>
+  >([]);
+  const [uploadando, setUploadando] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
+  const carregarResultados = async (protocolo: string) => {
+    const { data } = await supabase
+      .from("resultados")
+      .select("id,nome_arquivo,arquivo_url,created_at")
+      .eq("pedido_protocolo", protocolo)
+      .order("created_at", { ascending: false });
+    setResultados((data as any) ?? []);
+  };
     if (!pedido) return;
     setNovoStatus(pedido.status);
     setPaciente(null);
