@@ -34,35 +34,21 @@ serve(async (req) => {
       );
     }
 
-    // 2. Ler FormData
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    const catalogoRaw = formData.get("catalogo") as string | null;
+    // 2. Ler JSON
+    const { fileBase64, mimeType: mimeTypeReq, catalogo } = await req.json();
 
-    if (!file || !catalogoRaw) {
+    if (!fileBase64 || !catalogo) {
       return new Response(
         JSON.stringify({ error: "Arquivo ou catálogo ausente." }),
         { status: 400, headers: cors }
       );
     }
 
-    // 3. Converter arquivo para base64 (em chunks, p/ evitar estouro de stack)
-    const arrayBuffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = "";
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode.apply(
-        null,
-        Array.from(bytes.subarray(i, i + chunk)) as unknown as number[],
-      );
-    }
-    const base64 = btoa(binary);
-    const mimeType = file.type || "image/jpeg";
+    const base64 = fileBase64;
+    const mimeType = mimeTypeReq || "image/jpeg";
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
-    // 4. Montar catálogo enxuto
-    const catalogo = JSON.parse(catalogoRaw);
+    // 3. Montar catálogo enxuto
     const catalogoTexto = catalogo
       .map((c: any) => {
         const outros = (c.outros_nomes ?? []).join(", ");
