@@ -336,6 +336,33 @@ export const AbaUnidades = () => {
               />
             </div>
 
+            <div className="space-y-1.5">
+              <Label>Foto da unidade</Label>
+              {form.foto_url && (
+                <img
+                  src={form.foto_url}
+                  alt="Prévia da foto da unidade"
+                  className="max-h-32 w-full rounded-lg object-cover"
+                />
+              )}
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground hover:bg-muted">
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Enviando...
+                  </>
+                ) : (
+                  <>Escolher imagem</>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={onSelecionarFoto}
+                />
+              </label>
+            </div>
+
             <div className="flex items-center justify-between rounded-md border p-3">
               <Label className="cursor-pointer">Atende em domicílio</Label>
               <Switch
