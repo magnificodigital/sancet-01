@@ -110,7 +110,7 @@ const EnviarPedido = () => {
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Link>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        <div className="mx-auto max-w-2xl">
           <div>
             {etapa === 1 && (
               <EtapaTipoAtendimento onEscolher={handleEscolherModalidade} />
@@ -141,16 +141,6 @@ const EnviarPedido = () => {
                 onConfirmar={handleConfirmarPedido}
               />
             )}
-          </div>
-
-          <div className="hidden md:block">
-            <div className="rounded-2xl overflow-hidden bg-[#F5F5F5] aspect-[4/5]">
-              <img
-                src={IMG}
-                alt="Atendimento Sancet"
-                className="w-full h-full object-cover"
-              />
-            </div>
           </div>
         </div>
       </div>
