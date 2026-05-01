@@ -200,6 +200,7 @@ export const AbaUnidades = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[60px]">Foto</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Endereço</TableHead>
               <TableHead>Cidade/UF</TableHead>
