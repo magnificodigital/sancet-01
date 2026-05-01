@@ -274,6 +274,36 @@ export type Database = {
           },
         ]
       }
+      resultados: {
+        Row: {
+          arquivo_url: string
+          created_at: string | null
+          id: string
+          nome_arquivo: string
+          observacao: string | null
+          paciente_cpf: string
+          pedido_protocolo: string
+        }
+        Insert: {
+          arquivo_url: string
+          created_at?: string | null
+          id?: string
+          nome_arquivo: string
+          observacao?: string | null
+          paciente_cpf: string
+          pedido_protocolo: string
+        }
+        Update: {
+          arquivo_url?: string
+          created_at?: string | null
+          id?: string
+          nome_arquivo?: string
+          observacao?: string | null
+          paciente_cpf?: string
+          pedido_protocolo?: string
+        }
+        Relationships: []
+      }
       unidades_cache: {
         Row: {
           aceita_domicilio: boolean

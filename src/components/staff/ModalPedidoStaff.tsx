@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Upload, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Sheet,
@@ -79,11 +79,27 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const [novoStatus, setNovoStatus] = useState<string>(pedido?.status ?? "novo");
   const [salvando, setSalvando] = useState(false);
   const [paciente, setPaciente] = useState<PacienteFull | null>(null);
+  const [resultados, setResultados] = useState<
+    Array<{ id: string; nome_arquivo: string; arquivo_url: string; created_at: string }>
+  >([]);
+  const [uploadando, setUploadando] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const carregarResultados = async (protocolo: string) => {
+    const { data } = await supabase
+      .from("resultados")
+      .select("id,nome_arquivo,arquivo_url,created_at")
+      .eq("pedido_protocolo", protocolo)
+      .order("created_at", { ascending: false });
+    setResultados((data as any) ?? []);
+  };
 
   useEffect(() => {
     if (!pedido) return;
     setNovoStatus(pedido.status);
     setPaciente(null);
+    setResultados([]);
+    carregarResultados(pedido.protocolo);
     if (pedido.paciente_id) {
       supabase
         .from("pacientes")
@@ -117,6 +133,52 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     onClose();
   };
 
+  const onSelecionarArquivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !pedido) return;
+    setUploadando(true);
+    try {
+      const path = `resultados/${pedido.protocolo}-${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage
+        .from("imagens-exames")
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("imagens-exames").getPublicUrl(path);
+      const { error: insErr } = await supabase.from("resultados").insert({
+        pedido_protocolo: pedido.protocolo,
+        paciente_cpf: pedido.paciente_cpf,
+        nome_arquivo: file.name,
+        arquivo_url: pub.publicUrl,
+      });
+      if (insErr) throw insErr;
+      await carregarResultados(pedido.protocolo);
+      toast.success("Resultado enviado!");
+    } catch (err) {
+      toast.error("Erro ao enviar resultado");
+    } finally {
+      setUploadando(false);
+    }
+  };
+
+  const excluirResultado = async (id: string, arquivoUrl: string) => {
+    if (!pedido) return;
+    try {
+      const marker = "/imagens-exames/";
+      const idx = arquivoUrl.indexOf(marker);
+      const path = idx >= 0 ? arquivoUrl.slice(idx + marker.length) : null;
+      const { error: delErr } = await supabase.from("resultados").delete().eq("id", id);
+      if (delErr) throw delErr;
+      if (path) {
+        await supabase.storage.from("imagens-exames").remove([path]);
+      }
+      await carregarResultados(pedido.protocolo);
+      toast.success("Resultado excluído");
+    } catch {
+      toast.error("Erro ao excluir resultado");
+    }
+  };
+
   return (
     <Sheet open={!!pedido} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-[560px] overflow-y-auto">
@@ -132,6 +194,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
             <TabsTrigger value="dados" className="flex-1">Dados do pedido</TabsTrigger>
             <TabsTrigger value="paciente" className="flex-1">Paciente</TabsTrigger>
             <TabsTrigger value="docs" className="flex-1">Documentos</TabsTrigger>
+            <TabsTrigger value="resultados" className="flex-1">Resultados</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
@@ -270,6 +333,59 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                   <DocLink label="Ver identidade" url={pedido.url_identidade} />
                 </>
               )}
+          </TabsContent>
+
+          <TabsContent value="resultados" className="space-y-3 pt-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,image/*"
+              className="hidden"
+              onChange={onSelecionarArquivo}
+            />
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadando}
+            >
+              {uploadando ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {uploadando ? "Enviando..." : "Upload de resultado"}
+            </Button>
+
+            {resultados.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum resultado enviado</p>
+            ) : (
+              <ul className="divide-y rounded-lg border bg-white">
+                {resultados.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{r.nome_arquivo}</p>
+                      <p className="text-xs text-muted-foreground">{formatarData(r.created_at)}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(r.arquivo_url, "_blank", "noopener,noreferrer")}
+                    >
+                      Abrir
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => excluirResultado(r.id, r.arquivo_url)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </TabsContent>
         </Tabs>
       </SheetContent>
