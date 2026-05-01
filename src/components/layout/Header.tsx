@@ -27,7 +27,7 @@ const Logo = ({ dark }: { dark: boolean }) => (
     <img
       src={dark ? logoLight : logoDark}
       alt="Sancet Medicina Diagnóstica"
-      className="h-14 w-auto drop-shadow"
+      className={cn("w-auto drop-shadow", dark ? "h-14" : "h-24")}
     />
   </Link>
 );
