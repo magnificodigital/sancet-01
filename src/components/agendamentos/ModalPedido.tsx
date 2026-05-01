@@ -13,7 +13,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Circle, CheckCircle2 } from "lucide-react";
+import { Circle, CheckCircle2, Download } from "lucide-react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,20 @@ const ETAPAS = [
 
 export const ModalPedido = ({ pedido, onClose }: Props) => {
   const qc = useQueryClient();
+  const [resultados, setResultados] = useState<
+    Array<{ id: string; nome_arquivo: string; arquivo_url: string; created_at: string }>
+  >([]);
+
+  useEffect(() => {
+    if (!pedido) return;
+    setResultados([]);
+    supabase
+      .from("resultados")
+      .select("id, nome_arquivo, arquivo_url, created_at")
+      .eq("pedido_protocolo", pedido.protocolo)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setResultados((data as any) ?? []));
+  }, [pedido]);
 
   const cancelar = async () => {
     if (!pedido) return;
@@ -135,6 +150,34 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
             <p className="text-lg font-bold text-[#C8102E]">
               {formatarPreco(pedido.valor_total_centavos ?? 0)}
             </p>
+          </section>
+
+          <section>
+            <h4 className="text-sm font-semibold mb-2">Resultados</h4>
+            {resultados.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Resultado ainda não disponível.</p>
+            ) : (
+              <ul className="space-y-2">
+                {resultados.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium truncate max-w-[220px]">{r.nome_arquivo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(r.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 border-[#1B3A6B] text-[#1B3A6B]"
+                      onClick={() => window.open(r.arquivo_url, "_blank", "noopener,noreferrer")}
+                    >
+                      <Download className="h-3.5 w-3.5" /> Baixar
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section>
