@@ -135,6 +135,7 @@ export const AbaUnidades = () => {
       horarios:         form.horario.trim() ? { texto: form.horario.trim() } : null,
       aceita_domicilio: form.aceita_domicilio,
       ativo:            form.ativo,
+      foto_url:         form.foto_url || null,
       atualizado_em:    new Date().toISOString(),
     };
 
