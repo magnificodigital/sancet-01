@@ -49,6 +49,7 @@ const Agendamentos = () => {
 
   const agendados = (pedidos ?? []).filter((p) => STATUS_AGENDADOS.includes(p.status));
   const cancelados = (pedidos ?? []).filter((p) => p.status === "cancelado");
+  const concluidos = (pedidos ?? []).filter((p) => p.status === "concluido");
 
   const Vazio = () => (
     <div className="rounded-xl bg-[#F5F5F5] p-10 text-center space-y-4">
@@ -72,6 +73,7 @@ const Agendamentos = () => {
               <Tabs defaultValue="agendados">
                 <TabsList>
                   <TabsTrigger value="agendados">Agendados</TabsTrigger>
+                  <TabsTrigger value="concluidos">Concluídos</TabsTrigger>
                   <TabsTrigger value="cancelados">Cancelados</TabsTrigger>
                 </TabsList>
 
@@ -85,6 +87,20 @@ const Agendamentos = () => {
                     <Vazio />
                   ) : (
                     agendados.map((p) => (
+                      <CardPedido key={p.id} pedido={p} onVerDetalhes={setDetalhe} />
+                    ))
+                  )}
+                </TabsContent>
+
+                <TabsContent value="concluidos" className="mt-4 space-y-3">
+                  {isLoading ? (
+                    <Skeleton className="h-32 w-full" />
+                  ) : concluidos.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12">
+                      Nenhum exame concluído ainda.
+                    </p>
+                  ) : (
+                    concluidos.map((p) => (
                       <CardPedido key={p.id} pedido={p} onVerDetalhes={setDetalhe} />
                     ))
                   )}
