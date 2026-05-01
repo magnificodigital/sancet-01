@@ -81,6 +81,7 @@ export const AbaUnidades = () => {
       cidade: u.cidade ?? null,
       uf: u.uf ?? null,
       telefone: u.telefone ?? null,
+      email: u.email ?? null,
       horario: typeof u.horarios === "string" ? u.horarios : (u.horarios?.texto ?? null),
       aceita_domicilio: !!u.aceita_domicilio,
       ativo: !!u.ativo,
