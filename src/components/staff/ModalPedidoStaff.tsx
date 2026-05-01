@@ -133,6 +133,52 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     onClose();
   };
 
+  const onSelecionarArquivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !pedido) return;
+    setUploadando(true);
+    try {
+      const path = `resultados/${pedido.protocolo}-${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage
+        .from("imagens-exames")
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("imagens-exames").getPublicUrl(path);
+      const { error: insErr } = await supabase.from("resultados").insert({
+        pedido_protocolo: pedido.protocolo,
+        paciente_cpf: pedido.paciente_cpf,
+        nome_arquivo: file.name,
+        arquivo_url: pub.publicUrl,
+      });
+      if (insErr) throw insErr;
+      await carregarResultados(pedido.protocolo);
+      toast.success("Resultado enviado!");
+    } catch (err) {
+      toast.error("Erro ao enviar resultado");
+    } finally {
+      setUploadando(false);
+    }
+  };
+
+  const excluirResultado = async (id: string, arquivoUrl: string) => {
+    if (!pedido) return;
+    try {
+      const marker = "/imagens-exames/";
+      const idx = arquivoUrl.indexOf(marker);
+      const path = idx >= 0 ? arquivoUrl.slice(idx + marker.length) : null;
+      const { error: delErr } = await supabase.from("resultados").delete().eq("id", id);
+      if (delErr) throw delErr;
+      if (path) {
+        await supabase.storage.from("imagens-exames").remove([path]);
+      }
+      await carregarResultados(pedido.protocolo);
+      toast.success("Resultado excluído");
+    } catch {
+      toast.error("Erro ao excluir resultado");
+    }
+  };
+
   return (
     <Sheet open={!!pedido} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-[560px] overflow-y-auto">
@@ -148,6 +194,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
             <TabsTrigger value="dados" className="flex-1">Dados do pedido</TabsTrigger>
             <TabsTrigger value="paciente" className="flex-1">Paciente</TabsTrigger>
             <TabsTrigger value="docs" className="flex-1">Documentos</TabsTrigger>
+            <TabsTrigger value="resultados" className="flex-1">Resultados</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
