@@ -1,38 +1,18 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
-    // 1. Ler configurações do Supabase
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    const { data: configRows } = await supabase
-      .from("configuracoes")
-      .select("chave, valor")
-      .in("chave", ["OPENROUTER_API_KEY", "OPENROUTER_MODELO"]);
-
-    const cfg: Record<string, string> = {};
-    (configRows ?? []).forEach((r: any) => { cfg[r.chave] = r.valor; });
-
-    console.log("DIAG cfg:", JSON.stringify(cfg));
-    console.log("DIAG apiKey presente:", !!cfg["OPENROUTER_API_KEY"]);
-
-    const apiKey = cfg["OPENROUTER_API_KEY"];
-    const modelo = cfg["OPENROUTER_MODELO"] || "google/gemini-2.5-flash-preview:free";
+    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+    const modelo = Deno.env.get("OPENROUTER_MODELO") || "google/gemini-2.5-flash-preview:free";
 
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "OPENROUTER_API_KEY não configurada no painel admin." }),
+        JSON.stringify({ error: "OPENROUTER_API_KEY não configurada nos secrets da edge function." }),
         { status: 400, headers: cors }
       );
     }
