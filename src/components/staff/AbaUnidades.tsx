@@ -108,6 +108,7 @@ export const AbaUnidades = () => {
       horario:         u.horario ?? "",
       aceita_domicilio: u.aceita_domicilio,
       ativo:           u.ativo,
+      foto_url:        u.foto_url ?? "",
     });
     setDrawerAberto(true);
   };
