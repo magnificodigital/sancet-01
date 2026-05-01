@@ -214,6 +214,15 @@ export const AbaUnidades = () => {
           <TableBody>
             {unidades.map((u) => (
               <TableRow key={u.id}>
+                <TableCell>
+                  {u.foto_url ? (
+                    <img src={u.foto_url} alt={u.nome} className="h-10 w-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                      <ImageOff className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="max-w-[220px] truncate">{u.nome}</TableCell>
                 <TableCell className="max-w-[220px] truncate">{u.endereco ?? "—"}</TableCell>
                 <TableCell>{u.cidade ? `${u.cidade}${u.uf ? "/" + u.uf : ""}` : "—"}</TableCell>
