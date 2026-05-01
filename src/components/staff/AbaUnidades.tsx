@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Loader2, ImageOff, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
