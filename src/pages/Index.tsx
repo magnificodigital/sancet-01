@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2 } from "lucide-react";
+import {
+  Building2,
   FlaskConical,
   Syringe,
   ShieldCheck,
@@ -11,6 +12,7 @@ import { Building2 } from "lucide-react";
   ScanLine,
   ClipboardList,
   MapPin,
+  Phone,
   CheckCircle2,
 } from "lucide-react";
 import { AutocompleteExames } from "@/components/catalogo/AutocompleteExames";
