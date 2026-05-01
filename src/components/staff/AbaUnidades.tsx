@@ -62,6 +62,7 @@ export const AbaUnidades = () => {
   const [editando, setEditando] = useState<Un | null>(null);
   const [form, setForm] = useState<Form>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const carregar = async () => {
     const { data } = await supabase
