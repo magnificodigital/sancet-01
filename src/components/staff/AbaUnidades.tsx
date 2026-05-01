@@ -333,6 +333,16 @@ export const AbaUnidades = () => {
             </div>
 
             <div className="space-y-1.5">
+              <Label>E-mail</Label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                placeholder="contato@sancet.com.br"
+              />
+            </div>
+
+            <div className="space-y-1.5">
               <Label>Horário de funcionamento</Label>
               <Input
                 value={form.horario}
