@@ -59,23 +59,15 @@ const passos = [
   },
 ];
 
-const unidades = [
-  {
-    nome: "Unidade Centro",
-    endereco: "Rua das Flores, 123 — Centro",
-    horario: "Seg–Sex 07h–18h · Sáb 07h–13h",
-  },
-  {
-    nome: "Unidade Norte",
-    endereco: "Av. Brasil, 456 — Bairro Norte",
-    horario: "Seg–Sex 07h–18h · Sáb 07h–13h",
-  },
-  {
-    nome: "Unidade Sul",
-    endereco: "Rua das Palmeiras, 789 — Bairro Sul",
-    horario: "Seg–Sex 07h–17h",
-  },
-];
+type UnidadeHome = {
+  id: string;
+  nome: string;
+  cidade: string | null;
+  uf: string | null;
+  telefone: string | null;
+  foto_url: string | null;
+  horario: string | null;
+};
 
 const faqs = [
   {
