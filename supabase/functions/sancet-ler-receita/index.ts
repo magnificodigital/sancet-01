@@ -24,6 +24,9 @@ serve(async (req) => {
     const cfg: Record<string, string> = {};
     (configRows ?? []).forEach((r: any) => { cfg[r.chave] = r.valor; });
 
+    console.log("DIAG cfg:", JSON.stringify(cfg));
+    console.log("DIAG apiKey presente:", !!cfg["OPENROUTER_API_KEY"]);
+
     const apiKey = cfg["OPENROUTER_API_KEY"];
     const modelo = cfg["OPENROUTER_MODELO"] || "google/gemini-2.5-flash-preview:free";
 
