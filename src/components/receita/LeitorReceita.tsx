@@ -17,6 +17,14 @@ import { UploadReceita } from "./UploadReceita";
 
 type Etapa = "upload" | "lendo" | "sucesso" | "erro";
 
+const toBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
 type CatalogoItem = {
   codigo_shift: string;
   tipo: "exame" | "vacina";
@@ -90,13 +98,16 @@ export const LeitorReceita = () => {
         outros_nomes: c.outros_nomes ?? [],
       }));
 
-      const formData = new FormData();
-      formData.append("file", arquivo);
-      formData.append("catalogo", JSON.stringify(catalogoEnxuto));
-
+      const fileBase64 = await toBase64(arquivo);
       const { data, error } = await supabase.functions.invoke(
         "sancet-ler-receita",
-        { body: formData },
+        {
+          body: {
+            fileBase64,
+            mimeType: arquivo.type || "image/jpeg",
+            catalogo: catalogoEnxuto,
+          },
+        },
       );
 
       if (error) throw error;
