@@ -153,6 +153,34 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
           </section>
 
           <section>
+            <h4 className="text-sm font-semibold mb-2">Resultados</h4>
+            {resultados.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Resultado ainda não disponível.</p>
+            ) : (
+              <ul className="space-y-2">
+                {resultados.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium truncate max-w-[220px]">{r.nome_arquivo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(r.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 border-[#1B3A6B] text-[#1B3A6B]"
+                      onClick={() => window.open(r.arquivo_url, "_blank", "noopener,noreferrer")}
+                    >
+                      <Download className="h-3.5 w-3.5" /> Baixar
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
             <h4 className="text-sm font-semibold mb-3">Linha do tempo</h4>
             <ol className="relative space-y-4 ml-2">
               {ETAPAS.map((e, idx) => {
