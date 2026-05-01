@@ -1,11 +1,12 @@
-import { CalendarDays, CreditCard, UserCircle } from "lucide-react";
+import { CalendarDays, CreditCard, UserCircle, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePaciente } from "@/hooks/usePaciente";
 
-export type AbaAgendamentos = "agendamentos" | "convenio" | "dados";
+export type AbaAgendamentos = "agendamentos" | "convenio" | "dados" | "resultados";
 
 const ITENS: { key: AbaAgendamentos; label: string; icon: any }[] = [
   { key: "agendamentos", label: "Agendamentos", icon: CalendarDays },
+  { key: "resultados", label: "Resultados", icon: FileText },
   { key: "convenio", label: "Convênio", icon: CreditCard },
   { key: "dados", label: "Dados pessoais", icon: UserCircle },
 ];
