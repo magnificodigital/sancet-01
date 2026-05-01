@@ -30,6 +30,7 @@ type Un = {
   cidade: string | null;
   uf: string | null;
   telefone: string | null;
+  email: string | null;
   horario: string | null;
   aceita_domicilio: boolean;
   ativo: boolean;
@@ -44,6 +45,7 @@ type Form = {
   cidade: string;
   uf: string;
   telefone: string;
+  email: string;
   horario: string;
   aceita_domicilio: boolean;
   ativo: boolean;
@@ -52,7 +54,7 @@ type Form = {
 
 const FORM_VAZIO: Form = {
   codigo_shift: "", nome: "", endereco: "", bairro: "",
-  cidade: "", uf: "", telefone: "", horario: "",
+  cidade: "", uf: "", telefone: "", email: "", horario: "",
   aceita_domicilio: true, ativo: true, foto_url: "",
 };
 
@@ -67,7 +69,7 @@ export const AbaUnidades = () => {
   const carregar = async () => {
     const { data } = await supabase
       .from("unidades_cache")
-      .select("id, codigo_shift, nome, endereco, bairro, cidade, uf, telefone, horarios, aceita_domicilio, ativo, foto_url")
+      .select("id, codigo_shift, nome, endereco, bairro, cidade, uf, telefone, email, horarios, aceita_domicilio, ativo, foto_url")
       .order("nome");
 
     const mapped: Un[] = (data ?? []).map((u: any) => ({
@@ -79,6 +81,7 @@ export const AbaUnidades = () => {
       cidade: u.cidade ?? null,
       uf: u.uf ?? null,
       telefone: u.telefone ?? null,
+      email: u.email ?? null,
       horario: typeof u.horarios === "string" ? u.horarios : (u.horarios?.texto ?? null),
       aceita_domicilio: !!u.aceita_domicilio,
       ativo: !!u.ativo,
@@ -105,6 +108,7 @@ export const AbaUnidades = () => {
       cidade:          u.cidade ?? "",
       uf:              u.uf ?? "",
       telefone:        u.telefone ?? "",
+      email:           u.email ?? "",
       horario:         u.horario ?? "",
       aceita_domicilio: u.aceita_domicilio,
       ativo:           u.ativo,
@@ -132,6 +136,7 @@ export const AbaUnidades = () => {
       cidade:           form.cidade.trim() || null,
       uf:               form.uf || null,
       telefone:         form.telefone.trim() || null,
+      email:            form.email.trim() || null,
       horarios:         form.horario.trim() ? { texto: form.horario.trim() } : null,
       aceita_domicilio: form.aceita_domicilio,
       ativo:            form.ativo,
@@ -324,6 +329,16 @@ export const AbaUnidades = () => {
                 value={form.telefone}
                 onChange={(e) => set("telefone", e.target.value)}
                 placeholder="(11) 3000-0000"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>E-mail</Label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                placeholder="contato@sancet.com.br"
               />
             </div>
 
