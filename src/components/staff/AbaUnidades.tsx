@@ -33,6 +33,7 @@ type Un = {
   horario: string | null;
   aceita_domicilio: boolean;
   ativo: boolean;
+  foto_url: string | null;
 };
 
 type Form = {
@@ -46,12 +47,13 @@ type Form = {
   horario: string;
   aceita_domicilio: boolean;
   ativo: boolean;
+  foto_url: string;
 };
 
 const FORM_VAZIO: Form = {
   codigo_shift: "", nome: "", endereco: "", bairro: "",
   cidade: "", uf: "", telefone: "", horario: "",
-  aceita_domicilio: true, ativo: true,
+  aceita_domicilio: true, ativo: true, foto_url: "",
 };
 
 export const AbaUnidades = () => {
