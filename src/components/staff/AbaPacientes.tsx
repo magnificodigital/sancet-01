@@ -248,14 +248,16 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-secondary">Pacientes</h1>
-        <Button
-          size="sm"
-          onClick={abrirNovo}
-          className="gap-1.5 text-white hover:opacity-90"
-          style={{ backgroundColor: COR_PRIMARIA }}
-        >
-          <UserPlus className="h-4 w-4" /> Novo paciente
-        </Button>
+        {podeEditar && (
+          <Button
+            size="sm"
+            onClick={abrirNovo}
+            className="gap-1.5 text-white hover:opacity-90"
+            style={{ backgroundColor: COR_PRIMARIA }}
+          >
+            <UserPlus className="h-4 w-4" /> Novo paciente
+          </Button>
+        )}
       </div>
 
       <div className="relative max-w-md">
