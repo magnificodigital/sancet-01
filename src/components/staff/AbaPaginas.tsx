@@ -67,6 +67,8 @@ export const AbaPaginas = () => {
   const navigate = useNavigate();
   const [paginas, setPaginas] = useState<LandingPage[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [modalTemplateAberto, setModalTemplateAberto] = useState(false);
+  const [templateEscolhido, setTemplateEscolhido] = useState<LandingTemplate | null>(null);
   const [sheetAberto, setSheetAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [titulo, setTitulo] = useState("");
