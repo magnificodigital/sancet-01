@@ -26,9 +26,11 @@ type Props = {
 const UploadImagem = ({
   value,
   onChange,
+  pasta = "landing-pages",
 }: {
   value: string;
   onChange: (url: string) => void;
+  pasta?: string;
 }) => {
   const [up, setUp] = useState(false);
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +38,7 @@ const UploadImagem = ({
     if (!file) return;
     setUp(true);
     try {
-      const path = `landing-pages/${Date.now()}-${file.name}`;
+      const path = `${pasta}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage
         .from("imagens-exames")
         .upload(path, file, { upsert: true });
