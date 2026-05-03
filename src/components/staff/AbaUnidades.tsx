@@ -58,7 +58,19 @@ const FORM_VAZIO: Form = {
   aceita_domicilio: true, ativo: true, foto_url: "",
 };
 
-export const AbaUnidades = () => {
+type Props = {
+  permissoes?: { unidades: { ver: boolean; editar: boolean; excluir: boolean } } | null;
+};
+
+export const AbaUnidades = ({ permissoes }: Props = {}) => {
+  if (permissoes?.unidades?.ver === false) {
+    return (
+      <div className="py-20 text-center text-muted-foreground">
+        Você não tem permissão para ver esta seção.
+      </div>
+    );
+  }
+  const podeEditar = permissoes?.unidades?.editar !== false;
   const [unidades, setUnidades] = useState<Un[]>([]);
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [editando, setEditando] = useState<Un | null>(null);
