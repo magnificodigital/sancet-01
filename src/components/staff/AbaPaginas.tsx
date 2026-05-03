@@ -225,8 +225,8 @@ export const AbaPaginas = () => {
               <TableHead>Título</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Criada em</TableHead>
-              <TableHead className="w-48">Ações</TableHead>
+              <TableHead>Atualizada</TableHead>
+              <TableHead className="w-64">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -235,16 +235,37 @@ export const AbaPaginas = () => {
                 <TableCell className="font-medium">{p.titulo}</TableCell>
                 <TableCell className="text-muted-foreground">/{p.slug}</TableCell>
                 <TableCell>
-                  {p.publicado ? (
-                    <Badge className="bg-green-600 hover:bg-green-600 text-white">
-                      Publicado
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">Rascunho</Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {p.publicado ? (
+                      <Badge className="bg-green-600 hover:bg-green-600 text-white">
+                        Publicado
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Rascunho</Badge>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      disabled={!p.publicado}
+                      onClick={() => window.open(`/p/${p.slug}`, "_blank")}
+                      title={p.publicado ? "Abrir página" : "Publique para abrir"}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => copiarLink(p)}
+                      title="Copiar link público"
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {new Date(p.created_at).toLocaleDateString("pt-BR")}
+                  {formatDistanceToNow(new Date(p.updated_at), { addSuffix: true, locale: ptBR })}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1.5">
@@ -261,6 +282,7 @@ export const AbaPaginas = () => {
                       variant="outline"
                       onClick={() => duplicar(p)}
                       className="gap-1"
+                      title="Duplicar"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
@@ -269,6 +291,7 @@ export const AbaPaginas = () => {
                       variant="outline"
                       onClick={() => setParaExcluir(p)}
                       className="gap-1 text-destructive hover:text-destructive"
+                      title="Excluir"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
