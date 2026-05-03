@@ -10,6 +10,7 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')
+    console.log('[1] authHeader:', authHeader ? 'presente' : 'ausente')
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: corsHeaders })
     }
@@ -21,6 +22,7 @@ Deno.serve(async (req) => {
     )
 
     const { data: { user } } = await supabaseUser.auth.getUser()
+    console.log('[2] user:', user?.id ?? 'null')
     if (!user) {
       return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: corsHeaders })
     }
@@ -31,6 +33,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .eq('role', 'admin')
       .maybeSingle()
+    console.log('[3] roleData:', JSON.stringify(roleData))
 
     if (!roleData) {
       return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: corsHeaders })
@@ -42,6 +45,7 @@ Deno.serve(async (req) => {
     )
 
     const { nome, email, senha, permissoes } = await req.json()
+    console.log('[4] body recebido:', nome, email)
 
     const { data: novoUser, error: erroCriar } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -51,6 +55,7 @@ Deno.serve(async (req) => {
     if (erroCriar || !novoUser?.user) {
       return new Response(JSON.stringify({ error: erroCriar?.message ?? 'Erro ao criar usuário' }), { status: 400, headers: corsHeaders })
     }
+    console.log('[5] novo user criado:', novoUser?.user?.id)
 
     const { error: erroRole } = await supabaseAdmin.from('user_roles').insert({
       user_id: novoUser.user.id,
@@ -65,6 +70,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders })
   } catch (e) {
+    console.error('[ERRO]', String(e))
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: corsHeaders })
   }
 })
