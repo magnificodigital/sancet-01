@@ -76,7 +76,7 @@ const formVazio: FormState = {
   ativo: true,
 };
 
-const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
+const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cache"; podeEditar: boolean }) => {
   const [itens, setItens] = useState<Item[]>([]);
   const [busca, setBusca] = useState("");
   const [drawerAberto, setDrawerAberto] = useState(false);
