@@ -78,7 +78,7 @@ const LandingPublica = () => {
     return () => {
       ativo = false;
     };
-  }, [slug]);
+  }, [slug, preview]);
 
   useEffect(() => {
     if (estado.tipo === "ok") {
