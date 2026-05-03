@@ -128,6 +128,23 @@ export const AbaPaginas = () => {
     navigate(`/staff/paginas/${data!.id}`);
   };
 
+  const slugUnico = async (base: string): Promise<string> => {
+    let candidato = base;
+    let i = 2;
+    // limita a 20 tentativas
+    for (let tries = 0; tries < 20; tries++) {
+      const { data } = await supabase
+        .from("landing_pages")
+        .select("id")
+        .eq("slug", candidato)
+        .maybeSingle();
+      if (!data) return candidato;
+      candidato = `${base}-${i}`;
+      i++;
+    }
+    return `${base}-${Date.now().toString(36)}`;
+  };
+
   const duplicar = async (p: LandingPage) => {
     const { data: full, error: e1 } = await supabase
       .from("landing_pages")
@@ -138,20 +155,36 @@ export const AbaPaginas = () => {
       toast.error(e1?.message ?? "Erro ao duplicar");
       return;
     }
-    const novoSlug = `${p.slug}-copia-${Date.now().toString(36)}`;
-    const { error: e2 } = await supabase.from("landing_pages").insert({
-      titulo: `${full.titulo} (cópia)`,
-      slug: novoSlug,
-      meta_descricao: full.meta_descricao,
-      blocos: full.blocos,
-      publicado: false,
-    });
-    if (e2) {
-      toast.error(e2.message);
+    const novoTitulo = `${full.titulo} (cópia)`;
+    const baseSlug = slugify(novoTitulo);
+    const novoSlug = await slugUnico(baseSlug);
+    const { data: nova, error: e2 } = await supabase
+      .from("landing_pages")
+      .insert({
+        titulo: novoTitulo,
+        slug: novoSlug,
+        meta_descricao: full.meta_descricao,
+        blocos: full.blocos,
+        publicado: false,
+      })
+      .select("id")
+      .single();
+    if (e2 || !nova) {
+      toast.error(e2?.message ?? "Erro ao duplicar");
       return;
     }
     toast.success("Página duplicada!");
-    carregar();
+    navigate(`/staff/paginas/${nova.id}`);
+  };
+
+  const copiarLink = async (p: LandingPage) => {
+    const url = `${window.location.origin}/p/${p.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copiado");
+    } catch {
+      toast.error("Falha ao copiar");
+    }
   };
 
   const excluir = async () => {
