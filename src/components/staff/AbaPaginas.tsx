@@ -329,6 +329,44 @@ export const AbaPaginas = () => {
         </Table>
       </div>
 
+      <Dialog open={modalTemplateAberto} onOpenChange={setModalTemplateAberto}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Escolher template</DialogTitle>
+            <DialogDescription>
+              Comece em branco ou selecione um modelo pronto. Você pode editar tudo depois.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-2">
+            {TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => escolherTemplate(t)}
+                className="group text-left rounded-xl border bg-white overflow-hidden transition hover:shadow-md hover:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+              >
+                <div
+                  className="h-28 w-full flex items-center justify-center text-white font-semibold"
+                  style={{ background: t.thumbnail_gradient, color: t.cor_principal === "#64748b" ? "#475569" : "#fff" }}
+                >
+                  {t.id === "branco" ? (
+                    <Plus className="h-8 w-8 opacity-60" />
+                  ) : (
+                    <span className="text-sm tracking-wide uppercase">{t.id === "outubro-rosa" ? "Outubro Rosa" : "Novembro Azul"}</span>
+                  )}
+                </div>
+                <div className="p-3 space-y-1">
+                  <div className="font-medium text-sm leading-tight">{t.nome}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2">{t.descricao}</div>
+                  <div className="pt-2 text-xs flex items-center gap-1 text-[#C8102E] opacity-0 group-hover:opacity-100 transition">
+                    <Check className="h-3.5 w-3.5" /> Usar este
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Sheet open={sheetAberto} onOpenChange={setSheetAberto}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
