@@ -32,7 +32,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Copy, FileText, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, FileText, Link2, Pencil, Plus, Trash2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 type LandingPage = {
   id: string;
