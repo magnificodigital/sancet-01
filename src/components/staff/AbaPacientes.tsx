@@ -76,7 +76,19 @@ const mascararCEP = (v: string) => {
   return d.replace(/(\d{5})(\d)/, "$1-$2");
 };
 
-export const AbaPacientes = () => {
+type Props = {
+  permissoes?: { pacientes: { ver: boolean; editar: boolean; excluir: boolean } } | null;
+};
+
+export const AbaPacientes = ({ permissoes }: Props = {}) => {
+  if (permissoes?.pacientes?.ver === false) {
+    return (
+      <div className="py-20 text-center text-muted-foreground">
+        Você não tem permissão para ver esta seção.
+      </div>
+    );
+  }
+  const podeEditar = permissoes?.pacientes?.editar !== false;
   const [pacientes, setPacientes] = useState<Pac[]>([]);
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
