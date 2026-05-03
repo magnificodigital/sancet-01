@@ -351,7 +351,9 @@ export const AbaPaginas = () => {
                   {t.id === "branco" ? (
                     <Plus className="h-8 w-8 opacity-60" />
                   ) : (
-                    <span className="text-sm tracking-wide uppercase">{t.id === "outubro-rosa" ? "Outubro Rosa" : "Novembro Azul"}</span>
+                    <span className="text-sm tracking-wide uppercase text-center px-2">
+                      {t.id === "outubro-rosa" ? "Outubro Rosa" : t.id === "novembro-azul" ? "Novembro Azul" : "Check-up Anual"}
+                    </span>
                   )}
                 </div>
                 <div className="p-3 space-y-1">
