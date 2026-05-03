@@ -122,6 +122,39 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_pages: {
+        Row: {
+          blocos: Json
+          created_at: string
+          id: string
+          meta_descricao: string | null
+          publicado: boolean
+          slug: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          blocos?: Json
+          created_at?: string
+          id?: string
+          meta_descricao?: string | null
+          publicado?: boolean
+          slug: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          blocos?: Json
+          created_at?: string
+          id?: string
+          meta_descricao?: string | null
+          publicado?: boolean
+          slug?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pacientes: {
         Row: {
           bairro: string | null
