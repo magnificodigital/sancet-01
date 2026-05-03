@@ -41,6 +41,7 @@ type LandingPage = {
   meta_descricao: string | null;
   publicado: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 const slugify = (s: string) =>
