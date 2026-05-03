@@ -8,6 +8,7 @@ type Permissoes = {
   unidades:  { ver: boolean; editar: boolean; excluir: boolean };
   sync:      { ver: boolean };
   config:    { ver: boolean; editar: boolean };
+  paginas:   { ver: boolean; editar: boolean; excluir: boolean };
 };
 
 type StaffPerfil = {
