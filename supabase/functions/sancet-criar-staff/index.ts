@@ -30,11 +30,10 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .eq('role', 'admin')
       .maybeSingle()
 
-    if (!roleData) {
-      return new Response(JSON.stringify({ error: 'Acesso negado - user_id: ' + user.id }), { status: 403, headers: corsHeaders })
+    if (!roleData || roleData.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Acesso negado - role encontrado: ' + roleData?.role }), { status: 403, headers: corsHeaders })
     }
 
     const { nome, email, senha, permissoes } = await req.json()
