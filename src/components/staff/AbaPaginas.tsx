@@ -92,11 +92,17 @@ export const AbaPaginas = () => {
     carregar();
   }, []);
 
-  const abrirNova = () => {
+  const abrirEscolherTemplate = () => {
+    setModalTemplateAberto(true);
+  };
+
+  const escolherTemplate = (t: LandingTemplate) => {
+    setTemplateEscolhido(t);
     setTitulo("");
     setSlug("");
     setSlugEditadoManual(false);
     setMetaDescricao("");
+    setModalTemplateAberto(false);
     setSheetAberto(true);
   };
 
@@ -121,12 +127,14 @@ export const AbaPaginas = () => {
       return;
     }
     setSalvando(true);
+    const blocosIniciais = templateEscolhido ? templateEscolhido.blocos() : [];
     const { data, error } = await supabase
       .from("landing_pages")
       .insert({
         titulo: titulo.trim(),
         slug: slug.trim(),
         meta_descricao: metaDescricao.trim() || null,
+        blocos: blocosIniciais as any,
       })
       .select("id")
       .single();
@@ -137,6 +145,7 @@ export const AbaPaginas = () => {
     }
     toast.success("Página criada!");
     setSheetAberto(false);
+    setTemplateEscolhido(null);
     navigate(`/staff/paginas/${data!.id}`);
   };
 
