@@ -4,6 +4,7 @@ import {
   Building2,
   ChevronDown,
   ClipboardList,
+  FileText,
   FlaskConical,
   KeyRound,
   LayoutDashboard,
@@ -37,6 +38,7 @@ export type StaffTab =
   | "unidades"
   | "sync"
   | "config"
+  | "paginas"
   | "equipe";
 
 const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
@@ -47,6 +49,7 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "unidades", label: "Unidades", icon: Building2 },
   { id: "sync", label: "Sync Shift", icon: RefreshCw },
   { id: "config", label: "Configurações", icon: Settings2 },
+  { id: "paginas", label: "Páginas", icon: FileText },
   { id: "equipe", label: "Equipe", icon: UserCog },
 ];
 
@@ -61,7 +64,7 @@ type Props = {
 };
 
 export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAdmin }: Props) => {
-  const itensVisiveis = ITENS.filter((i) => i.id !== "equipe" || isAdmin);
+  const itensVisiveis = ITENS.filter((i) => (i.id !== "equipe" && i.id !== "paginas") || isAdmin);
   const navigate = useNavigate();
   const [mobileAberto, setMobileAberto] = useState(false);
 

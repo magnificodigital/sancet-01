@@ -8,6 +8,7 @@ type Permissoes = {
   unidades:  { ver: boolean; editar: boolean; excluir: boolean };
   sync:      { ver: boolean };
   config:    { ver: boolean; editar: boolean };
+  paginas:   { ver: boolean; editar: boolean; excluir: boolean };
 };
 
 type StaffPerfil = {
@@ -25,6 +26,7 @@ const PERMISSOES_ADMIN: Permissoes = {
   unidades:  { ver: true, editar: true, excluir: true },
   sync:      { ver: true },
   config:    { ver: true, editar: true },
+  paginas:   { ver: true, editar: true, excluir: true },
 };
 
 export const useStaffPerfil = (): StaffPerfil => {
