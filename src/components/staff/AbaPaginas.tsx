@@ -69,8 +69,8 @@ export const AbaPaginas = () => {
     setCarregando(true);
     const { data, error } = await supabase
       .from("landing_pages")
-      .select("id, slug, titulo, meta_descricao, publicado, created_at")
-      .order("created_at", { ascending: false });
+      .select("id, slug, titulo, meta_descricao, publicado, created_at, updated_at")
+      .order("updated_at", { ascending: false });
     if (error) toast.error(error.message);
     setPaginas((data as any) ?? []);
     setCarregando(false);
