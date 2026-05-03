@@ -132,7 +132,7 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
         </Button>
       </div>
 
-      <TabelaPedidos pedidos={fatia} onAbrir={setPedidoAberto} />
+      <TabelaPedidos pedidos={fatia} onAbrir={podeEditar ? setPedidoAberto : () => {}} />
 
       {totalPaginas > 1 && (
         <div className="flex items-center justify-between text-sm">
