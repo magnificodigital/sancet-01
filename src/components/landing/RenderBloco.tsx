@@ -6,6 +6,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import type { Bloco } from "./tipos";
+import { BlocoDepoimentos } from "./blocos/BlocoDepoimentos";
+import { BlocoEstatisticas } from "./blocos/BlocoEstatisticas";
+import { BlocoConvenios } from "./blocos/BlocoConvenios";
+import { BlocoExamesDestaque } from "./blocos/BlocoExamesDestaque";
 
 const VERMELHO = "#C8102E";
 const AZUL = "#1B3A6B";
