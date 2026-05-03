@@ -275,7 +275,6 @@ export const AbaEquipe = () => {
                           <label key={acao} className="flex items-center gap-2 text-sm capitalize">
                             <Checkbox
                               checked={!!permEdit?.[s.key]?.[acao]}
-                              disabled={isAdminEdit}
                               onCheckedChange={(v) => togglePerm(s.key, acao, !!v)}
                             />
                             {acao}
@@ -289,7 +288,6 @@ export const AbaEquipe = () => {
                     <label className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={!!permEdit?.sync?.ver}
-                        disabled={isAdminEdit}
                         onCheckedChange={(v) => togglePerm("sync", "ver", !!v)}
                       />
                       Ver
@@ -302,7 +300,6 @@ export const AbaEquipe = () => {
                         <label key={acao} className="flex items-center gap-2 text-sm capitalize">
                           <Checkbox
                             checked={!!permEdit?.config?.[acao]}
-                            disabled={isAdminEdit}
                             onCheckedChange={(v) => togglePerm("config", acao, !!v)}
                           />
                           {acao}
