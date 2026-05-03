@@ -317,19 +317,22 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
                 <TableCell>
                   <Switch
                     checked={i.ativo}
+                    disabled={!podeEditar}
                     onCheckedChange={(v) => toggleAtivo(i, v)}
                   />
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => abrirEdicao(i)}
-                    className="gap-1"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Editar
-                  </Button>
+                  {podeEditar && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => abrirEdicao(i)}
+                      className="gap-1"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
