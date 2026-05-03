@@ -153,5 +153,13 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
         </section>
       );
     }
+    case "depoimentos":
+      return <BlocoDepoimentos config={bloco.config} />;
+    case "estatisticas":
+      return <BlocoEstatisticas config={bloco.config} />;
+    case "convenios":
+      return <BlocoConvenios config={bloco.config} />;
+    case "exames_destaque":
+      return <BlocoExamesDestaque config={bloco.config} />;
   }
 };
