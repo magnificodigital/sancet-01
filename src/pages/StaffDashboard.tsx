@@ -11,6 +11,7 @@ import { AbaUnidades } from "@/components/staff/AbaUnidades";
 import { AbaSync } from "@/components/staff/AbaSync";
 import { AbaConfiguracoes } from "@/components/staff/AbaConfiguracoes";
 import { AbaEquipe } from "@/components/staff/AbaEquipe";
+import { AbaPaginas } from "@/components/staff/AbaPaginas";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 const StaffDashboard = () => {
