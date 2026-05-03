@@ -230,7 +230,7 @@ export const AbaPaginas = () => {
           <FileText className="h-5 w-5" /> Páginas
         </h2>
         <Button
-          onClick={abrirNova}
+          onClick={abrirEscolherTemplate}
           className="gap-1.5 bg-[#C8102E] hover:bg-[#a30d25] text-white"
         >
           <Plus className="h-4 w-4" /> Nova página
