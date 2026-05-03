@@ -249,12 +249,14 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
                 <TableCell className="max-w-[180px] truncate">{u.horario ?? "—"}</TableCell>
                 <TableCell>{u.aceita_domicilio ? "Sim" : "Não"}</TableCell>
                 <TableCell>
-                  <Switch checked={u.ativo} onCheckedChange={(v) => toggleAtivo(u, v)} />
+                  <Switch checked={u.ativo} disabled={!podeEditar} onCheckedChange={(v) => toggleAtivo(u, v)} />
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => abrirEditar(u)} className="gap-1">
-                    <Pencil className="h-3.5 w-3.5" /> Editar
-                  </Button>
+                  {podeEditar && (
+                    <Button variant="ghost" size="sm" onClick={() => abrirEditar(u)} className="gap-1">
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
