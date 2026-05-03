@@ -297,9 +297,11 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
                   {formatarData(p.created_at)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" onClick={() => abrirEditar(p)} className="gap-1">
-                    <Pencil className="h-3.5 w-3.5" /> Editar
-                  </Button>
+                  {podeEditar && (
+                    <Button variant="outline" size="sm" onClick={() => abrirEditar(p)} className="gap-1">
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
