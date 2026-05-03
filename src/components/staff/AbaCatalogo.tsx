@@ -261,32 +261,34 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
           />
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={baixarModelo} className="gap-1.5">
-            <Download className="h-4 w-4" /> Baixar modelo
-          </Button>
-
-          <label>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={importarPlanilha}
-            />
-            <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer" asChild>
-              <span><Upload className="h-4 w-4" /> Importar planilha</span>
+        {podeEditar && (
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={baixarModelo} className="gap-1.5">
+              <Download className="h-4 w-4" /> Baixar modelo
             </Button>
-          </label>
 
-          <Button
-            size="sm"
-            onClick={() => { setEditando(null); setDrawerAberto(true); }}
-            className="gap-1.5 text-white"
-            style={{ backgroundColor: "#C8102E" }}
-          >
-            <Plus className="h-4 w-4" /> Novo item
-          </Button>
-        </div>
+            <label>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={importarPlanilha}
+              />
+              <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer" asChild>
+                <span><Upload className="h-4 w-4" /> Importar planilha</span>
+              </Button>
+            </label>
+
+            <Button
+              size="sm"
+              onClick={() => { setEditando(null); setDrawerAberto(true); }}
+              className="gap-1.5 text-white"
+              style={{ backgroundColor: "#C8102E" }}
+            >
+              <Plus className="h-4 w-4" /> Novo item
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-white">
