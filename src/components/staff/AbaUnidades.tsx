@@ -203,14 +203,16 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-secondary">Unidades</h1>
-        <Button
-          size="sm"
-          onClick={abrirNovo}
-          className="gap-1.5 text-white"
-          style={{ backgroundColor: "#C8102E" }}
-        >
-          <Plus className="h-4 w-4" /> Nova unidade
-        </Button>
+        {podeEditar && (
+          <Button
+            size="sm"
+            onClick={abrirNovo}
+            className="gap-1.5 text-white"
+            style={{ backgroundColor: "#C8102E" }}
+          >
+            <Plus className="h-4 w-4" /> Nova unidade
+          </Button>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-white">
