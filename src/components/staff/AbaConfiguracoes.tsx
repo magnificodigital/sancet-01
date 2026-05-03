@@ -220,15 +220,17 @@ export const AbaConfiguracoes = ({ permissoes }: Props = {}) => {
         </CardContent>
       </Card>
 
-      <Button
-        onClick={salvar}
-        disabled={salvando}
-        className="gap-2 text-white hover:opacity-90"
-        style={{ backgroundColor: "#C8102E" }}
-      >
-        <Save className="h-4 w-4" />
-        {salvando ? "Salvando..." : "Salvar configurações"}
-      </Button>
+      {podeEditar && (
+        <Button
+          onClick={salvar}
+          disabled={salvando}
+          className="gap-2 text-white hover:opacity-90"
+          style={{ backgroundColor: "#C8102E" }}
+        >
+          <Save className="h-4 w-4" />
+          {salvando ? "Salvando..." : "Salvar configurações"}
+        </Button>
+      )}
     </div>
   );
 };
