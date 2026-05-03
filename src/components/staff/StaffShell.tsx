@@ -4,6 +4,7 @@ import {
   Building2,
   ChevronDown,
   ClipboardList,
+  FileText,
   FlaskConical,
   KeyRound,
   LayoutDashboard,
