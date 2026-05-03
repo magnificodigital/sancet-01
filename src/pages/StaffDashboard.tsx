@@ -63,6 +63,7 @@ const StaffDashboard = () => {
       {aba === "unidades" && <AbaUnidades permissoes={staffPerfil.permissoes} />}
       {aba === "sync" && <AbaSync permissoes={staffPerfil.permissoes} />}
       {aba === "config" && <AbaConfiguracoes permissoes={staffPerfil.permissoes} />}
+      {aba === "paginas" && <AbaPaginas />}
       {aba === "equipe" && <AbaEquipe />}
     </StaffShell>
   );
