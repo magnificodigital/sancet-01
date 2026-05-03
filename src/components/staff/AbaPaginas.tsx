@@ -32,9 +32,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Copy, ExternalLink, FileText, Link2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, FileText, Link2, Pencil, Plus, Trash2, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { TEMPLATES, type LandingTemplate } from "@/lib/landing-templates";
 
 type LandingPage = {
   id: string;
@@ -59,6 +67,8 @@ export const AbaPaginas = () => {
   const navigate = useNavigate();
   const [paginas, setPaginas] = useState<LandingPage[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [modalTemplateAberto, setModalTemplateAberto] = useState(false);
+  const [templateEscolhido, setTemplateEscolhido] = useState<LandingTemplate | null>(null);
   const [sheetAberto, setSheetAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [titulo, setTitulo] = useState("");
@@ -82,11 +92,17 @@ export const AbaPaginas = () => {
     carregar();
   }, []);
 
-  const abrirNova = () => {
+  const abrirEscolherTemplate = () => {
+    setModalTemplateAberto(true);
+  };
+
+  const escolherTemplate = (t: LandingTemplate) => {
+    setTemplateEscolhido(t);
     setTitulo("");
     setSlug("");
     setSlugEditadoManual(false);
     setMetaDescricao("");
+    setModalTemplateAberto(false);
     setSheetAberto(true);
   };
 
@@ -111,12 +127,14 @@ export const AbaPaginas = () => {
       return;
     }
     setSalvando(true);
+    const blocosIniciais = templateEscolhido ? templateEscolhido.blocos() : [];
     const { data, error } = await supabase
       .from("landing_pages")
       .insert({
         titulo: titulo.trim(),
         slug: slug.trim(),
         meta_descricao: metaDescricao.trim() || null,
+        blocos: blocosIniciais as any,
       })
       .select("id")
       .single();
@@ -127,6 +145,7 @@ export const AbaPaginas = () => {
     }
     toast.success("Página criada!");
     setSheetAberto(false);
+    setTemplateEscolhido(null);
     navigate(`/staff/paginas/${data!.id}`);
   };
 
@@ -211,7 +230,7 @@ export const AbaPaginas = () => {
           <FileText className="h-5 w-5" /> Páginas
         </h2>
         <Button
-          onClick={abrirNova}
+          onClick={abrirEscolherTemplate}
           className="gap-1.5 bg-[#C8102E] hover:bg-[#a30d25] text-white"
         >
           <Plus className="h-4 w-4" /> Nova página
@@ -310,10 +329,48 @@ export const AbaPaginas = () => {
         </Table>
       </div>
 
+      <Dialog open={modalTemplateAberto} onOpenChange={setModalTemplateAberto}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Escolher template</DialogTitle>
+            <DialogDescription>
+              Comece em branco ou selecione um modelo pronto. Você pode editar tudo depois.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-2">
+            {TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => escolherTemplate(t)}
+                className="group text-left rounded-xl border bg-white overflow-hidden transition hover:shadow-md hover:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+              >
+                <div
+                  className="h-28 w-full flex items-center justify-center text-white font-semibold"
+                  style={{ background: t.thumbnail_gradient, color: t.cor_principal === "#64748b" ? "#475569" : "#fff" }}
+                >
+                  {t.id === "branco" ? (
+                    <Plus className="h-8 w-8 opacity-60" />
+                  ) : (
+                    <span className="text-sm tracking-wide uppercase">{t.id === "outubro-rosa" ? "Outubro Rosa" : "Novembro Azul"}</span>
+                  )}
+                </div>
+                <div className="p-3 space-y-1">
+                  <div className="font-medium text-sm leading-tight">{t.nome}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2">{t.descricao}</div>
+                  <div className="pt-2 text-xs flex items-center gap-1 text-[#C8102E] opacity-0 group-hover:opacity-100 transition">
+                    <Check className="h-3.5 w-3.5" /> Usar este
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Sheet open={sheetAberto} onOpenChange={setSheetAberto}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Nova página</SheetTitle>
+            <SheetTitle>Nova página{templateEscolhido && templateEscolhido.id !== "branco" ? ` · ${templateEscolhido.nome}` : ""}</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
