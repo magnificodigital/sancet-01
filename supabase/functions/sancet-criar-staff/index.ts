@@ -26,14 +26,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: corsHeaders })
     }
 
-    const { data: roleData } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // Verifica se é admin via RPC (chama a função has_role do Postgres)
+    const { data: isAdmin, error: rpcError } = await supabaseAdmin
+      .rpc('has_role', { _user_id: user.id, _role: 'admin' })
 
-    if (!roleData || roleData.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Acesso negado - role encontrado: ' + roleData?.role }), { status: 403, headers: corsHeaders })
+    if (rpcError) {
+      return new Response(JSON.stringify({ error: 'Erro RPC: ' + rpcError.message }), { status: 500, headers: corsHeaders })
+    }
+
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: corsHeaders })
     }
 
     const { nome, email, senha, permissoes } = await req.json()
