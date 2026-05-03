@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -11,9 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import type { Bloco } from "./tipos";
+import { uid } from "./tipos";
 
 type Props = {
   bloco: Bloco;
@@ -23,9 +26,11 @@ type Props = {
 const UploadImagem = ({
   value,
   onChange,
+  pasta = "landing-pages",
 }: {
   value: string;
   onChange: (url: string) => void;
+  pasta?: string;
 }) => {
   const [up, setUp] = useState(false);
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,7 +38,7 @@ const UploadImagem = ({
     if (!file) return;
     setUp(true);
     try {
-      const path = `landing-pages/${Date.now()}-${file.name}`;
+      const path = `${pasta}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage
         .from("imagens-exames")
         .upload(path, file, { upsert: true });
@@ -226,5 +231,279 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
     );
   }
 
+  if (bloco.tipo === "depoimentos") {
+    const c = bloco.config;
+    const setD = (i: number, campo: string, valor: any) => {
+      const novos = c.depoimentos.map((d, idx) => (idx === i ? { ...d, [campo]: valor } : d));
+      set("depoimentos", novos);
+    };
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Título</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Subtítulo</Label><Input value={c.subtitulo_secao} onChange={(e) => set("subtitulo_secao", e.target.value)} /></div>
+        <div className="space-y-3">
+          <Label>Depoimentos</Label>
+          {c.depoimentos.map((d, i) => (
+            <div key={d.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Depoimento {i + 1}</span>
+                <Button size="sm" variant="ghost" onClick={() => set("depoimentos", c.depoimentos.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <Input placeholder="Nome" value={d.nome} onChange={(e) => setD(i, "nome", e.target.value)} />
+              <Textarea placeholder="Texto" rows={3} value={d.texto} onChange={(e) => setD(i, "texto", e.target.value)} />
+              <div className="space-y-1">
+                <Label className="text-xs">Foto</Label>
+                <UploadImagem value={d.foto_url} onChange={(v) => setD(i, "foto_url", v)} pasta="landing-pages/depoimentos" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Estrelas: {d.estrelas}</Label>
+                <Slider min={1} max={5} step={1} value={[d.estrelas]} onValueChange={(v) => setD(i, "estrelas", v[0])} />
+              </div>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => set("depoimentos", [...c.depoimentos, { id: uid(), foto_url: "", nome: "Novo cliente", texto: "Depoimento", estrelas: 5 }])}
+          >
+            <Plus className="h-3.5 w-3.5" /> Adicionar depoimento
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (bloco.tipo === "estatisticas") {
+    const c = bloco.config;
+    const setI = (i: number, campo: string, valor: string) => {
+      const novos = c.itens.map((it, idx) => (idx === i ? { ...it, [campo]: valor } : it));
+      set("itens", novos);
+    };
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Cor de fundo</Label>
+          <Select value={c.cor_fundo} onValueChange={(v) => set("cor_fundo", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="branco">Branco</SelectItem>
+              <SelectItem value="vermelho">Vermelho</SelectItem>
+              <SelectItem value="azul">Azul</SelectItem>
+              <SelectItem value="cinza">Cinza</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-3">
+          <Label>Itens (até 6)</Label>
+          {c.itens.map((it, i) => (
+            <div key={it.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Item {i + 1}</span>
+                <Button size="sm" variant="ghost" onClick={() => set("itens", c.itens.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Número" value={it.numero} onChange={(e) => setI(i, "numero", e.target.value)} />
+                <Input placeholder="Sufixo" value={it.sufixo} onChange={(e) => setI(i, "sufixo", e.target.value)} />
+              </div>
+              <Input placeholder="Descrição" value={it.descricao} onChange={(e) => setI(i, "descricao", e.target.value)} />
+            </div>
+          ))}
+          {c.itens.length < 6 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => set("itens", [...c.itens, { id: uid(), numero: "0", sufixo: "", descricao: "Descrição" }])}
+            >
+              <Plus className="h-3.5 w-3.5" /> Adicionar item
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (bloco.tipo === "convenios") {
+    const c = bloco.config;
+    const setL = (i: number, campo: string, valor: string) => {
+      const novos = c.logos.map((l, idx) => (idx === i ? { ...l, [campo]: valor } : l));
+      set("logos", novos);
+    };
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Título</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <div className="space-y-3">
+          <Label>Logos</Label>
+          {c.logos.map((l, i) => (
+            <div key={l.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Logo {i + 1}</span>
+                <Button size="sm" variant="ghost" onClick={() => set("logos", c.logos.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <UploadImagem value={l.imagem_url} onChange={(v) => setL(i, "imagem_url", v)} pasta="landing-pages/convenios" />
+              <Input placeholder="Texto alternativo" value={l.alt} onChange={(e) => setL(i, "alt", e.target.value)} />
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => set("logos", [...c.logos, { id: uid(), imagem_url: "", alt: "" }])}
+          >
+            <Plus className="h-3.5 w-3.5" /> Adicionar logo
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (bloco.tipo === "exames_destaque") {
+    return <FormExamesDestaque config={bloco.config} onChange={onChange} />;
+  }
+
   return null;
+};
+
+// ===== Form especializado para Exames em destaque (com busca) =====
+
+type ExameSel = { id: string; codigo_shift: string; nome: string };
+
+const FormExamesDestaque = ({
+  config,
+  onChange,
+}: {
+  config: { titulo_secao: string; subtitulo_secao: string; exames_ids: string[]; mostrar_botao_carrinho: boolean };
+  onChange: (cfg: any) => void;
+}) => {
+  const set = (campo: string, valor: any) => onChange({ ...config, [campo]: valor });
+  const [busca, setBusca] = useState("");
+  const [resultados, setResultados] = useState<ExameSel[]>([]);
+  const [selecionados, setSelecionados] = useState<ExameSel[]>([]);
+  const [buscando, setBuscando] = useState(false);
+  const debRef = useRef<number | null>(null);
+
+  // Carregar dados dos exames já selecionados
+  useEffect(() => {
+    if (config.exames_ids.length === 0) {
+      setSelecionados([]);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("exames_cache")
+        .select("id, codigo_shift, nome")
+        .in("id", config.exames_ids);
+      const mapa = new Map((data ?? []).map((e: any) => [e.id, e as ExameSel]));
+      setSelecionados(config.exames_ids.map((id) => mapa.get(id)).filter(Boolean) as ExameSel[]);
+    })();
+  }, [JSON.stringify(config.exames_ids)]);
+
+  // Buscar exames
+  useEffect(() => {
+    if (debRef.current) window.clearTimeout(debRef.current);
+    if (busca.trim().length < 2) {
+      setResultados([]);
+      return;
+    }
+    debRef.current = window.setTimeout(async () => {
+      setBuscando(true);
+      const { data } = await supabase
+        .from("exames_cache")
+        .select("id, codigo_shift, nome")
+        .or(`nome.ilike.%${busca}%,codigo_shift.ilike.%${busca}%`)
+        .eq("ativo", true)
+        .limit(20);
+      setResultados((data ?? []) as ExameSel[]);
+      setBuscando(false);
+    }, 300);
+  }, [busca]);
+
+  const adicionar = (e: ExameSel) => {
+    if (config.exames_ids.includes(e.id)) return;
+    set("exames_ids", [...config.exames_ids, e.id]);
+    setBusca("");
+    setResultados([]);
+  };
+
+  const remover = (id: string) => {
+    set("exames_ids", config.exames_ids.filter((x) => x !== id));
+  };
+
+  const mover = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= config.exames_ids.length) return;
+    const copia = [...config.exames_ids];
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+    set("exames_ids", copia);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2"><Label>Título</Label><Input value={config.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+      <div className="space-y-2"><Label>Subtítulo</Label><Input value={config.subtitulo_secao} onChange={(e) => set("subtitulo_secao", e.target.value)} /></div>
+      <div className="flex items-center justify-between rounded-md border p-3">
+        <Label className="text-sm">Mostrar botão "Adicionar ao carrinho"</Label>
+        <Switch checked={config.mostrar_botao_carrinho} onCheckedChange={(v) => set("mostrar_botao_carrinho", v)} />
+      </div>
+      <div className="space-y-2">
+        <Label>Buscar exames</Label>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Nome ou código..."
+            className="pl-8"
+          />
+        </div>
+        {buscando && <p className="text-xs text-muted-foreground">Buscando...</p>}
+        {resultados.length > 0 && (
+          <div className="rounded-md border max-h-48 overflow-y-auto">
+            {resultados.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => adicionar(r)}
+                disabled={config.exames_ids.includes(r.id)}
+                className="w-full text-left p-2 hover:bg-muted text-sm border-b last:border-b-0 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <p className="font-medium truncate">{r.nome}</p>
+                <p className="text-xs text-muted-foreground">Cód. {r.codigo_shift}</p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Label>Selecionados ({selecionados.length})</Label>
+        {selecionados.length === 0 && (
+          <p className="text-xs text-muted-foreground">Nenhum exame selecionado</p>
+        )}
+        {selecionados.map((e, i) => (
+          <div key={e.id} className="flex items-center gap-2 rounded-md border p-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{e.nome}</p>
+              <p className="text-xs text-muted-foreground">Cód. {e.codigo_shift}</p>
+            </div>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => mover(i, -1)} disabled={i === 0}>
+              <ArrowUp className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => mover(i, 1)} disabled={i === selecionados.length - 1}>
+              <ArrowDown className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => remover(e.id)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };

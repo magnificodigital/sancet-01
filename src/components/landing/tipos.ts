@@ -1,7 +1,20 @@
-export type TipoBloco = "hero" | "texto" | "servicos" | "imagem-texto" | "cta" | "faq";
+export type TipoBloco =
+  | "hero"
+  | "texto"
+  | "servicos"
+  | "imagem-texto"
+  | "cta"
+  | "faq"
+  | "depoimentos"
+  | "estatisticas"
+  | "convenios"
+  | "exames_destaque";
 
 export type CardServico = { icone: string; titulo: string; descricao: string };
 export type Pergunta = { pergunta: string; resposta: string };
+export type Depoimento = { id: string; foto_url: string; nome: string; texto: string; estrelas: number };
+export type ItemEstatistica = { id: string; numero: string; sufixo: string; descricao: string };
+export type LogoConvenio = { id: string; imagem_url: string; alt: string };
 
 export type ConfigHero = {
   titulo: string;
@@ -27,6 +40,22 @@ export type ConfigCTA = {
   cor_fundo: "vermelho" | "azul";
 };
 export type ConfigFAQ = { titulo_secao: string; perguntas: Pergunta[] };
+export type ConfigDepoimentos = {
+  titulo_secao: string;
+  subtitulo_secao: string;
+  depoimentos: Depoimento[];
+};
+export type ConfigEstatisticas = {
+  cor_fundo: "branco" | "vermelho" | "azul" | "cinza";
+  itens: ItemEstatistica[];
+};
+export type ConfigConvenios = { titulo_secao: string; logos: LogoConvenio[] };
+export type ConfigExamesDestaque = {
+  titulo_secao: string;
+  subtitulo_secao: string;
+  exames_ids: string[];
+  mostrar_botao_carrinho: boolean;
+};
 
 export type Bloco =
   | { id: string; tipo: "hero"; config: ConfigHero }
@@ -34,7 +63,11 @@ export type Bloco =
   | { id: string; tipo: "servicos"; config: ConfigServicos }
   | { id: string; tipo: "imagem-texto"; config: ConfigImagemTexto }
   | { id: string; tipo: "cta"; config: ConfigCTA }
-  | { id: string; tipo: "faq"; config: ConfigFAQ };
+  | { id: string; tipo: "faq"; config: ConfigFAQ }
+  | { id: string; tipo: "depoimentos"; config: ConfigDepoimentos }
+  | { id: string; tipo: "estatisticas"; config: ConfigEstatisticas }
+  | { id: string; tipo: "convenios"; config: ConfigConvenios }
+  | { id: string; tipo: "exames_destaque"; config: ConfigExamesDestaque };
 
 export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[] = [
   { tipo: "hero", label: "Hero", descricao: "Banner principal" },
@@ -43,9 +76,13 @@ export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[]
   { tipo: "imagem-texto", label: "Imagem + Texto", descricao: "Duas colunas" },
   { tipo: "cta", label: "CTA", descricao: "Chamada para ação" },
   { tipo: "faq", label: "FAQ", descricao: "Perguntas e respostas" },
+  { tipo: "depoimentos", label: "Depoimentos", descricao: "Carrossel de avaliações" },
+  { tipo: "estatisticas", label: "Estatísticas", descricao: "Números em destaque" },
+  { tipo: "convenios", label: "Convênios", descricao: "Grid de logos" },
+  { tipo: "exames_destaque", label: "Exames em destaque", descricao: "Cards de exames" },
 ];
 
-const uid = () =>
+export const uid = () =>
   (typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2) + Date.now().toString(36));
@@ -121,6 +158,54 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
             { pergunta: "Como faço para agendar?", resposta: "Acesse nosso site ou ligue para a unidade mais próxima." },
             { pergunta: "Aceitam convênio?", resposta: "Sim, trabalhamos com os principais convênios." },
           ],
+        },
+      };
+    case "depoimentos":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo_secao: "O que dizem nossos pacientes",
+          subtitulo_secao: "",
+          depoimentos: [
+            { id: uid(), foto_url: "", nome: "Maria Silva", texto: "Atendimento excelente, recomendo!", estrelas: 5 },
+            { id: uid(), foto_url: "", nome: "João Santos", texto: "Resultados rápidos e equipe atenciosa.", estrelas: 5 },
+            { id: uid(), foto_url: "", nome: "Ana Costa", texto: "Processo simples do início ao fim.", estrelas: 4 },
+          ],
+        },
+      };
+    case "estatisticas":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          cor_fundo: "azul",
+          itens: [
+            { id: uid(), numero: "30", sufixo: "+", descricao: "Anos de experiência" },
+            { id: uid(), numero: "2000", sufixo: "+", descricao: "Exames disponíveis" },
+            { id: uid(), numero: "50", sufixo: "k", descricao: "Pacientes atendidos" },
+            { id: uid(), numero: "98", sufixo: "%", descricao: "Satisfação" },
+          ],
+        },
+      };
+    case "convenios":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo_secao: "Convênios aceitos",
+          logos: [],
+        },
+      };
+    case "exames_destaque":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo_secao: "Exames em destaque",
+          subtitulo_secao: "",
+          exames_ids: [],
+          mostrar_botao_carrinho: true,
         },
       };
   }

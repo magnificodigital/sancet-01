@@ -6,6 +6,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import type { Bloco } from "./tipos";
+import { BlocoDepoimentos } from "./blocos/BlocoDepoimentos";
+import { BlocoEstatisticas } from "./blocos/BlocoEstatisticas";
+import { BlocoConvenios } from "./blocos/BlocoConvenios";
+import { BlocoExamesDestaque } from "./blocos/BlocoExamesDestaque";
 
 const VERMELHO = "#C8102E";
 const AZUL = "#1B3A6B";
@@ -149,5 +153,13 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
         </section>
       );
     }
+    case "depoimentos":
+      return <BlocoDepoimentos config={bloco.config} />;
+    case "estatisticas":
+      return <BlocoEstatisticas config={bloco.config} />;
+    case "convenios":
+      return <BlocoConvenios config={bloco.config} />;
+    case "exames_destaque":
+      return <BlocoExamesDestaque config={bloco.config} />;
   }
 };
