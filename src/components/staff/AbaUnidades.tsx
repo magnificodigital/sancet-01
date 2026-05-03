@@ -58,7 +58,19 @@ const FORM_VAZIO: Form = {
   aceita_domicilio: true, ativo: true, foto_url: "",
 };
 
-export const AbaUnidades = () => {
+type Props = {
+  permissoes?: { unidades: { ver: boolean; editar: boolean; excluir: boolean } } | null;
+};
+
+export const AbaUnidades = ({ permissoes }: Props = {}) => {
+  if (permissoes?.unidades?.ver === false) {
+    return (
+      <div className="py-20 text-center text-muted-foreground">
+        Você não tem permissão para ver esta seção.
+      </div>
+    );
+  }
+  const podeEditar = permissoes?.unidades?.editar !== false;
   const [unidades, setUnidades] = useState<Un[]>([]);
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [editando, setEditando] = useState<Un | null>(null);
@@ -191,14 +203,16 @@ export const AbaUnidades = () => {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-secondary">Unidades</h1>
-        <Button
-          size="sm"
-          onClick={abrirNovo}
-          className="gap-1.5 text-white"
-          style={{ backgroundColor: "#C8102E" }}
-        >
-          <Plus className="h-4 w-4" /> Nova unidade
-        </Button>
+        {podeEditar && (
+          <Button
+            size="sm"
+            onClick={abrirNovo}
+            className="gap-1.5 text-white"
+            style={{ backgroundColor: "#C8102E" }}
+          >
+            <Plus className="h-4 w-4" /> Nova unidade
+          </Button>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-white">
@@ -235,12 +249,14 @@ export const AbaUnidades = () => {
                 <TableCell className="max-w-[180px] truncate">{u.horario ?? "—"}</TableCell>
                 <TableCell>{u.aceita_domicilio ? "Sim" : "Não"}</TableCell>
                 <TableCell>
-                  <Switch checked={u.ativo} onCheckedChange={(v) => toggleAtivo(u, v)} />
+                  <Switch checked={u.ativo} disabled={!podeEditar} onCheckedChange={(v) => toggleAtivo(u, v)} />
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => abrirEditar(u)} className="gap-1">
-                    <Pencil className="h-3.5 w-3.5" /> Editar
-                  </Button>
+                  {podeEditar && (
+                    <Button variant="ghost" size="sm" onClick={() => abrirEditar(u)} className="gap-1">
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

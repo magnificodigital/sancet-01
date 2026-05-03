@@ -47,7 +47,19 @@ const SENSIVEIS = new Set([
   "PAGHIPER_TOKEN",
 ]);
 
-export const AbaConfiguracoes = () => {
+type Props = {
+  permissoes?: { config: { ver: boolean; editar: boolean } } | null;
+};
+
+export const AbaConfiguracoes = ({ permissoes }: Props = {}) => {
+  if (permissoes?.config?.ver === false) {
+    return (
+      <div className="py-20 text-center text-muted-foreground">
+        Você não tem permissão para ver esta seção.
+      </div>
+    );
+  }
+  const podeEditar = permissoes?.config?.editar !== false;
   const [configs, setConfigs] = useState<Configs>({});
   const [revelados, setRevelados] = useState<Set<string>>(new Set());
   const [salvando, setSalvando] = useState(false);
@@ -208,15 +220,17 @@ export const AbaConfiguracoes = () => {
         </CardContent>
       </Card>
 
-      <Button
-        onClick={salvar}
-        disabled={salvando}
-        className="gap-2 text-white hover:opacity-90"
-        style={{ backgroundColor: "#C8102E" }}
-      >
-        <Save className="h-4 w-4" />
-        {salvando ? "Salvando..." : "Salvar configurações"}
-      </Button>
+      {podeEditar && (
+        <Button
+          onClick={salvar}
+          disabled={salvando}
+          className="gap-2 text-white hover:opacity-90"
+          style={{ backgroundColor: "#C8102E" }}
+        >
+          <Save className="h-4 w-4" />
+          {salvando ? "Salvando..." : "Salvar configurações"}
+        </Button>
+      )}
     </div>
   );
 };

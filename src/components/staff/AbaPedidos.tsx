@@ -16,7 +16,19 @@ import { Pedido, STATUS_OPTIONS } from "./utils";
 
 const POR_PAGINA = 20;
 
-export const AbaPedidos = () => {
+type Props = {
+  permissoes?: { pedidos: { ver: boolean; editar: boolean; excluir: boolean } } | null;
+};
+
+export const AbaPedidos = ({ permissoes }: Props = {}) => {
+  if (permissoes?.pedidos?.ver === false) {
+    return (
+      <div className="py-20 text-center text-muted-foreground">
+        Você não tem permissão para ver esta seção.
+      </div>
+    );
+  }
+  const podeEditar = permissoes?.pedidos?.editar !== false;
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
 
@@ -120,7 +132,7 @@ export const AbaPedidos = () => {
         </Button>
       </div>
 
-      <TabelaPedidos pedidos={fatia} onAbrir={setPedidoAberto} />
+      <TabelaPedidos pedidos={fatia} onAbrir={podeEditar ? setPedidoAberto : () => {}} />
 
       {totalPaginas > 1 && (
         <div className="flex items-center justify-between text-sm">

@@ -56,12 +56,12 @@ const StaffDashboard = () => {
   return (
     <StaffShell abaAtiva={aba} onTrocarAba={setAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin}>
       {aba === "visao" && <AbaVisaoGeral />}
-      {aba === "pedidos" && <AbaPedidos />}
-      {aba === "pacientes" && <AbaPacientes />}
-      {aba === "catalogo" && <AbaCatalogo />}
-      {aba === "unidades" && <AbaUnidades />}
-      {aba === "sync" && <AbaSync />}
-      {aba === "config" && <AbaConfiguracoes />}
+      {aba === "pedidos" && <AbaPedidos permissoes={staffPerfil.permissoes} />}
+      {aba === "pacientes" && <AbaPacientes permissoes={staffPerfil.permissoes} />}
+      {aba === "catalogo" && <AbaCatalogo permissoes={staffPerfil.permissoes} />}
+      {aba === "unidades" && <AbaUnidades permissoes={staffPerfil.permissoes} />}
+      {aba === "sync" && <AbaSync permissoes={staffPerfil.permissoes} />}
+      {aba === "config" && <AbaConfiguracoes permissoes={staffPerfil.permissoes} />}
       {aba === "equipe" && <AbaEquipe />}
     </StaffShell>
   );

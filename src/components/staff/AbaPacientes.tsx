@@ -76,7 +76,19 @@ const mascararCEP = (v: string) => {
   return d.replace(/(\d{5})(\d)/, "$1-$2");
 };
 
-export const AbaPacientes = () => {
+type Props = {
+  permissoes?: { pacientes: { ver: boolean; editar: boolean; excluir: boolean } } | null;
+};
+
+export const AbaPacientes = ({ permissoes }: Props = {}) => {
+  if (permissoes?.pacientes?.ver === false) {
+    return (
+      <div className="py-20 text-center text-muted-foreground">
+        Você não tem permissão para ver esta seção.
+      </div>
+    );
+  }
+  const podeEditar = permissoes?.pacientes?.editar !== false;
   const [pacientes, setPacientes] = useState<Pac[]>([]);
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -236,14 +248,16 @@ export const AbaPacientes = () => {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-secondary">Pacientes</h1>
-        <Button
-          size="sm"
-          onClick={abrirNovo}
-          className="gap-1.5 text-white hover:opacity-90"
-          style={{ backgroundColor: COR_PRIMARIA }}
-        >
-          <UserPlus className="h-4 w-4" /> Novo paciente
-        </Button>
+        {podeEditar && (
+          <Button
+            size="sm"
+            onClick={abrirNovo}
+            className="gap-1.5 text-white hover:opacity-90"
+            style={{ backgroundColor: COR_PRIMARIA }}
+          >
+            <UserPlus className="h-4 w-4" /> Novo paciente
+          </Button>
+        )}
       </div>
 
       <div className="relative max-w-md">
@@ -283,9 +297,11 @@ export const AbaPacientes = () => {
                   {formatarData(p.created_at)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" onClick={() => abrirEditar(p)} className="gap-1">
-                    <Pencil className="h-3.5 w-3.5" /> Editar
-                  </Button>
+                  {podeEditar && (
+                    <Button variant="outline" size="sm" onClick={() => abrirEditar(p)} className="gap-1">
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

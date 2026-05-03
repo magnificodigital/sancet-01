@@ -76,7 +76,7 @@ const formVazio: FormState = {
   ativo: true,
 };
 
-const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
+const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cache"; podeEditar: boolean }) => {
   const [itens, setItens] = useState<Item[]>([]);
   const [busca, setBusca] = useState("");
   const [drawerAberto, setDrawerAberto] = useState(false);
@@ -261,32 +261,34 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
           />
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={baixarModelo} className="gap-1.5">
-            <Download className="h-4 w-4" /> Baixar modelo
-          </Button>
-
-          <label>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={importarPlanilha}
-            />
-            <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer" asChild>
-              <span><Upload className="h-4 w-4" /> Importar planilha</span>
+        {podeEditar && (
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={baixarModelo} className="gap-1.5">
+              <Download className="h-4 w-4" /> Baixar modelo
             </Button>
-          </label>
 
-          <Button
-            size="sm"
-            onClick={() => { setEditando(null); setDrawerAberto(true); }}
-            className="gap-1.5 text-white"
-            style={{ backgroundColor: "#C8102E" }}
-          >
-            <Plus className="h-4 w-4" /> Novo item
-          </Button>
-        </div>
+            <label>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={importarPlanilha}
+              />
+              <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer" asChild>
+                <span><Upload className="h-4 w-4" /> Importar planilha</span>
+              </Button>
+            </label>
+
+            <Button
+              size="sm"
+              onClick={() => { setEditando(null); setDrawerAberto(true); }}
+              className="gap-1.5 text-white"
+              style={{ backgroundColor: "#C8102E" }}
+            >
+              <Plus className="h-4 w-4" /> Novo item
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-white">
@@ -315,19 +317,22 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
                 <TableCell>
                   <Switch
                     checked={i.ativo}
+                    disabled={!podeEditar}
                     onCheckedChange={(v) => toggleAtivo(i, v)}
                   />
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => abrirEdicao(i)}
-                    className="gap-1"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Editar
-                  </Button>
+                  {podeEditar && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => abrirEdicao(i)}
+                      className="gap-1"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -471,20 +476,34 @@ const Tabela = ({ tabela }: { tabela: "exames_cache" | "vacinas_cache" }) => {
   );
 };
 
-export const AbaCatalogo = () => (
-  <div className="space-y-5">
-    <h1 className="text-2xl font-bold text-secondary">Catálogo</h1>
-    <Tabs defaultValue="exames">
-      <TabsList>
-        <TabsTrigger value="exames">Exames</TabsTrigger>
-        <TabsTrigger value="vacinas">Vacinas</TabsTrigger>
-      </TabsList>
-      <TabsContent value="exames" className="mt-4">
-        <Tabela tabela="exames_cache" />
-      </TabsContent>
-      <TabsContent value="vacinas" className="mt-4">
-        <Tabela tabela="vacinas_cache" />
-      </TabsContent>
-    </Tabs>
-  </div>
-);
+type AbaCatalogoProps = {
+  permissoes?: { catalogo: { ver: boolean; editar: boolean; excluir: boolean } } | null;
+};
+
+export const AbaCatalogo = ({ permissoes }: AbaCatalogoProps = {}) => {
+  if (permissoes?.catalogo?.ver === false) {
+    return (
+      <div className="py-20 text-center text-muted-foreground">
+        Você não tem permissão para ver esta seção.
+      </div>
+    );
+  }
+  const podeEditar = permissoes?.catalogo?.editar !== false;
+  return (
+    <div className="space-y-5">
+      <h1 className="text-2xl font-bold text-secondary">Catálogo</h1>
+      <Tabs defaultValue="exames">
+        <TabsList>
+          <TabsTrigger value="exames">Exames</TabsTrigger>
+          <TabsTrigger value="vacinas">Vacinas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="exames" className="mt-4">
+          <Tabela tabela="exames_cache" podeEditar={podeEditar} />
+        </TabsContent>
+        <TabsContent value="vacinas" className="mt-4">
+          <Tabela tabela="vacinas_cache" podeEditar={podeEditar} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
