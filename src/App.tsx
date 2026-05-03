@@ -19,6 +19,7 @@ import StaffLogin from "./pages/StaffLogin.tsx";
 import StaffDashboard from "./pages/StaffDashboard.tsx";
 import StaffAlterarSenha from "./pages/StaffAlterarSenha.tsx";
 import StaffPaginaEditor from "./pages/StaffPaginaEditor.tsx";
+import LandingPublica from "./pages/LandingPublica.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
           <Route path="/staff/alterar-senha" element={<StaffAlterarSenha />} />
           <Route path="/staff/paginas/:id" element={<StaffPaginaEditor />} />
+          <Route path="/p/:slug" element={<LandingPublica />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
