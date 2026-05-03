@@ -370,7 +370,7 @@ export const AbaPaginas = () => {
       <Sheet open={sheetAberto} onOpenChange={setSheetAberto}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Nova página</SheetTitle>
+            <SheetTitle>Nova página{templateEscolhido && templateEscolhido.id !== "branco" ? ` · ${templateEscolhido.nome}` : ""}</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
