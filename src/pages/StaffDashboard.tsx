@@ -10,12 +10,15 @@ import { AbaCatalogo } from "@/components/staff/AbaCatalogo";
 import { AbaUnidades } from "@/components/staff/AbaUnidades";
 import { AbaSync } from "@/components/staff/AbaSync";
 import { AbaConfiguracoes } from "@/components/staff/AbaConfiguracoes";
+import { AbaEquipe } from "@/components/staff/AbaEquipe";
+import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
   const [carregando, setCarregando] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
   const [aba, setAba] = useState<StaffTab>("visao");
+  const staffPerfil = useStaffPerfil();
 
   useEffect(() => {
     let active = true;
@@ -51,7 +54,7 @@ const StaffDashboard = () => {
   }
 
   return (
-    <StaffShell abaAtiva={aba} onTrocarAba={setAba} emailUsuario={email}>
+    <StaffShell abaAtiva={aba} onTrocarAba={setAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin}>
       {aba === "visao" && <AbaVisaoGeral />}
       {aba === "pedidos" && <AbaPedidos />}
       {aba === "pacientes" && <AbaPacientes />}
@@ -59,6 +62,7 @@ const StaffDashboard = () => {
       {aba === "unidades" && <AbaUnidades />}
       {aba === "sync" && <AbaSync />}
       {aba === "config" && <AbaConfiguracoes />}
+      {aba === "equipe" && <AbaEquipe />}
     </StaffShell>
   );
 };

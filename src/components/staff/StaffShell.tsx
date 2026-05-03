@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Settings2,
   UserCircle,
+  UserCog,
   Users,
   X,
 } from "lucide-react";
@@ -35,7 +36,8 @@ export type StaffTab =
   | "catalogo"
   | "unidades"
   | "sync"
-  | "config";
+  | "config"
+  | "equipe";
 
 const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "visao", label: "Visão Geral", icon: LayoutDashboard },
@@ -45,6 +47,7 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "unidades", label: "Unidades", icon: Building2 },
   { id: "sync", label: "Sync Shift", icon: RefreshCw },
   { id: "config", label: "Configurações", icon: Settings2 },
+  { id: "equipe", label: "Equipe", icon: UserCog },
 ];
 
 const SIDEBAR_BG = "#0B1F3A";
@@ -54,9 +57,11 @@ type Props = {
   abaAtiva: StaffTab;
   onTrocarAba: (t: StaffTab) => void;
   emailUsuario: string | null;
+  isAdmin: boolean;
 };
 
-export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Props) => {
+export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAdmin }: Props) => {
+  const itensVisiveis = ITENS.filter((i) => i.id !== "equipe" || isAdmin);
   const navigate = useNavigate();
   const [mobileAberto, setMobileAberto] = useState(false);
 
@@ -77,7 +82,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
       <hr className="border-white/15" />
 
       <nav className="flex-1 space-y-1 p-3">
-        {ITENS.map((item) => {
+        {itensVisiveis.map((item) => {
           const ativo = abaAtiva === item.id;
           const Icon = item.icon;
           return (
