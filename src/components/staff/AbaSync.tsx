@@ -27,7 +27,18 @@ const ITEMS: { key: SyncKey; label: string; desc: string }[] = [
   { key: "convenios", label: "Convênios", desc: "WsGetTodosFontePagadora" },
 ];
 
-export const AbaSync = () => {
+type Props = {
+  permissoes?: { sync: { ver: boolean } } | null;
+};
+
+export const AbaSync = ({ permissoes }: Props = {}) => {
+  if (permissoes?.sync?.ver === false) {
+    return (
+      <div className="py-20 text-center text-muted-foreground">
+        Você não tem permissão para ver esta seção.
+      </div>
+    );
+  }
   const [status, setStatus] = useState<Record<SyncKey, Status>>({
     exames: "idle",
     unidades: "idle",
