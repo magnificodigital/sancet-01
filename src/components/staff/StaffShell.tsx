@@ -64,7 +64,7 @@ type Props = {
 };
 
 export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAdmin }: Props) => {
-  const itensVisiveis = ITENS.filter((i) => i.id !== "equipe" || isAdmin);
+  const itensVisiveis = ITENS.filter((i) => (i.id !== "equipe" && i.id !== "paginas") || isAdmin);
   const navigate = useNavigate();
   const [mobileAberto, setMobileAberto] = useState(false);
 
