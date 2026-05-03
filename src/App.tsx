@@ -47,6 +47,7 @@ const App = () => (
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
           <Route path="/staff/alterar-senha" element={<StaffAlterarSenha />} />
           <Route path="/staff/paginas/:id" element={<StaffPaginaEditor />} />
+          <Route path="/p/:slug" element={<LandingPublica />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
