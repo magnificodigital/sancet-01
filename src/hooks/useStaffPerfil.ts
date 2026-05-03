@@ -26,6 +26,7 @@ const PERMISSOES_ADMIN: Permissoes = {
   unidades:  { ver: true, editar: true, excluir: true },
   sync:      { ver: true },
   config:    { ver: true, editar: true },
+  paginas:   { ver: true, editar: true, excluir: true },
 };
 
 export const useStaffPerfil = (): StaffPerfil => {
