@@ -18,6 +18,7 @@ import Pagamento from "./pages/Pagamento.tsx";
 import StaffLogin from "./pages/StaffLogin.tsx";
 import StaffDashboard from "./pages/StaffDashboard.tsx";
 import StaffAlterarSenha from "./pages/StaffAlterarSenha.tsx";
+import StaffPaginaEditor from "./pages/StaffPaginaEditor.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
