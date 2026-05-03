@@ -100,7 +100,15 @@ export const AbaEquipe = () => {
       const { error } = await supabase.functions.invoke("sancet-criar-staff", {
         body: formNovo,
       });
-      if (error) throw error;
+      if (error) {
+        let msg = "Erro ao criar usuário";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
       toast.success("Usuário criado!");
       setSheetAberto(false);
       await carregar();
