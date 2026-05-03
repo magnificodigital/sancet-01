@@ -372,20 +372,32 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          ativo: boolean | null
           created_at: string
+          email: string | null
           id: string
+          nome: string | null
+          permissoes: Json | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          ativo?: boolean | null
           created_at?: string
+          email?: string | null
           id?: string
+          nome?: string | null
+          permissoes?: Json | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          ativo?: boolean | null
           created_at?: string
+          email?: string | null
           id?: string
+          nome?: string | null
+          permissoes?: Json | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
