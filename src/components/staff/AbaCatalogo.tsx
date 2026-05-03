@@ -476,20 +476,34 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
   );
 };
 
-export const AbaCatalogo = () => (
-  <div className="space-y-5">
-    <h1 className="text-2xl font-bold text-secondary">Catálogo</h1>
-    <Tabs defaultValue="exames">
-      <TabsList>
-        <TabsTrigger value="exames">Exames</TabsTrigger>
-        <TabsTrigger value="vacinas">Vacinas</TabsTrigger>
-      </TabsList>
-      <TabsContent value="exames" className="mt-4">
-        <Tabela tabela="exames_cache" />
-      </TabsContent>
-      <TabsContent value="vacinas" className="mt-4">
-        <Tabela tabela="vacinas_cache" />
-      </TabsContent>
-    </Tabs>
-  </div>
-);
+type AbaCatalogoProps = {
+  permissoes?: { catalogo: { ver: boolean; editar: boolean; excluir: boolean } } | null;
+};
+
+export const AbaCatalogo = ({ permissoes }: AbaCatalogoProps = {}) => {
+  if (permissoes?.catalogo?.ver === false) {
+    return (
+      <div className="py-20 text-center text-muted-foreground">
+        Você não tem permissão para ver esta seção.
+      </div>
+    );
+  }
+  const podeEditar = permissoes?.catalogo?.editar !== false;
+  return (
+    <div className="space-y-5">
+      <h1 className="text-2xl font-bold text-secondary">Catálogo</h1>
+      <Tabs defaultValue="exames">
+        <TabsList>
+          <TabsTrigger value="exames">Exames</TabsTrigger>
+          <TabsTrigger value="vacinas">Vacinas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="exames" className="mt-4">
+          <Tabela tabela="exames_cache" podeEditar={podeEditar} />
+        </TabsContent>
+        <TabsContent value="vacinas" className="mt-4">
+          <Tabela tabela="vacinas_cache" podeEditar={podeEditar} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
