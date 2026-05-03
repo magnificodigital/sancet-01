@@ -32,7 +32,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Copy, FileText, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, FileText, Link2, Pencil, Plus, Trash2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 type LandingPage = {
   id: string;
@@ -41,6 +43,7 @@ type LandingPage = {
   meta_descricao: string | null;
   publicado: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 const slugify = (s: string) =>
@@ -68,8 +71,8 @@ export const AbaPaginas = () => {
     setCarregando(true);
     const { data, error } = await supabase
       .from("landing_pages")
-      .select("id, slug, titulo, meta_descricao, publicado, created_at")
-      .order("created_at", { ascending: false });
+      .select("id, slug, titulo, meta_descricao, publicado, created_at, updated_at")
+      .order("updated_at", { ascending: false });
     if (error) toast.error(error.message);
     setPaginas((data as any) ?? []);
     setCarregando(false);
@@ -127,6 +130,23 @@ export const AbaPaginas = () => {
     navigate(`/staff/paginas/${data!.id}`);
   };
 
+  const slugUnico = async (base: string): Promise<string> => {
+    let candidato = base;
+    let i = 2;
+    // limita a 20 tentativas
+    for (let tries = 0; tries < 20; tries++) {
+      const { data } = await supabase
+        .from("landing_pages")
+        .select("id")
+        .eq("slug", candidato)
+        .maybeSingle();
+      if (!data) return candidato;
+      candidato = `${base}-${i}`;
+      i++;
+    }
+    return `${base}-${Date.now().toString(36)}`;
+  };
+
   const duplicar = async (p: LandingPage) => {
     const { data: full, error: e1 } = await supabase
       .from("landing_pages")
@@ -137,20 +157,36 @@ export const AbaPaginas = () => {
       toast.error(e1?.message ?? "Erro ao duplicar");
       return;
     }
-    const novoSlug = `${p.slug}-copia-${Date.now().toString(36)}`;
-    const { error: e2 } = await supabase.from("landing_pages").insert({
-      titulo: `${full.titulo} (cópia)`,
-      slug: novoSlug,
-      meta_descricao: full.meta_descricao,
-      blocos: full.blocos,
-      publicado: false,
-    });
-    if (e2) {
-      toast.error(e2.message);
+    const novoTitulo = `${full.titulo} (cópia)`;
+    const baseSlug = slugify(novoTitulo);
+    const novoSlug = await slugUnico(baseSlug);
+    const { data: nova, error: e2 } = await supabase
+      .from("landing_pages")
+      .insert({
+        titulo: novoTitulo,
+        slug: novoSlug,
+        meta_descricao: full.meta_descricao,
+        blocos: full.blocos,
+        publicado: false,
+      })
+      .select("id")
+      .single();
+    if (e2 || !nova) {
+      toast.error(e2?.message ?? "Erro ao duplicar");
       return;
     }
     toast.success("Página duplicada!");
-    carregar();
+    navigate(`/staff/paginas/${nova.id}`);
+  };
+
+  const copiarLink = async (p: LandingPage) => {
+    const url = `${window.location.origin}/p/${p.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copiado");
+    } catch {
+      toast.error("Falha ao copiar");
+    }
   };
 
   const excluir = async () => {
@@ -189,8 +225,8 @@ export const AbaPaginas = () => {
               <TableHead>Título</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Criada em</TableHead>
-              <TableHead className="w-48">Ações</TableHead>
+              <TableHead>Atualizada</TableHead>
+              <TableHead className="w-64">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -199,16 +235,37 @@ export const AbaPaginas = () => {
                 <TableCell className="font-medium">{p.titulo}</TableCell>
                 <TableCell className="text-muted-foreground">/{p.slug}</TableCell>
                 <TableCell>
-                  {p.publicado ? (
-                    <Badge className="bg-green-600 hover:bg-green-600 text-white">
-                      Publicado
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">Rascunho</Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {p.publicado ? (
+                      <Badge className="bg-green-600 hover:bg-green-600 text-white">
+                        Publicado
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Rascunho</Badge>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      disabled={!p.publicado}
+                      onClick={() => window.open(`/p/${p.slug}`, "_blank")}
+                      title={p.publicado ? "Abrir página" : "Publique para abrir"}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => copiarLink(p)}
+                      title="Copiar link público"
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {new Date(p.created_at).toLocaleDateString("pt-BR")}
+                  {formatDistanceToNow(new Date(p.updated_at), { addSuffix: true, locale: ptBR })}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1.5">
@@ -225,6 +282,7 @@ export const AbaPaginas = () => {
                       variant="outline"
                       onClick={() => duplicar(p)}
                       className="gap-1"
+                      title="Duplicar"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
@@ -233,6 +291,7 @@ export const AbaPaginas = () => {
                       variant="outline"
                       onClick={() => setParaExcluir(p)}
                       className="gap-1 text-destructive hover:text-destructive"
+                      title="Excluir"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

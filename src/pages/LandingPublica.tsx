@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageShell } from "@/components/layout/PageShell";
@@ -25,6 +25,8 @@ const setMetaDescription = (descricao: string | null) => {
 
 const LandingPublica = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const preview = searchParams.get("preview") === "true";
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
 
   useEffect(() => {
@@ -32,12 +34,31 @@ const LandingPublica = () => {
     let ativo = true;
     setEstado({ tipo: "carregando" });
     (async () => {
-      const { data, error } = await supabase
+      // Em modo preview, exigir admin autenticado e bypassar filtro de publicado
+      if (preview) {
+        const { data: sess } = await supabase.auth.getSession();
+        const uid = sess.session?.user.id;
+        if (!uid) {
+          if (ativo) setEstado({ tipo: "nao-encontrada" });
+          return;
+        }
+        const { data: isAdmin } = await supabase.rpc("has_role", {
+          _user_id: uid,
+          _role: "admin",
+        });
+        if (!isAdmin) {
+          if (ativo) setEstado({ tipo: "nao-encontrada" });
+          return;
+        }
+      }
+
+      let query = supabase
         .from("landing_pages")
         .select("titulo, meta_descricao, blocos, publicado")
-        .eq("slug", slug)
-        .eq("publicado", true)
-        .maybeSingle();
+        .eq("slug", slug);
+      if (!preview) query = query.eq("publicado", true);
+
+      const { data, error } = await query.maybeSingle();
       if (!ativo) return;
       if (error) {
         setEstado({ tipo: "erro", mensagem: error.message });
@@ -57,7 +78,7 @@ const LandingPublica = () => {
     return () => {
       ativo = false;
     };
-  }, [slug]);
+  }, [slug, preview]);
 
   useEffect(() => {
     if (estado.tipo === "ok") {

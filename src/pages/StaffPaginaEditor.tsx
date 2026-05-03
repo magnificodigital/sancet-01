@@ -1,29 +1,139 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowDown, ArrowUp, Eye, Loader2, Save, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Copy,
+  Eye,
+  GripVertical,
+  Loader2,
+  Save,
+  X,
+} from "lucide-react";
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { BIBLIOTECA, Bloco, criarBloco, TipoBloco } from "@/components/landing/tipos";
+import {
+  BIBLIOTECA,
+  Bloco,
+  criarBloco,
+  TipoBloco,
+} from "@/components/landing/tipos";
 import { RenderBloco } from "@/components/landing/RenderBloco";
 import { FormBloco } from "@/components/landing/FormBloco";
 import { cn } from "@/lib/utils";
+
+type EstadoSalvar = "ocioso" | "salvando" | "salvo";
+
+const BlocoSortavel = ({
+  bloco,
+  selecionado,
+  onSelecionar,
+  onRemover,
+}: {
+  bloco: Bloco;
+  selecionado: boolean;
+  onSelecionar: () => void;
+  onRemover: () => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: bloco.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+      onClick={onSelecionar}
+      className={cn(
+        "relative group cursor-pointer outline outline-2 outline-transparent",
+        selecionado && "outline-[#1B3A6B]",
+      )}
+    >
+      <RenderBloco bloco={bloco} />
+      <div className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition">
+        <button
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+          className="h-7 w-7 flex items-center justify-center rounded bg-white/90 border shadow-sm cursor-grab active:cursor-grabbing"
+          title="Arrastar para reordenar"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition">
+        <Button
+          size="icon"
+          variant="destructive"
+          className="h-7 w-7"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemover();
+          }}
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const StaffPaginaEditor = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [carregando, setCarregando] = useState(true);
-  const [salvando, setSalvando] = useState(false);
+  const [estadoSalvar, setEstadoSalvar] = useState<EstadoSalvar>("ocioso");
+  const [horaSalvo, setHoraSalvo] = useState<string | null>(null);
   const [titulo, setTitulo] = useState("");
   const [slug, setSlug] = useState("");
   const [publicado, setPublicado] = useState(false);
   const [blocos, setBlocos] = useState<Bloco[]>([]);
   const [snapshot, setSnapshot] = useState<string>("");
   const [selecionado, setSelecionado] = useState<string | null>(null);
+
+  // modais de publicação
+  const [modalPublicar, setModalPublicar] = useState(false);
+  const [modalDespublicar, setModalDespublicar] = useState(false);
+
+  const debounceRef = useRef<number | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -48,10 +158,43 @@ const StaffPaginaEditor = () => {
     })();
   }, [id, navigate]);
 
-  const sujo = useMemo(
-    () => snapshot !== JSON.stringify({ titulo, publicado, blocos }),
-    [snapshot, titulo, publicado, blocos],
+  const estadoAtual = useMemo(
+    () => JSON.stringify({ titulo, publicado, blocos }),
+    [titulo, publicado, blocos],
   );
+  const sujo = snapshot !== estadoAtual;
+
+  const salvar = async (silencioso = false) => {
+    if (!id) return;
+    setEstadoSalvar("salvando");
+    const payload = { titulo, publicado, blocos: blocos as any };
+    const { error } = await supabase.from("landing_pages").update(payload).eq("id", id);
+    if (error) {
+      setEstadoSalvar("ocioso");
+      toast.error(error.message);
+      return false;
+    }
+    setSnapshot(JSON.stringify({ titulo, publicado, blocos }));
+    setEstadoSalvar("salvo");
+    setHoraSalvo(
+      new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    );
+    if (!silencioso) toast.success("Página salva");
+    return true;
+  };
+
+  // Auto-save com debounce de 3s
+  useEffect(() => {
+    if (carregando || !sujo) return;
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      salvar(true);
+    }, 3000);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estadoAtual, carregando]);
 
   const adicionar = (tipo: TipoBloco) => {
     const novo = criarBloco(tipo);
@@ -64,41 +207,55 @@ const StaffPaginaEditor = () => {
     if (selecionado === idBloco) setSelecionado(null);
   };
 
-  const mover = (idBloco: string, dir: -1 | 1) => {
-    setBlocos((prev) => {
-      const i = prev.findIndex((b) => b.id === idBloco);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= prev.length) return prev;
-      const copy = [...prev];
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-      return copy;
-    });
-  };
-
   const atualizarConfig = (idBloco: string, novaCfg: any) => {
     setBlocos((prev) =>
       prev.map((b) => (b.id === idBloco ? ({ ...b, config: novaCfg } as Bloco) : b)),
     );
   };
 
-  const salvar = async () => {
-    if (!id) return;
-    setSalvando(true);
-    const { error } = await supabase
-      .from("landing_pages")
-      .update({ titulo, publicado, blocos: blocos as any })
-      .eq("id", id);
-    setSalvando(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setSnapshot(JSON.stringify({ titulo, publicado, blocos }));
-    toast.success("Página salva");
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setBlocos((prev) => {
+      const oldIndex = prev.findIndex((b) => b.id === active.id);
+      const newIndex = prev.findIndex((b) => b.id === over.id);
+      if (oldIndex < 0 || newIndex < 0) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
   };
 
   const previsualizar = () => {
-    window.open(`/p/${slug}`, "_blank");
+    const url = publicado ? `/p/${slug}` : `/p/${slug}?preview=true`;
+    window.open(url, "_blank");
+  };
+
+  const togglePublicado = () => {
+    if (publicado) setModalDespublicar(true);
+    else setModalPublicar(true);
+  };
+
+  const confirmarPublicar = async () => {
+    setPublicado(true);
+    setModalPublicar(false);
+    // salvar imediatamente após mudança de estado
+    setTimeout(() => salvar(false), 0);
+  };
+
+  const confirmarDespublicar = async () => {
+    setPublicado(false);
+    setModalDespublicar(false);
+    setTimeout(() => salvar(false), 0);
+  };
+
+  const urlPublica = `${typeof window !== "undefined" ? window.location.origin : ""}/p/${slug}`;
+
+  const copiarLink = async () => {
+    try {
+      await navigator.clipboard.writeText(urlPublica);
+      toast.success("Link copiado");
+    } catch {
+      toast.error("Falha ao copiar");
+    }
   };
 
   const blocoSelecionado = blocos.find((b) => b.id === selecionado) ?? null;
@@ -110,6 +267,13 @@ const StaffPaginaEditor = () => {
       </div>
     );
   }
+
+  const indicadorSalvar = () => {
+    if (estadoSalvar === "salvando") return <span className="text-xs text-muted-foreground">Salvando...</span>;
+    if (sujo) return <span className="text-xs text-amber-600">• alterações não salvas</span>;
+    if (horaSalvo) return <span className="text-xs text-muted-foreground">Salvo às {horaSalvo}</span>;
+    return null;
+  };
 
   return (
     <div className="flex h-screen flex-col bg-[#F5F5F5]">
@@ -124,22 +288,41 @@ const StaffPaginaEditor = () => {
           className="max-w-md font-medium"
         />
         <span className="text-xs text-muted-foreground">/{slug}</span>
-        {sujo && <span className="text-xs text-amber-600">• alterações não salvas</span>}
+        {indicadorSalvar()}
         <div className="ml-auto flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="pub" className="text-sm">Publicado</Label>
-            <Switch id="pub" checked={publicado} onCheckedChange={setPublicado} />
-          </div>
+          {/* Toggle Rascunho/Publicado */}
+          <button
+            onClick={togglePublicado}
+            className={cn(
+              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+              publicado
+                ? "border-green-600 bg-green-50 text-green-700 hover:bg-green-100"
+                : "border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100",
+            )}
+          >
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full",
+                publicado ? "bg-green-500 animate-pulse" : "bg-gray-400",
+              )}
+            />
+            {publicado ? "Ao vivo" : "Rascunho"}
+          </button>
+
           <Button variant="outline" size="sm" onClick={previsualizar} className="gap-1.5">
             <Eye className="h-4 w-4" /> Pré-visualizar
           </Button>
           <Button
             size="sm"
-            onClick={salvar}
-            disabled={salvando}
+            onClick={() => salvar(false)}
+            disabled={estadoSalvar === "salvando"}
             className="gap-1.5 bg-[#C8102E] hover:bg-[#a30d25] text-white"
           >
-            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {estadoSalvar === "salvando" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Salvar
           </Button>
         </div>
@@ -171,49 +354,19 @@ const StaffPaginaEditor = () => {
                 Adicione blocos pela coluna à esquerda
               </div>
             )}
-            {blocos.map((b, i) => {
-              const ativo = selecionado === b.id;
-              return (
-                <div
-                  key={b.id}
-                  onClick={() => setSelecionado(b.id)}
-                  className={cn(
-                    "relative group cursor-pointer outline outline-2 outline-transparent",
-                    ativo && "outline-[#1B3A6B]",
-                  )}
-                >
-                  <RenderBloco bloco={b} />
-                  <div className="absolute top-2 right-2 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className="h-7 w-7"
-                      onClick={(e) => { e.stopPropagation(); mover(b.id, -1); }}
-                      disabled={i === 0}
-                    >
-                      <ArrowUp className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className="h-7 w-7"
-                      onClick={(e) => { e.stopPropagation(); mover(b.id, 1); }}
-                      disabled={i === blocos.length - 1}
-                    >
-                      <ArrowDown className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      className="h-7 w-7"
-                      onClick={(e) => { e.stopPropagation(); remover(b.id); }}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <SortableContext items={blocos.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                {blocos.map((b) => (
+                  <BlocoSortavel
+                    key={b.id}
+                    bloco={b}
+                    selecionado={selecionado === b.id}
+                    onSelecionar={() => setSelecionado(b.id)}
+                    onRemover={() => remover(b.id)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         </main>
 
@@ -237,6 +390,56 @@ const StaffPaginaEditor = () => {
           )}
         </aside>
       </div>
+
+      {/* Modal: Publicar */}
+      <AlertDialog open={modalPublicar} onOpenChange={setModalPublicar}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-green-600" /> Publicar página
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              A página ficará visível publicamente neste link:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-md border bg-muted/40 p-3 flex items-center gap-2">
+            <code className="text-xs flex-1 truncate">{urlPublica}</code>
+            <Button size="sm" variant="outline" onClick={copiarLink} className="gap-1.5 shrink-0">
+              <Copy className="h-3.5 w-3.5" /> Copiar
+            </Button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarPublicar}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Publicar agora
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal: Despublicar */}
+      <AlertDialog open={modalDespublicar} onOpenChange={setModalDespublicar}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Despublicar página?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A página ficará indisponível para visitantes. Você pode publicá-la novamente a qualquer momento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarDespublicar}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Despublicar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
