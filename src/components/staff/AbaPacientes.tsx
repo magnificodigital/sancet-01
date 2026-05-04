@@ -340,11 +340,23 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
                   {formatarData(p.created_at)}
                 </TableCell>
                 <TableCell className="text-right">
-                  {podeEditar && (
-                    <Button variant="outline" size="sm" onClick={() => abrirEditar(p)} className="gap-1">
-                      <Pencil className="h-3.5 w-3.5" /> Editar
-                    </Button>
-                  )}
+                  <div className="flex justify-end gap-1.5">
+                    {podeEditar && (
+                      <Button variant="outline" size="sm" onClick={() => abrirEditar(p)} className="gap-1">
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </Button>
+                    )}
+                    {podeExcluir && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => abrirExcluirCascade(p)}
+                        className="gap-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
