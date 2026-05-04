@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Save } from "lucide-react";
+import { Eye, EyeOff, Save, AlertTriangle, ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ConfirmarExclusao } from "./ConfirmarExclusao";
 
 const MODELOS_OPENROUTER = [
   { value: "google/gemini-2.5-flash-preview:free", label: "Gemini Flash 2.5 (gratuito — padrão)" },
@@ -49,9 +51,10 @@ const SENSIVEIS = new Set([
 
 type Props = {
   permissoes?: { config: { ver: boolean; editar: boolean } } | null;
+  isAdmin?: boolean;
 };
 
-export const AbaConfiguracoes = ({ permissoes }: Props = {}) => {
+export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) => {
   if (permissoes?.config?.ver === false) {
     return (
       <div className="py-20 text-center text-muted-foreground">
