@@ -272,6 +272,7 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
     }
   };
 
+  const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
     if (!q) return pacientes;
     return pacientes.filter(
