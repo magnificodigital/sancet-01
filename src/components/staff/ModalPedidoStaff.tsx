@@ -322,6 +322,17 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                 </Button>
               )}
             </div>
+
+            {podeExcluirPedido && (
+              <Button
+                variant="outline"
+                onClick={() => setConfirmarExcluir(true)}
+                className="w-full gap-1.5 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir pedido
+              </Button>
+            )}
           </TabsContent>
 
           <TabsContent value="paciente" className="space-y-2 pt-4 text-sm">
