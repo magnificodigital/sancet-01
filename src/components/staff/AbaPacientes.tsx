@@ -533,6 +533,28 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      <ConfirmarExclusao
+        open={!!pacienteParaExcluir}
+        onOpenChange={(v) => !v && setPacienteParaExcluir(null)}
+        titulo="Excluir paciente permanentemente?"
+        loading={excluindoCascade}
+        onConfirmar={confirmarExcluirCascade}
+        descricao={
+          <>
+            <p>
+              Esta ação vai apagar de forma <strong>irreversível</strong>:
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>O cadastro do paciente <strong>{pacienteParaExcluir?.nome ?? pacienteParaExcluir?.cpf}</strong></li>
+              <li><strong>{contagemPedidos}</strong> {contagemPedidos === 1 ? "pedido" : "pedidos"}</li>
+              <li>Todos os arquivos de receita e resultados</li>
+              <li>O login do paciente, se houver</li>
+            </ul>
+            <p>Esta ação não pode ser desfeita.</p>
+          </>
+        }
+      />
     </div>
   );
 };
