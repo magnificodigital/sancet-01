@@ -185,10 +185,33 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     }
   };
 
-  return (
-    <Sheet open={!!pedido} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-[560px] overflow-y-auto">
-        <SheetHeader>
+  const confirmarExcluirPedido = async () => {
+    if (!pedido) return;
+    setExcluindoPedido(true);
+    try {
+      const { error } = await supabase.functions.invoke("sancet-deletar-pedido", {
+        body: { pedido_id: pedido.id },
+      });
+      if (error) {
+        let msg = "Erro ao excluir pedido";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      toast.success("Pedido excluído");
+      setConfirmarExcluir(false);
+      onSalvo?.();
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao excluir");
+    } finally {
+      setExcluindoPedido(false);
+    }
+  };
+
           <SheetTitle className="flex flex-wrap items-center gap-3">
             <span className="font-mono">{pedido.protocolo}</span>
             <BadgeStatus status={pedido.status} />
