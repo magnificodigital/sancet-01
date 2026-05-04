@@ -433,6 +433,20 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
           </TabsContent>
         </Tabs>
       </SheetContent>
+
+      <ConfirmarExclusao
+        open={confirmarExcluir}
+        onOpenChange={setConfirmarExcluir}
+        titulo="Excluir pedido permanentemente?"
+        loading={excluindoPedido}
+        onConfirmar={confirmarExcluirPedido}
+        descricao={
+          <p>
+            Esta ação vai apagar o pedido <strong className="font-mono">{pedido.protocolo}</strong>,
+            receita anexada, resultados e arquivos. <strong>Irreversível.</strong>
+          </p>
+        }
+      />
     </Sheet>
   );
 };
