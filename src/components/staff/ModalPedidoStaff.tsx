@@ -24,6 +24,8 @@ import {
   Pedido,
   STATUS_OPTIONS,
 } from "./utils";
+import { ConfirmarExclusao } from "./ConfirmarExclusao";
+import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 type Props = {
   pedido: Pedido | null;
@@ -83,7 +85,11 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     Array<{ id: string; nome_arquivo: string; arquivo_url: string; created_at: string }>
   >([]);
   const [uploadando, setUploadando] = useState(false);
+  const [confirmarExcluir, setConfirmarExcluir] = useState(false);
+  const [excluindoPedido, setExcluindoPedido] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { isAdmin, permissoes } = useStaffPerfil();
+  const podeExcluirPedido = isAdmin || permissoes?.pedidos?.excluir === true;
 
   const carregarResultados = async (protocolo: string) => {
     const { data } = await supabase
