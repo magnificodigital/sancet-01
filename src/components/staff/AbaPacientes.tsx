@@ -15,6 +15,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { formatarData } from "./utils";
+import { ConfirmarExclusao } from "./ConfirmarExclusao";
+import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 const POR_PAGINA = 20;
 const COR_PRIMARIA = "#1B3A6B";
@@ -89,7 +91,12 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
     );
   }
   const podeEditar = permissoes?.pacientes?.editar !== false;
+  const { isAdmin } = useStaffPerfil();
+  const podeExcluir = isAdmin || permissoes?.pacientes?.excluir === true;
   const [pacientes, setPacientes] = useState<Pac[]>([]);
+  const [pacienteParaExcluir, setPacienteParaExcluir] = useState<Pac | null>(null);
+  const [contagemPedidos, setContagemPedidos] = useState<number>(0);
+  const [excluindoCascade, setExcluindoCascade] = useState(false);
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
   const [sheetAberto, setSheetAberto] = useState(false);
