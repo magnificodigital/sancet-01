@@ -66,6 +66,32 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
   const [configs, setConfigs] = useState<Configs>({});
   const [revelados, setRevelados] = useState<Set<string>>(new Set());
   const [salvando, setSalvando] = useState(false);
+  const [zonaRiscoAberta, setZonaRiscoAberta] = useState(false);
+  const [confirmarReset, setConfirmarReset] = useState(false);
+  const [resetando, setResetando] = useState(false);
+
+  const resetarDados = async () => {
+    setResetando(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sancet-resetar-dados", { body: {} });
+      if (error) {
+        let msg = "Erro ao resetar";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      const r = data as any;
+      toast.success(`Dados apagados: ${r?.pacientes ?? 0} pacientes, ${r?.pedidos ?? 0} pedidos`);
+      setConfirmarReset(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao resetar");
+    } finally {
+      setResetando(false);
+    }
+  };
 
   useEffect(() => {
     supabase
