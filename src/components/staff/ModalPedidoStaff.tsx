@@ -24,6 +24,8 @@ import {
   Pedido,
   STATUS_OPTIONS,
 } from "./utils";
+import { ConfirmarExclusao } from "./ConfirmarExclusao";
+import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 type Props = {
   pedido: Pedido | null;
@@ -83,7 +85,11 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     Array<{ id: string; nome_arquivo: string; arquivo_url: string; created_at: string }>
   >([]);
   const [uploadando, setUploadando] = useState(false);
+  const [confirmarExcluir, setConfirmarExcluir] = useState(false);
+  const [excluindoPedido, setExcluindoPedido] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { isAdmin, permissoes } = useStaffPerfil();
+  const podeExcluirPedido = isAdmin || permissoes?.pedidos?.excluir === true;
 
   const carregarResultados = async (protocolo: string) => {
     const { data } = await supabase
@@ -176,6 +182,33 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
       toast.success("Resultado excluído");
     } catch {
       toast.error("Erro ao excluir resultado");
+    }
+  };
+
+  const confirmarExcluirPedido = async () => {
+    if (!pedido) return;
+    setExcluindoPedido(true);
+    try {
+      const { error } = await supabase.functions.invoke("sancet-deletar-pedido", {
+        body: { pedido_id: pedido.id },
+      });
+      if (error) {
+        let msg = "Erro ao excluir pedido";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      toast.success("Pedido excluído");
+      setConfirmarExcluir(false);
+      onSalvo?.();
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao excluir");
+    } finally {
+      setExcluindoPedido(false);
     }
   };
 
@@ -289,6 +322,17 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                 </Button>
               )}
             </div>
+
+            {podeExcluirPedido && (
+              <Button
+                variant="outline"
+                onClick={() => setConfirmarExcluir(true)}
+                className="w-full gap-1.5 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir pedido
+              </Button>
+            )}
           </TabsContent>
 
           <TabsContent value="paciente" className="space-y-2 pt-4 text-sm">
@@ -389,6 +433,20 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
           </TabsContent>
         </Tabs>
       </SheetContent>
+
+      <ConfirmarExclusao
+        open={confirmarExcluir}
+        onOpenChange={setConfirmarExcluir}
+        titulo="Excluir pedido permanentemente?"
+        loading={excluindoPedido}
+        onConfirmar={confirmarExcluirPedido}
+        descricao={
+          <p>
+            Esta ação vai apagar o pedido <strong className="font-mono">{pedido.protocolo}</strong>,
+            receita anexada, resultados e arquivos. <strong>Irreversível.</strong>
+          </p>
+        }
+      />
     </Sheet>
   );
 };

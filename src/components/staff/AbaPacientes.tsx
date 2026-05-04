@@ -15,6 +15,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { formatarData } from "./utils";
+import { ConfirmarExclusao } from "./ConfirmarExclusao";
+import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 const POR_PAGINA = 20;
 const COR_PRIMARIA = "#1B3A6B";
@@ -89,7 +91,12 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
     );
   }
   const podeEditar = permissoes?.pacientes?.editar !== false;
+  const { isAdmin } = useStaffPerfil();
+  const podeExcluir = isAdmin || permissoes?.pacientes?.excluir === true;
   const [pacientes, setPacientes] = useState<Pac[]>([]);
+  const [pacienteParaExcluir, setPacienteParaExcluir] = useState<Pac | null>(null);
+  const [contagemPedidos, setContagemPedidos] = useState<number>(0);
+  const [excluindoCascade, setExcluindoCascade] = useState(false);
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
   const [sheetAberto, setSheetAberto] = useState(false);
@@ -229,6 +236,42 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
     carregar();
   };
 
+  const abrirExcluirCascade = async (p: Pac) => {
+    const { count } = await supabase
+      .from("pedidos")
+      .select("id", { count: "exact", head: true })
+      .eq("paciente_id", p.id);
+    setContagemPedidos(count ?? 0);
+    setPacienteParaExcluir(p);
+  };
+
+  const confirmarExcluirCascade = async () => {
+    if (!pacienteParaExcluir) return;
+    setExcluindoCascade(true);
+    try {
+      const { error } = await supabase.functions.invoke("sancet-deletar-paciente", {
+        body: { paciente_id: pacienteParaExcluir.id },
+      });
+      if (error) {
+        let msg = "Erro ao excluir paciente";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      toast.success("Paciente excluído permanentemente");
+      setPacienteParaExcluir(null);
+      setSheetAberto(false);
+      carregar();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao excluir");
+    } finally {
+      setExcluindoCascade(false);
+    }
+  };
+
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
     if (!q) return pacientes;
@@ -297,11 +340,23 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
                   {formatarData(p.created_at)}
                 </TableCell>
                 <TableCell className="text-right">
-                  {podeEditar && (
-                    <Button variant="outline" size="sm" onClick={() => abrirEditar(p)} className="gap-1">
-                      <Pencil className="h-3.5 w-3.5" /> Editar
-                    </Button>
-                  )}
+                  <div className="flex justify-end gap-1.5">
+                    {podeEditar && (
+                      <Button variant="outline" size="sm" onClick={() => abrirEditar(p)} className="gap-1">
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </Button>
+                    )}
+                    {podeExcluir && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => abrirExcluirCascade(p)}
+                        className="gap-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -478,6 +533,28 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      <ConfirmarExclusao
+        open={!!pacienteParaExcluir}
+        onOpenChange={(v) => !v && setPacienteParaExcluir(null)}
+        titulo="Excluir paciente permanentemente?"
+        loading={excluindoCascade}
+        onConfirmar={confirmarExcluirCascade}
+        descricao={
+          <>
+            <p>
+              Esta ação vai apagar de forma <strong>irreversível</strong>:
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>O cadastro do paciente <strong>{pacienteParaExcluir?.nome ?? pacienteParaExcluir?.cpf}</strong></li>
+              <li><strong>{contagemPedidos}</strong> {contagemPedidos === 1 ? "pedido" : "pedidos"}</li>
+              <li>Todos os arquivos de receita e resultados</li>
+              <li>O login do paciente, se houver</li>
+            </ul>
+            <p>Esta ação não pode ser desfeita.</p>
+          </>
+        }
+      />
     </div>
   );
 };

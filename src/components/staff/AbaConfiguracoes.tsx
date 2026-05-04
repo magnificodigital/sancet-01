@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Save } from "lucide-react";
+import { Eye, EyeOff, Save, AlertTriangle, ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ConfirmarExclusao } from "./ConfirmarExclusao";
 
 const MODELOS_OPENROUTER = [
   { value: "google/gemini-2.5-flash-preview:free", label: "Gemini Flash 2.5 (gratuito — padrão)" },
@@ -49,9 +51,10 @@ const SENSIVEIS = new Set([
 
 type Props = {
   permissoes?: { config: { ver: boolean; editar: boolean } } | null;
+  isAdmin?: boolean;
 };
 
-export const AbaConfiguracoes = ({ permissoes }: Props = {}) => {
+export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) => {
   if (permissoes?.config?.ver === false) {
     return (
       <div className="py-20 text-center text-muted-foreground">
@@ -63,6 +66,32 @@ export const AbaConfiguracoes = ({ permissoes }: Props = {}) => {
   const [configs, setConfigs] = useState<Configs>({});
   const [revelados, setRevelados] = useState<Set<string>>(new Set());
   const [salvando, setSalvando] = useState(false);
+  const [zonaRiscoAberta, setZonaRiscoAberta] = useState(false);
+  const [confirmarReset, setConfirmarReset] = useState(false);
+  const [resetando, setResetando] = useState(false);
+
+  const resetarDados = async () => {
+    setResetando(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sancet-resetar-dados", { body: {} });
+      if (error) {
+        let msg = "Erro ao resetar";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      const r = data as any;
+      toast.success(`Dados apagados: ${r?.pacientes ?? 0} pacientes, ${r?.pedidos ?? 0} pedidos`);
+      setConfirmarReset(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao resetar");
+    } finally {
+      setResetando(false);
+    }
+  };
 
   useEffect(() => {
     supabase
@@ -231,6 +260,57 @@ export const AbaConfiguracoes = ({ permissoes }: Props = {}) => {
           {salvando ? "Salvando..." : "Salvar configurações"}
         </Button>
       )}
+
+      {isAdmin && (
+        <Card className="border-destructive/40">
+          <Collapsible open={zonaRiscoAberta} onOpenChange={setZonaRiscoAberta}>
+            <CollapsibleTrigger asChild>
+              <button className="flex w-full items-center justify-between p-6 text-left">
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" /> Zona de risco
+                </CardTitle>
+                <ChevronDown
+                  className={`h-5 w-5 text-muted-foreground transition-transform ${zonaRiscoAberta ? "rotate-180" : ""}`}
+                />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-4 pt-0">
+                <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+                  <strong>Atenção:</strong> as ações abaixo são irreversíveis. Use apenas em ambiente
+                  de teste ou para limpeza autorizada.
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setConfirmarReset(true)}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" /> Apagar todos os dados de teste
+                </Button>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      )}
+
+      <ConfirmarExclusao
+        open={confirmarReset}
+        onOpenChange={setConfirmarReset}
+        titulo="Apagar TODOS os dados?"
+        palavraConfirmacao="APAGAR TUDO"
+        textoBotao="Apagar tudo agora"
+        loading={resetando}
+        onConfirmar={resetarDados}
+        descricao={
+          <>
+            <p>
+              Vai apagar <strong>TODOS</strong> os pacientes, pedidos, resultados e arquivos de storage.
+            </p>
+            <p>Mantém apenas os usuários staff e configurações do sistema.</p>
+            <p className="text-destructive font-medium">Esta ação não pode ser desfeita.</p>
+          </>
+        }
+      />
     </div>
   );
 };
