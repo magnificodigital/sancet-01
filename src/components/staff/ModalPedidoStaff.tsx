@@ -212,6 +212,10 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     }
   };
 
+  return (
+    <Sheet open={!!pedido} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="w-full sm:max-w-[560px] overflow-y-auto">
+        <SheetHeader>
           <SheetTitle className="flex flex-wrap items-center gap-3">
             <span className="font-mono">{pedido.protocolo}</span>
             <BadgeStatus status={pedido.status} />
