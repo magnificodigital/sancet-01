@@ -236,7 +236,42 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
     carregar();
   };
 
-  const filtrados = useMemo(() => {
+  const abrirExcluirCascade = async (p: Pac) => {
+    const { count } = await supabase
+      .from("pedidos")
+      .select("id", { count: "exact", head: true })
+      .eq("paciente_id", p.id);
+    setContagemPedidos(count ?? 0);
+    setPacienteParaExcluir(p);
+  };
+
+  const confirmarExcluirCascade = async () => {
+    if (!pacienteParaExcluir) return;
+    setExcluindoCascade(true);
+    try {
+      const { error } = await supabase.functions.invoke("sancet-deletar-paciente", {
+        body: { paciente_id: pacienteParaExcluir.id },
+      });
+      if (error) {
+        let msg = "Erro ao excluir paciente";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      toast.success("Paciente excluído permanentemente");
+      setPacienteParaExcluir(null);
+      setSheetAberto(false);
+      carregar();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao excluir");
+    } finally {
+      setExcluindoCascade(false);
+    }
+  };
+
     const q = busca.trim().toLowerCase();
     if (!q) return pacientes;
     return pacientes.filter(
