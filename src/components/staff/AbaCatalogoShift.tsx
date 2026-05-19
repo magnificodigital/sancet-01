@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment as FragmentWithKey, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,8 +179,8 @@ export const AbaCatalogoShift = () => {
                   const atualizados = l.exames_atualizados + l.unidades_atualizadas + l.convenios_atualizados;
                   const aberto = expandido === l.id;
                   return (
-                    <>
-                      <TableRow key={l.id}>
+                    <FragmentWithKey key={l.id}>
+                      <TableRow>
                         <TableCell>
                           <Collapsible open={aberto} onOpenChange={(o) => setExpandido(o ? l.id : null)}>
                             <CollapsibleTrigger asChild>
@@ -197,7 +197,7 @@ export const AbaCatalogoShift = () => {
                         <TableCell className="text-sm">~{atualizados}</TableCell>
                       </TableRow>
                       {aberto && (
-                        <TableRow key={l.id + "-d"} className="bg-muted/30">
+                        <TableRow className="bg-muted/30">
                           <TableCell colSpan={6} className="text-xs">
                             <div className="grid grid-cols-3 gap-4 py-2">
                               <div>
@@ -224,7 +224,7 @@ export const AbaCatalogoShift = () => {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </FragmentWithKey>
                   );
                 })}
               </TableBody>
