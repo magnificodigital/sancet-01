@@ -8,7 +8,7 @@ import { AbaPedidos } from "@/components/staff/AbaPedidos";
 import { AbaPacientes } from "@/components/staff/AbaPacientes";
 import { AbaCatalogo } from "@/components/staff/AbaCatalogo";
 import { AbaUnidades } from "@/components/staff/AbaUnidades";
-import { AbaSync } from "@/components/staff/AbaSync";
+import { AbaCatalogoShift } from "@/components/staff/AbaCatalogoShift";
 import { AbaConfiguracoes } from "@/components/staff/AbaConfiguracoes";
 import { AbaEquipe } from "@/components/staff/AbaEquipe";
 import { AbaPaginas } from "@/components/staff/AbaPaginas";
