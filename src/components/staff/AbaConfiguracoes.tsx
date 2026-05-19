@@ -28,6 +28,7 @@ type Configs = Record<string, string>;
 
 const CHAVES = [
   "SHIFT_ENDPOINT",
+  "SHIFT_ENDPOINT_MOBILE",
   "SHIFT_USER_ID",
   "SHIFT_SENHA",
   "OPENROUTER_API_KEY",
