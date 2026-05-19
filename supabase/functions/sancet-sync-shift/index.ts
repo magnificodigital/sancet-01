@@ -3,7 +3,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { XMLParser } from "https://esm.sh/fast-xml-parser@4.3.2";
-import { SOAP_HEADERS, buildEnvelope, slugify, loadShiftConfig } from "../_shared/shift-soap.ts";
+import { SOAP_HEADERS, buildEnvelope, slugify, loadShiftConfig, buildAuthTags } from "../_shared/shift-soap.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,10 +31,10 @@ function findDeep(obj: any, key: string): any {
   return undefined;
 }
 
-async function soapCall(endpoint: string, userId: string, senha: string, method: string) {
+async function soapCall(endpoint: string, userId: string | null, senha: string | null, method: string) {
   const envelope = buildEnvelope(
     method,
-    `<pUserId>${userId}</pUserId><pSenha>${senha}</pSenha><pConfiguracaoWeb></pConfiguracaoWeb>`,
+    `${buildAuthTags(userId, senha)}<pConfiguracaoWeb></pConfiguracaoWeb>`,
   );
   const res = await fetch(endpoint, { method: "POST", headers: SOAP_HEADERS, body: envelope });
   const xml = await res.text();
