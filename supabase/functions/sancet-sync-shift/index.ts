@@ -286,18 +286,20 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] unidades válidas para upsert:", unidades.length);
+    const unidadesDedup = dedupByCodigoShift(unidades);
+    console.log(`[sync] unidades após dedup: ${unidadesDedup.length} (era ${unidades.length})`);
 
     etapa = "diff_unidades";
-    const unidadesExist = await diffCounts(supabase, "unidades_cache", unidades.map((x) => x.codigo_shift));
+    const unidadesExist = await diffCounts(supabase, "unidades_cache", unidadesDedup.map((x) => x.codigo_shift));
     let unidadesCriadas = 0, unidadesAtualizadas = 0;
-    if (unidades.length) {
+    if (unidadesDedup.length) {
       etapa = "upsert_unidades";
-      const { error } = await supabase.from("unidades_cache").upsert(unidades, { onConflict: "codigo_shift" });
+      const { error } = await supabase.from("unidades_cache").upsert(unidadesDedup, { onConflict: "codigo_shift" });
       if (error) {
         console.error("[sync] ERRO upsert unidades:", JSON.stringify(error));
         throw new Error("Upsert unidades: " + error.message);
       }
-      for (const x of unidades) unidadesExist.has(x.codigo_shift) ? unidadesAtualizadas++ : unidadesCriadas++;
+      for (const x of unidadesDedup) unidadesExist.has(x.codigo_shift) ? unidadesAtualizadas++ : unidadesCriadas++;
       console.log("[sync] unidades criadas:", unidadesCriadas, "atualizadas:", unidadesAtualizadas);
     }
 
