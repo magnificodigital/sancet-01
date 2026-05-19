@@ -52,11 +52,11 @@ function findDeep(obj: any, key: string): any {
   return undefined;
 }
 
-async function soapCall(endpoint: string, userId: string | null, senha: string | null, method: string) {
+async function soapCall(endpoint: string, userId: string | null, senha: string | null, method: string, configWeb = "") {
   console.log(`[sync] SOAP ${method} → ${endpoint} (auth: ${!!(userId && senha)})`);
   const envelope = buildEnvelope(
     method,
-    `${buildAuthTags(userId, senha)}<www:pConfiguracaoWeb></www:pConfiguracaoWeb>`,
+    `${buildAuthTags(userId, senha)}<www:pConfiguracaoWeb>${configWeb}</www:pConfiguracaoWeb>`,
   );
 
   const SHIFT_PROXY_URL = 'https://sancet-shift-proxysancet-shift-proxy.willy-5c4.workers.dev/';
@@ -205,8 +205,9 @@ serve(async (req) => {
     };
 
     etapa = "load_config";
-    const { endpoint, userId, senha } = await loadShiftConfig(supabase);
-    console.log("[sync] config — endpoint:", endpoint, "tem credenciais:", !!(userId && senha));
+    const { endpoint, endpointMobile, userId, senha } = await loadShiftConfig(supabase);
+    console.log("[sync] config — endpoint consultas:", endpoint, "endpoint mobile:", endpointMobile, "tem credenciais:", !!(userId && senha));
+    
 
     // ----- EXAMES -----
     etapa = "soap_exames";
@@ -364,7 +365,7 @@ serve(async (req) => {
     // ----- CONVENIOS -----
     etapa = "soap_convenios";
     console.log("[sync] === CONVENIOS ===");
-    const convXml = await soapCall(endpoint, userId, senha, "WsGetTodosFontePagadora");
+    const convXml = await soapCall(endpointMobile, userId, senha, "WsGetTodosFontePagadora", "UNICO");
     console.log("[sync] convenios root keys:", Object.keys(convXml ?? {}));
     const convRaw = asArray(findDeep(convXml, "fontePagadora"));
     console.log("[sync] convenios brutos encontrados:", convRaw.length);

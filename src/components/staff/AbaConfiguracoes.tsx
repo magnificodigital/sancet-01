@@ -28,6 +28,7 @@ type Configs = Record<string, string>;
 
 const CHAVES = [
   "SHIFT_ENDPOINT",
+  "SHIFT_ENDPOINT_MOBILE",
   "SHIFT_USER_ID",
   "SHIFT_SENHA",
   "OPENROUTER_API_KEY",
@@ -172,8 +173,13 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
         <CardContent className="space-y-4">
           {campo(
             "SHIFT_ENDPOINT",
-            "Endpoint SOAP",
+            "Endpoint SOAP (consultas)",
             "https://sancet.shiftcloud.com.br/shift/lis/sancet/elis/s01.util.b2b.shift.consultas.Webserver.cls",
+          )}
+          {campo(
+            "SHIFT_ENDPOINT_MOBILE",
+            "Endpoint SOAP Mobile (convênios)",
+            "https://sancet.shiftcloud.com.br/shift/lis/sancet/elis/s01.util.b2b.integracaoMobile.Webserver.cls",
           )}
           {campo("SHIFT_USER_ID", "Usuário (pUserId)", "Fornecido pelo TI da Sancet")}
           {campo("SHIFT_SENHA", "Senha", "Fornecido pelo TI da Sancet")}
