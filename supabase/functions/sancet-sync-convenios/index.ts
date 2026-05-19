@@ -2,7 +2,7 @@
 // Secrets: SHIFT_ENDPOINT, SHIFT_USER_ID, SHIFT_SENHA
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SOAP_HEADERS, buildEnvelope, getter, loadShiftConfig } from "../_shared/shift-soap.ts";
+import { SOAP_HEADERS, buildEnvelope, getter, loadShiftConfig, buildAuthTags } from "../_shared/shift-soap.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
