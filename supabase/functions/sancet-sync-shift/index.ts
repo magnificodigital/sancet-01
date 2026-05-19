@@ -213,7 +213,15 @@ serve(async (req) => {
     console.log("[sync] === EXAMES ===");
     const examesXml = await soapCall(endpoint, userId, senha, "WsGetTodosExames");
     console.log("[sync] exames root keys:", Object.keys(examesXml ?? {}));
-    const examesRaw = asArray(findDeep(examesXml, "procedimentoSimples"));
+    const examesRaw = asArray(findDeep(examesXml, "procedimentoSimples")).filter((e: any) => {
+      const id = String(e?.id ?? '').trim();
+      const nome = String(e?.nome ?? '').trim();
+      // Descarta lixo: id === nome E muito curto
+      if (id === nome && id.length <= 3) return false;
+      // Descarta nomes vazios ou só números/letras isoladas
+      if (nome.length < 3) return false;
+      return true;
+    });
     console.log("[sync] exames brutos encontrados:", examesRaw.length);
     const exames = examesRaw
       .map((e: any) => {
