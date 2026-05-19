@@ -9,7 +9,6 @@ import { AbaPacientes } from "@/components/staff/AbaPacientes";
 import { AbaCatalogo } from "@/components/staff/AbaCatalogo";
 import { AbaUnidades } from "@/components/staff/AbaUnidades";
 import { AbaSync } from "@/components/staff/AbaSync";
-import { AbaCatalogoShift } from "@/components/staff/AbaCatalogoShift";
 import { AbaConfiguracoes } from "@/components/staff/AbaConfiguracoes";
 import { AbaEquipe } from "@/components/staff/AbaEquipe";
 import { AbaPaginas } from "@/components/staff/AbaPaginas";
@@ -62,8 +61,6 @@ const StaffDashboard = () => {
       {aba === "pacientes" && <AbaPacientes permissoes={staffPerfil.permissoes} />}
       {aba === "catalogo" && <AbaCatalogo permissoes={staffPerfil.permissoes} />}
       {aba === "unidades" && <AbaUnidades permissoes={staffPerfil.permissoes} />}
-      {aba === "shift" && <AbaCatalogoShift />}
-      {aba === "shift" && <AbaCatalogoShift />}
       {aba === "config" && <AbaConfiguracoes permissoes={staffPerfil.permissoes} isAdmin={staffPerfil.isAdmin} />}
       {aba === "paginas" && <AbaPaginas />}
       {aba === "equipe" && <AbaEquipe />}
