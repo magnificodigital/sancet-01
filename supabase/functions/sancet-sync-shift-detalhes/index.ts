@@ -64,7 +64,7 @@ async function fetchDetalhe(endpoint: string, exameId: string) {
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${xml.slice(0, 200)}`);
   }
-  return parser.parse(xml);
+  return { xml, parsed: parser.parse(xml) };
 }
 
 function mapDetalhe(parsed: any) {
