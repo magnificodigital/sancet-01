@@ -21,6 +21,14 @@ function asArray<T>(v: T | T[] | undefined | null): T[] {
   return Array.isArray(v) ? v : [v];
 }
 
+function dedupByCodigoShift<T extends { codigo_shift: string }>(items: T[]): T[] {
+  const map = new Map<string, T>();
+  for (const item of items) {
+    map.set(item.codigo_shift, item);
+  }
+  return Array.from(map.values());
+}
+
 function findDeep(obj: any, key: string): any {
   if (!obj || typeof obj !== "object") return undefined;
   if (key in obj) return obj[key];
