@@ -241,8 +241,10 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] exames válidos para upsert:", exames.length);
-    const examesDedup = dedupByCodigoShift(exames);
-    console.log(`[sync] exames após dedup: ${examesDedup.length} (era ${exames.length})`);
+    const examesDedupCodigo = dedupByCodigoShift(exames);
+    console.log(`[sync] exames após dedup código: ${examesDedupCodigo.length} (era ${exames.length})`);
+    const examesDedup = dedupBySlug(examesDedupCodigo);
+    console.log(`[sync] exames após dedup slug: ${examesDedup.length} (era ${examesDedupCodigo.length})`);
 
     etapa = "diff_exames";
     const examesExist = await diffCounts(supabase, "exames_cache", examesDedup.map((x) => x.codigo_shift));
