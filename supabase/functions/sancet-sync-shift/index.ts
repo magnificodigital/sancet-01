@@ -365,7 +365,7 @@ serve(async (req) => {
     // ----- CONVENIOS -----
     etapa = "soap_convenios";
     console.log("[sync] === CONVENIOS ===");
-    const convXml = await soapCall(endpoint, userId, senha, "WsGetTodosFontePagadora");
+    const convXml = await soapCall(endpointMobile, userId, senha, "WsGetTodosFontePagadora", "UNICO");
     console.log("[sync] convenios root keys:", Object.keys(convXml ?? {}));
     const convRaw = asArray(findDeep(convXml, "fontePagadora"));
     console.log("[sync] convenios brutos encontrados:", convRaw.length);
