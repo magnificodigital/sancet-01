@@ -90,63 +90,80 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const inicio = Date.now();
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  let etapa = "init";
+  let logId: string | null = null;
+  let supabase: any;
 
-  // 1. Auth + admin check
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  const userClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claims?.claims?.sub) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  const { data: isAdmin } = await supabase.rpc("has_role", {
-    _user_id: claims.claims.sub,
-    _role: "admin",
-  });
-  if (!isAdmin) {
-    return new Response(JSON.stringify({ error: "Apenas administradores." }), {
-      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  try {
+    console.log("[sync] iniciando");
+    etapa = "create_client";
+    supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
 
-  // 2. Cria log
-  const { data: logRow, error: logErr } = await supabase
-    .from("shift_sync_logs")
-    .insert({ status: "em_execucao" })
-    .select("id")
-    .single();
-  if (logErr) {
-    return new Response(JSON.stringify({ error: "Falha ao criar log: " + logErr.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // 1. Auth + admin check
+    etapa = "auth_header";
+    const authHeader = req.headers.get("Authorization");
+    console.log("[sync] auth header presente:", !!authHeader);
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    etapa = "get_claims";
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
+    console.log("[sync] user:", claims?.claims?.sub, "claimsErr:", claimsErr?.message);
+    if (claimsErr || !claims?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    etapa = "has_role";
+    const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
+      _user_id: claims.claims.sub,
+      _role: "admin",
     });
-  }
-  const logId = logRow.id;
+    console.log("[sync] is admin:", isAdmin, "roleErr:", roleErr?.message);
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: "Apenas administradores." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-  const finalizar = async (extra: Record<string, any>) => {
-    await supabase
+    // 2. Cria log
+    etapa = "criar_log";
+    const { data: logRow, error: logErr } = await supabase
       .from("shift_sync_logs")
-      .update({
-        finalizado_em: new Date().toISOString(),
-        duracao_ms: Date.now() - inicio,
-        ...extra,
-      })
-      .eq("id", logId);
-  };
+      .insert({ status: "em_execucao" })
+      .select("id")
+      .single();
+    console.log("[sync] log criado:", logRow?.id, "logErr:", logErr?.message);
+    if (logErr) {
+      return new Response(JSON.stringify({ error: "Falha ao criar log: " + logErr.message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    logId = logRow.id;
+
+    const finalizar = async (extra: Record<string, any>) => {
+      if (!logId) return;
+      await supabase
+        .from("shift_sync_logs")
+        .update({
+          finalizado_em: new Date().toISOString(),
+          duracao_ms: Date.now() - inicio,
+          ...extra,
+        })
+        .eq("id", logId);
+    };
+
 
   try {
     const { endpoint, userId, senha } = await loadShiftConfig(supabase);
