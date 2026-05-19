@@ -29,6 +29,19 @@ function dedupByCodigoShift<T extends { codigo_shift: string }>(items: T[]): T[]
   return Array.from(map.values());
 }
 
+function dedupBySlug<T extends { slug: string | null; nome: string }>(items: T[]): T[] {
+  const map = new Map<string, T>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (!item.slug) { out.push(item); continue; }
+    const existing = map.get(item.slug);
+    if (!existing || item.nome.length > existing.nome.length) {
+      map.set(item.slug, item);
+    }
+  }
+  return [...out, ...Array.from(map.values())];
+}
+
 function findDeep(obj: any, key: string): any {
   if (!obj || typeof obj !== "object") return undefined;
   if (key in obj) return obj[key];
@@ -228,8 +241,10 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] exames válidos para upsert:", exames.length);
-    const examesDedup = dedupByCodigoShift(exames);
-    console.log(`[sync] exames após dedup: ${examesDedup.length} (era ${exames.length})`);
+    const examesDedupCodigo = dedupByCodigoShift(exames);
+    console.log(`[sync] exames após dedup código: ${examesDedupCodigo.length} (era ${exames.length})`);
+    const examesDedup = dedupBySlug(examesDedupCodigo);
+    console.log(`[sync] exames após dedup slug: ${examesDedup.length} (era ${examesDedupCodigo.length})`);
 
     etapa = "diff_exames";
     const examesExist = await diffCounts(supabase, "exames_cache", examesDedup.map((x) => x.codigo_shift));
@@ -286,8 +301,10 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] unidades válidas para upsert:", unidades.length);
-    const unidadesDedup = dedupByCodigoShift(unidades);
-    console.log(`[sync] unidades após dedup: ${unidadesDedup.length} (era ${unidades.length})`);
+    const unidadesDedupCodigo = dedupByCodigoShift(unidades);
+    console.log(`[sync] unidades após dedup código: ${unidadesDedupCodigo.length} (era ${unidades.length})`);
+    const unidadesDedup = dedupBySlug(unidadesDedupCodigo);
+    console.log(`[sync] unidades após dedup slug: ${unidadesDedup.length} (era ${unidadesDedupCodigo.length})`);
 
     etapa = "diff_unidades";
     const unidadesExist = await diffCounts(supabase, "unidades_cache", unidadesDedup.map((x) => x.codigo_shift));
