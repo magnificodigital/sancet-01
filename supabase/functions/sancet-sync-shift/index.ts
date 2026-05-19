@@ -35,7 +35,7 @@ async function soapCall(endpoint: string, userId: string | null, senha: string |
   console.log(`[sync] SOAP ${method} → ${endpoint} (auth: ${!!(userId && senha)})`);
   const envelope = buildEnvelope(
     method,
-    `${buildAuthTags(userId, senha)}<pConfiguracaoWeb></pConfiguracaoWeb>`,
+    `${buildAuthTags(userId, senha)}<www:pConfiguracaoWeb></www:pConfiguracaoWeb>`,
   );
   const res = await fetch(endpoint, { method: "POST", headers: SOAP_HEADERS, body: envelope });
   const xml = await res.text();
