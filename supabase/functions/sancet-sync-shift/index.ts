@@ -327,18 +327,20 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] convenios válidos para upsert:", convenios.length);
+    const conveniosDedup = dedupByCodigoShift(convenios);
+    console.log(`[sync] convenios após dedup: ${conveniosDedup.length} (era ${convenios.length})`);
 
     etapa = "diff_convenios";
-    const convExist = await diffCounts(supabase, "convenios_cache", convenios.map((x) => x.codigo_shift));
+    const convExist = await diffCounts(supabase, "convenios_cache", conveniosDedup.map((x) => x.codigo_shift));
     let convCriados = 0, convAtualizados = 0;
-    if (convenios.length) {
+    if (conveniosDedup.length) {
       etapa = "upsert_convenios";
-      const { error } = await supabase.from("convenios_cache").upsert(convenios, { onConflict: "codigo_shift" });
+      const { error } = await supabase.from("convenios_cache").upsert(conveniosDedup, { onConflict: "codigo_shift" });
       if (error) {
         console.error("[sync] ERRO upsert convenios:", JSON.stringify(error));
         throw new Error("Upsert convenios: " + error.message);
       }
-      for (const x of convenios) convExist.has(x.codigo_shift) ? convAtualizados++ : convCriados++;
+      for (const x of conveniosDedup) convExist.has(x.codigo_shift) ? convAtualizados++ : convCriados++;
       console.log("[sync] convenios criados:", convCriados, "atualizados:", convAtualizados);
     }
 
