@@ -5,6 +5,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { XMLParser } from "https://esm.sh/fast-xml-parser@4.3.2";
 import { SOAP_HEADERS, buildEnvelope, slugify, loadShiftConfig, buildAuthTags } from "../_shared/shift-soap.ts";
 
+const SHIFT_PROXY_URL = "https://sancet-shift-proxysancet-shift-proxy.willy-5c4.workers.dev/";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -37,7 +39,12 @@ async function soapCall(endpoint: string, userId: string | null, senha: string |
     method,
     `${buildAuthTags(userId, senha)}<www:pConfiguracaoWeb></www:pConfiguracaoWeb>`,
   );
-  const res = await fetch(endpoint, { method: "POST", headers: SOAP_HEADERS, body: envelope });
+  console.log(`[sync] via proxy: ${SHIFT_PROXY_URL} → target: ${endpoint}`);
+  const res = await fetch(SHIFT_PROXY_URL, {
+    method: "POST",
+    headers: { ...SOAP_HEADERS, "X-Target-Url": endpoint },
+    body: envelope,
+  });
   const xml = await res.text();
   console.log(`[sync] SOAP ${method} ← HTTP ${res.status}, ${xml.length} bytes`);
   console.log(`[sync] SOAP ${method} preview:`, xml.slice(0, 400));
