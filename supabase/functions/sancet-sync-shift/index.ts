@@ -3,9 +3,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { XMLParser } from "https://esm.sh/fast-xml-parser@4.3.2";
-import { SOAP_HEADERS, buildEnvelope, slugify, loadShiftConfig, buildAuthTags } from "../_shared/shift-soap.ts";
-
-const SHIFT_PROXY_URL = "https://sancet-shift-proxysancet-shift-proxy.willy-5c4.workers.dev/";
+import { buildEnvelope, slugify, loadShiftConfig, buildAuthTags } from "../_shared/shift-soap.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,21 +37,29 @@ async function soapCall(endpoint: string, userId: string | null, senha: string |
     method,
     `${buildAuthTags(userId, senha)}<www:pConfiguracaoWeb></www:pConfiguracaoWeb>`,
   );
+
+  const SHIFT_PROXY_URL = 'https://sancet-shift-proxysancet-shift-proxy.willy-5c4.workers.dev/';
+
   console.log(`[sync] via proxy: ${SHIFT_PROXY_URL} → target: ${endpoint}`);
-  const res = await fetch(SHIFT_PROXY_URL, {
+
+  const response = await fetch(SHIFT_PROXY_URL, {
     method: "POST",
-    headers: { ...SOAP_HEADERS, "X-Target-Url": endpoint },
+    headers: {
+      "Content-Type": "text/xml; charset=utf-8",
+      "SOAPAction": '""',
+      "X-Target-Url": endpoint,
+    },
     body: envelope,
   });
-  const xml = await res.text();
-  console.log(`[sync] SOAP ${method} ← HTTP ${res.status}, ${xml.length} bytes`);
+  const xml = await response.text();
+  console.log(`[sync] SOAP ${method} ← HTTP ${response.status}, ${xml.length} bytes`);
   console.log(`[sync] SOAP ${method} preview:`, xml.slice(0, 400));
-  if (!res.ok) {
+  if (!response.ok) {
     const chunkSize = 250;
     for (let i = 0; i < xml.length; i += chunkSize) {
       console.error(`[soap_fault_chunk ${i}]:`, xml.substring(i, i + chunkSize));
     }
-    throw new Error(`${method} HTTP ${res.status}: (ver logs em chunks) ${xml.slice(0, 400)}`);
+    throw new Error(`${method} HTTP ${response.status}: (ver logs em chunks) ${xml.slice(0, 400)}`);
   }
   try {
     return parser.parse(xml);
