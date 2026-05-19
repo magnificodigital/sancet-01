@@ -42,6 +42,9 @@ export function getter(bloco: string) {
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const DEFAULT_SHIFT_ENDPOINT =
+  "https://sancet.shiftcloud.com.br/shift/lis/sancet/elis/s01.util.b2b.shift.consultas.Webserver.cls";
+
 export async function loadShiftConfig(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("configuracoes")
@@ -53,13 +56,17 @@ export async function loadShiftConfig(supabase: SupabaseClient) {
   const cfg: Record<string, string> = {};
   (data ?? []).forEach((r: any) => { cfg[r.chave] = r.valor; });
 
-  const endpoint = cfg["SHIFT_ENDPOINT"];
-  const userId   = cfg["SHIFT_USER_ID"];
-  const senha    = cfg["SHIFT_SENHA"];
-
-  if (!endpoint || !userId || !senha || userId === "PENDENTE" || senha === "PENDENTE") {
-    throw new Error("Credenciais Shift não configuradas. Acesse o painel admin → Configurações.");
-  }
+  const endpoint = cfg["SHIFT_ENDPOINT"] || Deno.env.get("SHIFT_ENDPOINT") || DEFAULT_SHIFT_ENDPOINT;
+  let userId: string | null = cfg["SHIFT_USER_ID"] || Deno.env.get("SHIFT_USER_ID") || null;
+  let senha: string | null  = cfg["SHIFT_SENHA"]   || Deno.env.get("SHIFT_SENHA")   || null;
+  if (userId === "PENDENTE") userId = null;
+  if (senha === "PENDENTE")  senha  = null;
 
   return { endpoint, userId, senha };
+}
+
+/** Monta as tags <pUserId>/<pSenha> apenas quando ambas existirem. */
+export function buildAuthTags(userId: string | null, senha: string | null): string {
+  if (!userId || !senha) return "";
+  return `<pUserId>${userId}</pUserId><pSenha>${senha}</pSenha>`;
 }
