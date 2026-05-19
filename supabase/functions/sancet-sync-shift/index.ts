@@ -32,14 +32,22 @@ function findDeep(obj: any, key: string): any {
 }
 
 async function soapCall(endpoint: string, userId: string | null, senha: string | null, method: string) {
+  console.log(`[sync] SOAP ${method} → ${endpoint} (auth: ${!!(userId && senha)})`);
   const envelope = buildEnvelope(
     method,
     `${buildAuthTags(userId, senha)}<pConfiguracaoWeb></pConfiguracaoWeb>`,
   );
   const res = await fetch(endpoint, { method: "POST", headers: SOAP_HEADERS, body: envelope });
   const xml = await res.text();
+  console.log(`[sync] SOAP ${method} ← HTTP ${res.status}, ${xml.length} bytes`);
+  console.log(`[sync] SOAP ${method} preview:`, xml.slice(0, 400));
   if (!res.ok) throw new Error(`${method} HTTP ${res.status}: ${xml.slice(0, 300)}`);
-  return parser.parse(xml);
+  try {
+    return parser.parse(xml);
+  } catch (e: any) {
+    console.error(`[sync] SOAP ${method} parse error:`, e?.message);
+    throw new Error(`${method} parse: ${e?.message}`);
+  }
 }
 
 function pickInt(v: any): number | null {
