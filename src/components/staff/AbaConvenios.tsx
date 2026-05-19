@@ -35,18 +35,22 @@ export const AbaConvenios = () => {
 
   const carregar = async () => {
     setCarregando(true);
-    const [conv, pls] = await Promise.all([
-      supabase.from("convenios_cache").select("id, nome, arquivo_cruzado_id, ativo").order("nome"),
-      supabase.from("convenios_planos").select("convenio_id"),
-    ]);
-    const contagens = new Map<string, number>();
-    ((pls.data as { convenio_id: string }[]) ?? []).forEach((p) => {
-      contagens.set(p.convenio_id, (contagens.get(p.convenio_id) ?? 0) + 1);
-    });
-    const lista = ((conv.data as Convenio[]) ?? []).map((c) => ({
-      ...c,
-      qtd_planos: contagens.get(c.id) ?? 0,
-    }));
+    const { data, error } = await supabase
+      .from("convenios_cache")
+      .select("id, nome, arquivo_cruzado_id, ativo, convenios_planos(count)")
+      .order("nome");
+    if (error) {
+      console.error("[convenios carregar]", error);
+      setCarregando(false);
+      return;
+    }
+    const lista = ((data as any[]) ?? []).map((c) => ({
+      id: c.id,
+      nome: c.nome,
+      arquivo_cruzado_id: c.arquivo_cruzado_id,
+      ativo: c.ativo,
+      qtd_planos: c.convenios_planos?.[0]?.count ?? 0,
+    })) as Convenio[];
     setConvenios(lista);
     setCarregando(false);
   };
