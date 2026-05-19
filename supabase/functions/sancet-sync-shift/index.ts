@@ -205,7 +205,8 @@ serve(async (req) => {
     };
 
     etapa = "load_config";
-    const { endpoint, userId, senha } = await loadShiftConfig(supabase);
+    const { endpoint, endpointMobile, userId, senha } = await loadShiftConfig(supabase);
+    console.log("[sync] config — endpoint consultas:", endpoint, "endpoint mobile:", endpointMobile, "tem credenciais:", !!(userId && senha));
     console.log("[sync] config — endpoint:", endpoint, "tem credenciais:", !!(userId && senha));
 
     // ----- EXAMES -----
