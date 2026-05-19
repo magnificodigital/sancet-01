@@ -21,7 +21,7 @@ serve(async (req) => {
 
     const envelope = buildEnvelope(
       "WsGetTodosUnidades",
-      `<pUserId>${userId}</pUserId><pSenha>${senha}</pSenha>`,
+      buildAuthTags(userId, senha),
     );
 
     const soapRes = await fetch(endpoint, { method: "POST", headers: SOAP_HEADERS, body: envelope });
