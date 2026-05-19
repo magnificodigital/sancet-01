@@ -36,7 +36,6 @@ export type StaffTab =
   | "pacientes"
   | "catalogo"
   | "unidades"
-  | "sync"
   | "shift"
   | "config"
   | "paginas"
