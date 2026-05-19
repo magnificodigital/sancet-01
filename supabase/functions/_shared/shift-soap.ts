@@ -41,27 +41,31 @@ export function getter(bloco: string) {
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const DEFAULT_SHIFT_ENDPOINT =
+const DEFAULT_SHIFT_ENDPOINT_CONSULTAS =
   "https://sancet.shiftcloud.com.br/shift/lis/sancet/elis/s01.util.b2b.shift.consultas.Webserver.cls";
+
+const DEFAULT_SHIFT_ENDPOINT_MOBILE =
+  "https://sancet.shiftcloud.com.br/shift/lis/sancet/elis/s01.util.b2b.integracaoMobile.Webserver.cls";
 
 export async function loadShiftConfig(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("configuracoes")
     .select("chave, valor")
-    .in("chave", ["SHIFT_ENDPOINT", "SHIFT_USER_ID", "SHIFT_SENHA"]);
+    .in("chave", ["SHIFT_ENDPOINT", "SHIFT_ENDPOINT_MOBILE", "SHIFT_USER_ID", "SHIFT_SENHA"]);
 
   if (error) throw new Error("Erro ao ler configurações Shift: " + error.message);
 
   const cfg: Record<string, string> = {};
   (data ?? []).forEach((r: any) => { cfg[r.chave] = r.valor; });
 
-  const endpoint = cfg["SHIFT_ENDPOINT"] || Deno.env.get("SHIFT_ENDPOINT") || DEFAULT_SHIFT_ENDPOINT;
+  const endpoint = cfg["SHIFT_ENDPOINT"] || Deno.env.get("SHIFT_ENDPOINT") || DEFAULT_SHIFT_ENDPOINT_CONSULTAS;
+  const endpointMobile = cfg["SHIFT_ENDPOINT_MOBILE"] || Deno.env.get("SHIFT_ENDPOINT_MOBILE") || DEFAULT_SHIFT_ENDPOINT_MOBILE;
   let userId: string | null = cfg["SHIFT_USER_ID"] || Deno.env.get("SHIFT_USER_ID") || null;
   let senha: string | null  = cfg["SHIFT_SENHA"]   || Deno.env.get("SHIFT_SENHA")   || null;
   if (userId === "PENDENTE") userId = null;
   if (senha === "PENDENTE")  senha  = null;
 
-  return { endpoint, userId, senha };
+  return { endpoint, endpointMobile, userId, senha };
 }
 
 /** Monta as tags <www:pUserId>/<www:pSenha> apenas quando ambas existirem. */
