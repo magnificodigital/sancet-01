@@ -164,13 +164,17 @@ serve(async (req) => {
         .eq("id", logId);
     };
 
-
-  try {
+    etapa = "load_config";
     const { endpoint, userId, senha } = await loadShiftConfig(supabase);
+    console.log("[sync] config — endpoint:", endpoint, "tem credenciais:", !!(userId && senha));
 
     // ----- EXAMES -----
+    etapa = "soap_exames";
+    console.log("[sync] === EXAMES ===");
     const examesXml = await soapCall(endpoint, userId, senha, "WsGetTodosExames");
+    console.log("[sync] exames root keys:", Object.keys(examesXml ?? {}));
     const examesRaw = asArray(findDeep(examesXml, "procedimentoSimples"));
+    console.log("[sync] exames brutos encontrados:", examesRaw.length);
     const exames = examesRaw
       .map((e: any) => {
         const codigo = pickStr(e.id);
@@ -196,18 +200,29 @@ serve(async (req) => {
         };
       })
       .filter(Boolean) as any[];
+    console.log("[sync] exames válidos para upsert:", exames.length);
 
+    etapa = "diff_exames";
     const examesExist = await diffCounts(supabase, "exames_cache", exames.map((x) => x.codigo_shift));
     let examesCriados = 0, examesAtualizados = 0;
     if (exames.length) {
+      etapa = "upsert_exames";
       const { error } = await supabase.from("exames_cache").upsert(exames, { onConflict: "codigo_shift" });
-      if (error) throw new Error("Upsert exames: " + error.message);
+      if (error) {
+        console.error("[sync] ERRO upsert exames:", JSON.stringify(error));
+        throw new Error("Upsert exames: " + error.message);
+      }
       for (const x of exames) examesExist.has(x.codigo_shift) ? examesAtualizados++ : examesCriados++;
+      console.log("[sync] exames criados:", examesCriados, "atualizados:", examesAtualizados);
     }
 
     // ----- UNIDADES -----
+    etapa = "soap_unidades";
+    console.log("[sync] === UNIDADES ===");
     const unidadesXml = await soapCall(endpoint, userId, senha, "WsGetTodosUnidades");
+    console.log("[sync] unidades root keys:", Object.keys(unidadesXml ?? {}));
     const unidadesRaw = asArray(findDeep(unidadesXml, "unidade"));
+    console.log("[sync] unidades brutas encontradas:", unidadesRaw.length);
     const unidades = unidadesRaw
       .map((u: any) => {
         const codigo = pickStr(u.id);
@@ -241,18 +256,29 @@ serve(async (req) => {
         };
       })
       .filter(Boolean) as any[];
+    console.log("[sync] unidades válidas para upsert:", unidades.length);
 
+    etapa = "diff_unidades";
     const unidadesExist = await diffCounts(supabase, "unidades_cache", unidades.map((x) => x.codigo_shift));
     let unidadesCriadas = 0, unidadesAtualizadas = 0;
     if (unidades.length) {
+      etapa = "upsert_unidades";
       const { error } = await supabase.from("unidades_cache").upsert(unidades, { onConflict: "codigo_shift" });
-      if (error) throw new Error("Upsert unidades: " + error.message);
+      if (error) {
+        console.error("[sync] ERRO upsert unidades:", JSON.stringify(error));
+        throw new Error("Upsert unidades: " + error.message);
+      }
       for (const x of unidades) unidadesExist.has(x.codigo_shift) ? unidadesAtualizadas++ : unidadesCriadas++;
+      console.log("[sync] unidades criadas:", unidadesCriadas, "atualizadas:", unidadesAtualizadas);
     }
 
     // ----- CONVENIOS -----
+    etapa = "soap_convenios";
+    console.log("[sync] === CONVENIOS ===");
     const convXml = await soapCall(endpoint, userId, senha, "WsGetTodosFontePagadora");
+    console.log("[sync] convenios root keys:", Object.keys(convXml ?? {}));
     const convRaw = asArray(findDeep(convXml, "fontePagadora"));
+    console.log("[sync] convenios brutos encontrados:", convRaw.length);
     const convenios = convRaw
       .map((c: any) => {
         const codigo = pickStr(c.id);
@@ -269,15 +295,23 @@ serve(async (req) => {
         };
       })
       .filter(Boolean) as any[];
+    console.log("[sync] convenios válidos para upsert:", convenios.length);
 
+    etapa = "diff_convenios";
     const convExist = await diffCounts(supabase, "convenios_cache", convenios.map((x) => x.codigo_shift));
     let convCriados = 0, convAtualizados = 0;
     if (convenios.length) {
+      etapa = "upsert_convenios";
       const { error } = await supabase.from("convenios_cache").upsert(convenios, { onConflict: "codigo_shift" });
-      if (error) throw new Error("Upsert convenios: " + error.message);
+      if (error) {
+        console.error("[sync] ERRO upsert convenios:", JSON.stringify(error));
+        throw new Error("Upsert convenios: " + error.message);
+      }
       for (const x of convenios) convExist.has(x.codigo_shift) ? convAtualizados++ : convCriados++;
+      console.log("[sync] convenios criados:", convCriados, "atualizados:", convAtualizados);
     }
 
+    etapa = "finalizar";
     await finalizar({
       status: "sucesso",
       exames_criados: examesCriados,
@@ -287,6 +321,7 @@ serve(async (req) => {
       convenios_criados: convCriados,
       convenios_atualizados: convAtualizados,
     });
+    console.log("[sync] FIM com sucesso em", Date.now() - inicio, "ms");
 
     return new Response(JSON.stringify({
       sucesso: true,
@@ -298,9 +333,33 @@ serve(async (req) => {
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     const msg = e?.message ?? String(e);
-    await finalizar({ status: "erro", erro_mensagem: msg });
-    return new Response(JSON.stringify({ sucesso: false, log_id: logId, erro: msg }), {
+    const stack = e?.stack ?? null;
+    console.error(`[sync] ERRO FATAL na etapa="${etapa}":`, msg);
+    if (stack) console.error("[sync] stack:", stack);
+    if (logId && supabase) {
+      try {
+        await supabase
+          .from("shift_sync_logs")
+          .update({
+            status: "erro",
+            erro_mensagem: `[${etapa}] ${msg}`,
+            finalizado_em: new Date().toISOString(),
+            duracao_ms: Date.now() - inicio,
+          })
+          .eq("id", logId);
+      } catch (logE: any) {
+        console.error("[sync] falha ao gravar log de erro:", logE?.message);
+      }
+    }
+    return new Response(JSON.stringify({
+      sucesso: false,
+      log_id: logId,
+      etapa,
+      erro: msg,
+      stack,
+    }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
+
