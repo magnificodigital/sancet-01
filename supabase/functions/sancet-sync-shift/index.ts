@@ -319,12 +319,45 @@ serve(async (req) => {
     let unidadesCriadas = 0, unidadesAtualizadas = 0;
     if (unidadesDedup.length) {
       etapa = "upsert_unidades";
-      const { error } = await supabase.from("unidades_cache").upsert(unidadesDedup, { onConflict: "codigo_shift" });
-      if (error) {
-        console.error("[sync] ERRO upsert unidades:", JSON.stringify(error));
-        throw new Error("Upsert unidades: " + error.message);
+      for (const u of unidadesDedup) {
+        // Tenta achar uma unidade antiga sem codigo_shift com mesmo nome (case-insensitive)
+        const { data: existente, error: lookupErr } = await supabase
+          .from("unidades_cache")
+          .select("id, codigo_shift")
+          .ilike("nome", u.nome)
+          .is("codigo_shift", null)
+          .maybeSingle();
+        if (lookupErr && lookupErr.code !== "PGRST116") {
+          console.error("[sync] lookup unidade falhou:", lookupErr.message);
+        }
+
+        if (existente && !existente.codigo_shift) {
+          // Adota só o codigo_shift, preservando foto/endereço/etc.
+          const { error: upErr } = await supabase
+            .from("unidades_cache")
+            .update({
+              codigo_shift: u.codigo_shift,
+              sincronizado_em: new Date().toISOString(),
+              atualizado_em: new Date().toISOString(),
+            })
+            .eq("id", existente.id);
+          if (upErr) {
+            console.error("[sync] ERRO adotar unidade:", upErr.message);
+            throw new Error("Adotar unidade: " + upErr.message);
+          }
+          unidadesAtualizadas++;
+        } else {
+          const { error: upErr } = await supabase
+            .from("unidades_cache")
+            .upsert(u, { onConflict: "codigo_shift" });
+          if (upErr) {
+            console.error("[sync] ERRO upsert unidade:", upErr.message);
+            throw new Error("Upsert unidades: " + upErr.message);
+          }
+          if (unidadesExist.has(u.codigo_shift)) unidadesAtualizadas++;
+          else unidadesCriadas++;
+        }
       }
-      for (const x of unidadesDedup) unidadesExist.has(x.codigo_shift) ? unidadesAtualizadas++ : unidadesCriadas++;
       console.log("[sync] unidades criadas:", unidadesCriadas, "atualizadas:", unidadesAtualizadas);
     }
 
