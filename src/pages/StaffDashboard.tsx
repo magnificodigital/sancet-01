@@ -62,7 +62,7 @@ const StaffDashboard = () => {
       {aba === "pacientes" && <AbaPacientes permissoes={staffPerfil.permissoes} />}
       {aba === "catalogo" && <AbaCatalogo permissoes={staffPerfil.permissoes} />}
       {aba === "unidades" && <AbaUnidades permissoes={staffPerfil.permissoes} />}
-      {aba === "sync" && <AbaSync permissoes={staffPerfil.permissoes} />}
+      {aba === "shift" && <AbaCatalogoShift />}
       {aba === "shift" && <AbaCatalogoShift />}
       {aba === "config" && <AbaConfiguracoes permissoes={staffPerfil.permissoes} isAdmin={staffPerfil.isAdmin} />}
       {aba === "paginas" && <AbaPaginas />}
