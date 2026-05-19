@@ -359,46 +359,7 @@ serve(async (req) => {
       console.log("[sync] unidades criadas:", unidadesCriadas, "atualizadas:", unidadesAtualizadas);
     }
 
-    // ----- CONVENIOS -----
-    etapa = "soap_convenios";
-    console.log("[sync] === CONVENIOS ===");
-    const convXml = await soapCall(endpointMobile, userId, senha, "WsGetTodosFontePagadora", "UNICO");
-    console.log("[sync] convenios root keys:", Object.keys(convXml ?? {}));
-    const convRaw = asArray(findDeep(convXml, "fontePagadora"));
-    console.log("[sync] convenios brutos encontrados:", convRaw.length);
-    const convenios = convRaw
-      .map((c: any) => {
-        const codigo = pickStr(c.id);
-        const nome = pickStr(c.descricao ?? c.nome);
-        if (!codigo || !nome) return null;
-        return {
-          codigo_shift: codigo,
-          nome,
-          observacoes: pickStr(c.observacoesFP ?? c.observacoes),
-          requisitos: pickStr(c.requisitosNecessarios ?? c.requisitos),
-          ativo: true,
-          atualizado_em: new Date().toISOString(),
-          sincronizado_em: new Date().toISOString(),
-        };
-      })
-      .filter(Boolean) as any[];
-    console.log("[sync] convenios válidos para upsert:", convenios.length);
-    const conveniosDedup = dedupByCodigoShift(convenios);
-    console.log(`[sync] convenios após dedup: ${conveniosDedup.length} (era ${convenios.length})`);
-
-    etapa = "diff_convenios";
-    const convExist = await diffCounts(supabase, "convenios_cache", conveniosDedup.map((x) => x.codigo_shift));
-    let convCriados = 0, convAtualizados = 0;
-    if (conveniosDedup.length) {
-      etapa = "upsert_convenios";
-      const { error } = await supabase.from("convenios_cache").upsert(conveniosDedup, { onConflict: "codigo_shift" });
-      if (error) {
-        console.error("[sync] ERRO upsert convenios:", JSON.stringify(error));
-        throw new Error("Upsert convenios: " + error.message);
-      }
-      for (const x of conveniosDedup) convExist.has(x.codigo_shift) ? convAtualizados++ : convCriados++;
-      console.log("[sync] convenios criados:", convCriados, "atualizados:", convAtualizados);
-    }
+    // ----- CONVENIOS: removido. Agora são gerenciados via planilha (aba Convênios). -----
 
     etapa = "finalizar";
     await finalizar({
@@ -407,8 +368,8 @@ serve(async (req) => {
       exames_atualizados: examesAtualizados,
       unidades_criadas: unidadesCriadas,
       unidades_atualizadas: unidadesAtualizadas,
-      convenios_criados: convCriados,
-      convenios_atualizados: convAtualizados,
+      convenios_criados: 0,
+      convenios_atualizados: 0,
     });
     console.log("[sync] FIM com sucesso em", Date.now() - inicio, "ms");
 
@@ -417,7 +378,7 @@ serve(async (req) => {
       log_id: logId,
       exames: { criados: examesCriados, atualizados: examesAtualizados },
       unidades: { criadas: unidadesCriadas, atualizadas: unidadesAtualizadas },
-      convenios: { criados: convCriados, atualizados: convAtualizados },
+      convenios: { criados: 0, atualizados: 0 },
       duracao_ms: Date.now() - inicio,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
