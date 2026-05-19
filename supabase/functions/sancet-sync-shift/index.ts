@@ -301,8 +301,10 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] unidades válidas para upsert:", unidades.length);
-    const unidadesDedup = dedupByCodigoShift(unidades);
-    console.log(`[sync] unidades após dedup: ${unidadesDedup.length} (era ${unidades.length})`);
+    const unidadesDedupCodigo = dedupByCodigoShift(unidades);
+    console.log(`[sync] unidades após dedup código: ${unidadesDedupCodigo.length} (era ${unidades.length})`);
+    const unidadesDedup = dedupBySlug(unidadesDedupCodigo);
+    console.log(`[sync] unidades após dedup slug: ${unidadesDedup.length} (era ${unidadesDedupCodigo.length})`);
 
     etapa = "diff_unidades";
     const unidadesExist = await diffCounts(supabase, "unidades_cache", unidadesDedup.map((x) => x.codigo_shift));
