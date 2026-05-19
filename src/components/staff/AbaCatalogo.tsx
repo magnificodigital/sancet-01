@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Search, Upload, Download } from "lucide-react";
+import { Pencil, Plus, Search, Upload, Download, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
+import { lerCsvComEncoding, csvParaObjetos, parsePrecoBR } from "@/lib/csv-import";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -247,6 +248,50 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
     toast.success(`${registros.length} itens importados com sucesso!`);
     carregar();
   };
+  const importarPrecosCsv = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    try {
+      const texto = await lerCsvComEncoding(file);
+      const linhas = csvParaObjetos(texto, ";");
+      if (linhas.length === 0) {
+        toast.error("Planilha vazia");
+        return;
+      }
+
+      let atualizados = 0;
+      let semMatch = 0;
+      let erros = 0;
+
+      for (const row of linhas) {
+        const mnemonico = (row["Mnemônico"] ?? row["Mnemonico"] ?? "").trim().toUpperCase();
+        const precoStr = (row["Preço"] ?? row["Preco"] ?? "").trim();
+        if (!mnemonico) { erros++; continue; }
+        const preco = parsePrecoBR(precoStr);
+        if (preco == null) { erros++; continue; }
+
+        const { data, error } = await supabase
+          .from("exames_cache")
+          .update({ preco_particular: preco, atualizado_em: new Date().toISOString() })
+          .ilike("mnemonico", mnemonico)
+          .select("id");
+
+        if (error) { erros++; continue; }
+        if (!data || data.length === 0) { semMatch++; continue; }
+        atualizados += data.length;
+      }
+
+      toast.success("Preços importados", {
+        description: `${atualizados} atualizados · ${semMatch} sem correspondência · ${erros} erros`,
+      });
+      carregar();
+    } catch (err: any) {
+      toast.error("Erro ao processar CSV", { description: err?.message ?? String(err) });
+    }
+  };
+
 
   return (
     <div className="space-y-4">
@@ -278,6 +323,20 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
                 <span><Upload className="h-4 w-4" /> Importar planilha</span>
               </Button>
             </label>
+
+            {tabela === "exames_cache" && (
+              <label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={importarPrecosCsv}
+                />
+                <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer" asChild>
+                  <span><DollarSign className="h-4 w-4" /> Importar preços (CSV)</span>
+                </Button>
+              </label>
+            )}
 
             <Button
               size="sm"

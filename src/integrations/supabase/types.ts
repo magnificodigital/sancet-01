@@ -40,6 +40,7 @@ export type Database = {
       }
       convenios_cache: {
         Row: {
+          arquivo_cruzado_id: number | null
           ativo: boolean
           atualizado_em: string | null
           codigo_shift: string
@@ -51,6 +52,7 @@ export type Database = {
           sincronizado_em: string | null
         }
         Insert: {
+          arquivo_cruzado_id?: number | null
           ativo?: boolean
           atualizado_em?: string | null
           codigo_shift: string
@@ -62,6 +64,7 @@ export type Database = {
           sincronizado_em?: string | null
         }
         Update: {
+          arquivo_cruzado_id?: number | null
           ativo?: boolean
           atualizado_em?: string | null
           codigo_shift?: string
@@ -73,6 +76,44 @@ export type Database = {
           sincronizado_em?: string | null
         }
         Relationships: []
+      }
+      convenios_planos: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          codigo_item: string
+          convenio_id: string
+          criado_em: string
+          descricao: string
+          id: string
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          codigo_item: string
+          convenio_id: string
+          criado_em?: string
+          descricao: string
+          id?: string
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          codigo_item?: string
+          convenio_id?: string
+          criado_em?: string
+          descricao?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convenios_planos_convenio_id_fkey"
+            columns: ["convenio_id"]
+            isOneToOne: false
+            referencedRelation: "convenios_cache"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       exames_cache: {
         Row: {
@@ -96,6 +137,7 @@ export type Database = {
           outros_nomes: string[] | null
           prazo_resultado: string | null
           preco_centavos: number | null
+          preco_particular: number | null
           preparo: string | null
           sincronizado_em: string | null
           slug: string | null
@@ -121,6 +163,7 @@ export type Database = {
           outros_nomes?: string[] | null
           prazo_resultado?: string | null
           preco_centavos?: number | null
+          preco_particular?: number | null
           preparo?: string | null
           sincronizado_em?: string | null
           slug?: string | null
@@ -146,6 +189,7 @@ export type Database = {
           outros_nomes?: string[] | null
           prazo_resultado?: string | null
           preco_centavos?: number | null
+          preco_particular?: number | null
           preparo?: string | null
           sincronizado_em?: string | null
           slug?: string | null
