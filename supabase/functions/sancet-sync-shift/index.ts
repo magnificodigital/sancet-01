@@ -52,11 +52,11 @@ function findDeep(obj: any, key: string): any {
   return undefined;
 }
 
-async function soapCall(endpoint: string, userId: string | null, senha: string | null, method: string) {
+async function soapCall(endpoint: string, userId: string | null, senha: string | null, method: string, configWeb = "") {
   console.log(`[sync] SOAP ${method} → ${endpoint} (auth: ${!!(userId && senha)})`);
   const envelope = buildEnvelope(
     method,
-    `${buildAuthTags(userId, senha)}<www:pConfiguracaoWeb></www:pConfiguracaoWeb>`,
+    `${buildAuthTags(userId, senha)}<www:pConfiguracaoWeb>${configWeb}</www:pConfiguracaoWeb>`,
   );
 
   const SHIFT_PROXY_URL = 'https://sancet-shift-proxysancet-shift-proxy.willy-5c4.workers.dev/';
