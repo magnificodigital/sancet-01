@@ -1,22 +1,21 @@
 // Helpers compartilhados para chamadas SOAP ao Shift LIS
-// Configure no Supabase Dashboard → Settings → Edge Functions → Secrets:
-//   SHIFT_ENDPOINT, SHIFT_USER_ID, SHIFT_SENHA
 
 export const SOAP_HEADERS = {
-  "Content-Type": "text/xml;charset=UTF-8",
-  "SOAPAction": "",
+  "Content-Type": "text/xml; charset=utf-8",
+  "SOAPAction": '""',
+  "Accept": "text/xml",
 };
 
 export function buildEnvelope(method: string, body: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:web="WebServices">
-  <soapenv:Header/>
-  <soapenv:Body>
-    <web:${method}>
+<x:Envelope xmlns:x="http://schemas.xmlsoap.org/soap/envelope/" xmlns:www="http://www.shift.com.br">
+  <x:Header/>
+  <x:Body>
+    <www:${method}>
       ${body}
-    </web:${method}>
-  </soapenv:Body>
-</soapenv:Envelope>`;
+    </www:${method}>
+  </x:Body>
+</x:Envelope>`;
 }
 
 export function extractTagValue(xml: string, tag: string): string {
@@ -65,8 +64,8 @@ export async function loadShiftConfig(supabase: SupabaseClient) {
   return { endpoint, userId, senha };
 }
 
-/** Monta as tags <pUserId>/<pSenha> apenas quando ambas existirem. */
+/** Monta as tags <www:pUserId>/<www:pSenha> apenas quando ambas existirem. */
 export function buildAuthTags(userId: string | null, senha: string | null): string {
   if (!userId || !senha) return "";
-  return `<pUserId>${userId}</pUserId><pSenha>${senha}</pSenha>`;
+  return `<www:pUserId>${userId}</www:pUserId><www:pSenha>${senha}</www:pSenha>`;
 }
