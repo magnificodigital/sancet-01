@@ -158,6 +158,9 @@ export const AbaCatalogoShift = () => {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{totais.convenios.toLocaleString("pt-BR")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Gerenciados via planilha — vide aba Convênios
+            </p>
           </CardContent>
         </Card>
       </div>

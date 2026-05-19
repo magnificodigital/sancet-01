@@ -324,6 +324,20 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
               </Button>
             </label>
 
+            {tabela === "exames_cache" && (
+              <label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={importarPrecosCsv}
+                />
+                <Button variant="outline" size="sm" className="gap-1.5 cursor-pointer" asChild>
+                  <span><DollarSign className="h-4 w-4" /> Importar preços (CSV)</span>
+                </Button>
+              </label>
+            )}
+
             <Button
               size="sm"
               onClick={() => { setEditando(null); setDrawerAberto(true); }}
