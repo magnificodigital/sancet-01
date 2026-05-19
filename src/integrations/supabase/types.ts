@@ -46,6 +46,9 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          observacoes: string | null
+          requisitos: string | null
+          sincronizado_em: string | null
         }
         Insert: {
           ativo?: boolean
@@ -54,6 +57,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome: string
+          observacoes?: string | null
+          requisitos?: string | null
+          sincronizado_em?: string | null
         }
         Update: {
           ativo?: boolean
@@ -62,6 +68,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome?: string
+          observacoes?: string | null
+          requisitos?: string | null
+          sincronizado_em?: string | null
         }
         Relationships: []
       }
@@ -77,11 +86,18 @@ export type Database = {
           disponivel_na_unidade: boolean
           id: string
           imagem_url: string | null
+          instrucoes_coleta: string | null
+          instrucoes_paciente: string | null
+          jejum_horas: number | null
+          material: string | null
+          metodologia: string | null
+          mnemonico: string | null
           nome: string
           outros_nomes: string[] | null
           prazo_resultado: string | null
           preco_centavos: number | null
           preparo: string | null
+          sincronizado_em: string | null
           slug: string | null
         }
         Insert: {
@@ -95,11 +111,18 @@ export type Database = {
           disponivel_na_unidade?: boolean
           id?: string
           imagem_url?: string | null
+          instrucoes_coleta?: string | null
+          instrucoes_paciente?: string | null
+          jejum_horas?: number | null
+          material?: string | null
+          metodologia?: string | null
+          mnemonico?: string | null
           nome: string
           outros_nomes?: string[] | null
           prazo_resultado?: string | null
           preco_centavos?: number | null
           preparo?: string | null
+          sincronizado_em?: string | null
           slug?: string | null
         }
         Update: {
@@ -113,11 +136,18 @@ export type Database = {
           disponivel_na_unidade?: boolean
           id?: string
           imagem_url?: string | null
+          instrucoes_coleta?: string | null
+          instrucoes_paciente?: string | null
+          jejum_horas?: number | null
+          material?: string | null
+          metodologia?: string | null
+          mnemonico?: string | null
           nome?: string
           outros_nomes?: string[] | null
           prazo_resultado?: string | null
           preco_centavos?: number | null
           preparo?: string | null
+          sincronizado_em?: string | null
           slug?: string | null
         }
         Relationships: []
@@ -337,6 +367,51 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_sync_logs: {
+        Row: {
+          convenios_atualizados: number
+          convenios_criados: number
+          duracao_ms: number | null
+          erro_mensagem: string | null
+          exames_atualizados: number
+          exames_criados: number
+          finalizado_em: string | null
+          id: string
+          iniciado_em: string
+          status: string
+          unidades_atualizadas: number
+          unidades_criadas: number
+        }
+        Insert: {
+          convenios_atualizados?: number
+          convenios_criados?: number
+          duracao_ms?: number | null
+          erro_mensagem?: string | null
+          exames_atualizados?: number
+          exames_criados?: number
+          finalizado_em?: string | null
+          id?: string
+          iniciado_em?: string
+          status?: string
+          unidades_atualizadas?: number
+          unidades_criadas?: number
+        }
+        Update: {
+          convenios_atualizados?: number
+          convenios_criados?: number
+          duracao_ms?: number | null
+          erro_mensagem?: string | null
+          exames_atualizados?: number
+          exames_criados?: number
+          finalizado_em?: string | null
+          id?: string
+          iniciado_em?: string
+          status?: string
+          unidades_atualizadas?: number
+          unidades_criadas?: number
+        }
+        Relationships: []
+      }
       unidades_cache: {
         Row: {
           aceita_domicilio: boolean
@@ -350,11 +425,15 @@ export type Database = {
           email: string | null
           endereco: string | null
           foto_url: string | null
+          horario_funcionamento: string | null
           horarios: Json | null
           id: string
           latitude: number | null
+          logradouro: string | null
           longitude: number | null
           nome: string
+          numero: string | null
+          sincronizado_em: string | null
           slug: string | null
           telefone: string | null
           uf: string | null
@@ -371,11 +450,15 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           foto_url?: string | null
+          horario_funcionamento?: string | null
           horarios?: Json | null
           id?: string
           latitude?: number | null
+          logradouro?: string | null
           longitude?: number | null
           nome: string
+          numero?: string | null
+          sincronizado_em?: string | null
           slug?: string | null
           telefone?: string | null
           uf?: string | null
@@ -392,11 +475,15 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           foto_url?: string | null
+          horario_funcionamento?: string | null
           horarios?: Json | null
           id?: string
           latitude?: number | null
+          logradouro?: string | null
           longitude?: number | null
           nome?: string
+          numero?: string | null
+          sincronizado_em?: string | null
           slug?: string | null
           telefone?: string | null
           uf?: string | null
