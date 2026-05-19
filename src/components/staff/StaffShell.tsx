@@ -37,6 +37,7 @@ export type StaffTab =
   | "catalogo"
   | "unidades"
   | "sync"
+  | "shift"
   | "config"
   | "paginas"
   | "equipe";
@@ -48,6 +49,7 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "catalogo", label: "Catálogo", icon: FlaskConical },
   { id: "unidades", label: "Unidades", icon: Building2 },
   { id: "sync", label: "Sync Shift", icon: RefreshCw },
+  { id: "shift", label: "Catálogo Shift", icon: RefreshCw },
   { id: "config", label: "Configurações", icon: Settings2 },
   { id: "paginas", label: "Páginas", icon: FileText },
   { id: "equipe", label: "Equipe", icon: UserCog },
