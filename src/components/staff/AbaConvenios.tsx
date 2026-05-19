@@ -101,7 +101,8 @@ export const AbaConvenios = () => {
 
       // Agrupar por ArquivoCruzado.Id
       const grupos = new Map<number, { descricao: string; itens: { codigo: string; descricao: string }[] }>();
-      let erros = 0;
+      let linhasInvalidas = 0;
+      let planosLidos = 0;
 
       for (const row of linhas) {
         const idStr = (row["ArquivoCruzado.Id"] ?? "").trim();
@@ -110,11 +111,12 @@ export const AbaConvenios = () => {
         const descItem = (row["Descricao"] ?? "").trim();
         const idNum = parseInt(idStr, 10);
         if (!idStr || isNaN(idNum) || !descConv || !codigo || !descItem) {
-          erros++;
+          linhasInvalidas++;
           continue;
         }
         if (!grupos.has(idNum)) grupos.set(idNum, { descricao: descConv, itens: [] });
         grupos.get(idNum)!.itens.push({ codigo, descricao: descItem });
+        planosLidos++;
       }
 
       // Upsert convênios
@@ -131,6 +133,7 @@ export const AbaConvenios = () => {
         .select("id, arquivo_cruzado_id");
 
       if (errConv) {
+        console.error("[convenios upsert fail]", errConv);
         toast.error("Erro ao importar convênios: " + errConv.message);
         return;
       }
@@ -140,39 +143,80 @@ export const AbaConvenios = () => {
         if (c.arquivo_cruzado_id != null) idMap.set(c.arquivo_cruzado_id, c.id);
       });
 
-      // Upsert planos
-      const planosUpsert: any[] = [];
+      // Dedup planos por (convenio_id, codigo_item) — mantém descricao mais longa
+      const planosDedup = new Map<string, { convenio_id: string; codigo_item: string; descricao: string; ativo: boolean; atualizado_em: string }>();
+      let semMatch = 0;
+      let dedupCount = 0;
+      const agora = new Date().toISOString();
+
       for (const [acId, grupo] of grupos.entries()) {
         const convId = idMap.get(acId);
-        if (!convId) continue;
+        if (!convId) {
+          semMatch += grupo.itens.length;
+          console.warn(`[planos] arquivo_cruzado_id=${acId} sem match em convenios_cache (${grupo.itens.length} planos)`);
+          continue;
+        }
         for (const item of grupo.itens) {
-          planosUpsert.push({
-            convenio_id: convId,
-            codigo_item: item.codigo,
-            descricao: item.descricao,
-            ativo: true,
-            atualizado_em: new Date().toISOString(),
-          });
+          const codigo = item.codigo.trim();
+          const descricao = item.descricao.trim();
+          if (!codigo || !descricao) continue;
+          const chave = `${convId}::${codigo}`;
+          const existente = planosDedup.get(chave);
+          if (existente) {
+            dedupCount++;
+            if (descricao.length > existente.descricao.length) existente.descricao = descricao;
+          } else {
+            planosDedup.set(chave, {
+              convenio_id: convId,
+              codigo_item: codigo,
+              descricao,
+              ativo: true,
+              atualizado_em: agora,
+            });
+          }
         }
       }
 
-      // Upsert em lotes de 1000
-      let planosOk = 0;
-      const lote = 1000;
+      const planosUpsert = Array.from(planosDedup.values());
+
+      // Upsert em batches de 500
+      let planosInseridos = 0;
+      const batchesComErro: any[] = [];
+      const lote = 500;
       for (let i = 0; i < planosUpsert.length; i += lote) {
-        const slice = planosUpsert.slice(i, i + lote);
+        const batch = planosUpsert.slice(i, i + lote);
         const { error } = await supabase
           .from("convenios_planos")
-          .upsert(slice, { onConflict: "convenio_id,codigo_item" });
+          .upsert(batch, { onConflict: "convenio_id,codigo_item", ignoreDuplicates: false });
         if (error) {
-          erros += slice.length;
+          console.error("[planos batch fail]", {
+            batch_index: i,
+            batch_size: batch.length,
+            error_code: (error as any).code,
+            error_message: error.message,
+            error_details: (error as any).details,
+            first_row: batch[0],
+            last_row: batch[batch.length - 1],
+          });
+          batchesComErro.push({ batch_index: i, error_code: (error as any).code, error_message: error.message });
         } else {
-          planosOk += slice.length;
+          planosInseridos += batch.length;
         }
       }
 
-      toast.success(`Importação concluída`, {
-        description: `${grupos.size} convênios e ${planosOk} planos importados · ${erros} erros`,
+      const resumo = {
+        convenios_criados: grupos.size,
+        planos_processados: planosLidos,
+        planos_inseridos: planosInseridos,
+        planos_duplicados_na_planilha: dedupCount,
+        linhas_invalidas: linhasInvalidas,
+        planos_sem_convenio_match: semMatch,
+        batches_com_erro: batchesComErro,
+      };
+      console.log("[import convenios] resumo:", resumo);
+
+      toast.success("Importação concluída", {
+        description: `${grupos.size} convênios · ${planosInseridos}/${planosLidos} planos · ${dedupCount} dups · ${batchesComErro.length} batches c/ erro`,
       });
       carregar();
     } catch (err: any) {
