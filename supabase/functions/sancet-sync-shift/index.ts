@@ -29,6 +29,19 @@ function dedupByCodigoShift<T extends { codigo_shift: string }>(items: T[]): T[]
   return Array.from(map.values());
 }
 
+function dedupBySlug<T extends { slug: string | null; nome: string }>(items: T[]): T[] {
+  const map = new Map<string, T>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (!item.slug) { out.push(item); continue; }
+    const existing = map.get(item.slug);
+    if (!existing || item.nome.length > existing.nome.length) {
+      map.set(item.slug, item);
+    }
+  }
+  return [...out, ...Array.from(map.values())];
+}
+
 function findDeep(obj: any, key: string): any {
   if (!obj || typeof obj !== "object") return undefined;
   if (key in obj) return obj[key];
