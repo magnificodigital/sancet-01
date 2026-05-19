@@ -12,6 +12,7 @@ import {
   Menu,
   RefreshCw,
   Settings2,
+  Shield,
   UserCircle,
   UserCog,
   Users,
