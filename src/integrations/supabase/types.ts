@@ -375,10 +375,13 @@ export type Database = {
           erro_mensagem: string | null
           exames_atualizados: number
           exames_criados: number
+          exames_falhados: number
+          exames_processados: number
           finalizado_em: string | null
           id: string
           iniciado_em: string
           status: string
+          tipo: string
           unidades_atualizadas: number
           unidades_criadas: number
         }
@@ -389,10 +392,13 @@ export type Database = {
           erro_mensagem?: string | null
           exames_atualizados?: number
           exames_criados?: number
+          exames_falhados?: number
+          exames_processados?: number
           finalizado_em?: string | null
           id?: string
           iniciado_em?: string
           status?: string
+          tipo?: string
           unidades_atualizadas?: number
           unidades_criadas?: number
         }
@@ -403,10 +409,13 @@ export type Database = {
           erro_mensagem?: string | null
           exames_atualizados?: number
           exames_criados?: number
+          exames_falhados?: number
+          exames_processados?: number
           finalizado_em?: string | null
           id?: string
           iniciado_em?: string
           status?: string
+          tipo?: string
           unidades_atualizadas?: number
           unidades_criadas?: number
         }
