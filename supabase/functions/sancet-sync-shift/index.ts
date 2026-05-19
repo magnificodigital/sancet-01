@@ -228,18 +228,20 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] exames válidos para upsert:", exames.length);
+    const examesDedup = dedupByCodigoShift(exames);
+    console.log(`[sync] exames após dedup: ${examesDedup.length} (era ${exames.length})`);
 
     etapa = "diff_exames";
-    const examesExist = await diffCounts(supabase, "exames_cache", exames.map((x) => x.codigo_shift));
+    const examesExist = await diffCounts(supabase, "exames_cache", examesDedup.map((x) => x.codigo_shift));
     let examesCriados = 0, examesAtualizados = 0;
-    if (exames.length) {
+    if (examesDedup.length) {
       etapa = "upsert_exames";
-      const { error } = await supabase.from("exames_cache").upsert(exames, { onConflict: "codigo_shift" });
+      const { error } = await supabase.from("exames_cache").upsert(examesDedup, { onConflict: "codigo_shift" });
       if (error) {
         console.error("[sync] ERRO upsert exames:", JSON.stringify(error));
         throw new Error("Upsert exames: " + error.message);
       }
-      for (const x of exames) examesExist.has(x.codigo_shift) ? examesAtualizados++ : examesCriados++;
+      for (const x of examesDedup) examesExist.has(x.codigo_shift) ? examesAtualizados++ : examesCriados++;
       console.log("[sync] exames criados:", examesCriados, "atualizados:", examesAtualizados);
     }
 
