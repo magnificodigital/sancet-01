@@ -42,6 +42,7 @@ export const AbaCatalogoShift = () => {
   const [totais, setTotais] = useState({ exames: 0, unidades: 0, convenios: 0 });
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [rodando, setRodando] = useState(false);
+  const [rodandoDetalhes, setRodandoDetalhes] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
 
@@ -84,6 +85,27 @@ export const AbaCatalogoShift = () => {
     }
   };
 
+  const atualizarDetalhes = async () => {
+    if (!confirm("Atualizar os detalhes dos exames (preparo, jejum, prazo, material, metodologia) pode levar de 5 a 10 minutos. Deseja continuar?")) return;
+    setRodandoDetalhes(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sancet-sync-shift-detalhes");
+      if (error) throw error;
+      if (data?.sucesso) {
+        toast.success("Detalhes atualizados", {
+          description: `${data.atualizados} de ${data.processados} exames atualizados · ${data.falhados} falharam`,
+        });
+      } else {
+        toast.error("Falha ao atualizar detalhes", { description: data?.erro ?? "Erro desconhecido" });
+      }
+    } catch (e: any) {
+      toast.error("Erro ao atualizar detalhes", { description: e?.message ?? String(e) });
+    } finally {
+      setRodandoDetalhes(false);
+      carregar();
+    }
+  };
+
   const ultimo = logs[0];
 
   return (
@@ -95,10 +117,16 @@ export const AbaCatalogoShift = () => {
             Sincroniza exames, unidades e convênios do Shift LIS em uma única execução.
           </p>
         </div>
-        <Button onClick={sincronizar} disabled={rodando} size="lg" className="gap-2">
-          {rodando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          {rodando ? "Sincronizando..." : "Sincronizar agora"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={atualizarDetalhes} disabled={rodando || rodandoDetalhes} variant="outline" size="lg" className="gap-2">
+            {rodandoDetalhes ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
+            {rodandoDetalhes ? "Atualizando..." : "Atualizar detalhes dos exames"}
+          </Button>
+          <Button onClick={sincronizar} disabled={rodando || rodandoDetalhes} size="lg" className="gap-2">
+            {rodando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {rodando ? "Sincronizando..." : "Sincronizar agora"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
