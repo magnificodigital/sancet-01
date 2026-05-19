@@ -41,7 +41,13 @@ async function soapCall(endpoint: string, userId: string | null, senha: string |
   const xml = await res.text();
   console.log(`[sync] SOAP ${method} ← HTTP ${res.status}, ${xml.length} bytes`);
   console.log(`[sync] SOAP ${method} preview:`, xml.slice(0, 400));
-  if (!res.ok) throw new Error(`${method} HTTP ${res.status}: ${xml.slice(0, 300)}`);
+  if (!res.ok) {
+    const chunkSize = 250;
+    for (let i = 0; i < xml.length; i += chunkSize) {
+      console.error(`[soap_fault_chunk ${i}]:`, xml.substring(i, i + chunkSize));
+    }
+    throw new Error(`${method} HTTP ${res.status}: (ver logs em chunks) ${xml.slice(0, 400)}`);
+  }
   try {
     return parser.parse(xml);
   } catch (e: any) {
