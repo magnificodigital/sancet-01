@@ -21,6 +21,14 @@ function asArray<T>(v: T | T[] | undefined | null): T[] {
   return Array.isArray(v) ? v : [v];
 }
 
+function dedupByCodigoShift<T extends { codigo_shift: string }>(items: T[]): T[] {
+  const map = new Map<string, T>();
+  for (const item of items) {
+    map.set(item.codigo_shift, item);
+  }
+  return Array.from(map.values());
+}
+
 function findDeep(obj: any, key: string): any {
   if (!obj || typeof obj !== "object") return undefined;
   if (key in obj) return obj[key];
@@ -220,18 +228,20 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] exames válidos para upsert:", exames.length);
+    const examesDedup = dedupByCodigoShift(exames);
+    console.log(`[sync] exames após dedup: ${examesDedup.length} (era ${exames.length})`);
 
     etapa = "diff_exames";
-    const examesExist = await diffCounts(supabase, "exames_cache", exames.map((x) => x.codigo_shift));
+    const examesExist = await diffCounts(supabase, "exames_cache", examesDedup.map((x) => x.codigo_shift));
     let examesCriados = 0, examesAtualizados = 0;
-    if (exames.length) {
+    if (examesDedup.length) {
       etapa = "upsert_exames";
-      const { error } = await supabase.from("exames_cache").upsert(exames, { onConflict: "codigo_shift" });
+      const { error } = await supabase.from("exames_cache").upsert(examesDedup, { onConflict: "codigo_shift" });
       if (error) {
         console.error("[sync] ERRO upsert exames:", JSON.stringify(error));
         throw new Error("Upsert exames: " + error.message);
       }
-      for (const x of exames) examesExist.has(x.codigo_shift) ? examesAtualizados++ : examesCriados++;
+      for (const x of examesDedup) examesExist.has(x.codigo_shift) ? examesAtualizados++ : examesCriados++;
       console.log("[sync] exames criados:", examesCriados, "atualizados:", examesAtualizados);
     }
 
@@ -276,18 +286,20 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] unidades válidas para upsert:", unidades.length);
+    const unidadesDedup = dedupByCodigoShift(unidades);
+    console.log(`[sync] unidades após dedup: ${unidadesDedup.length} (era ${unidades.length})`);
 
     etapa = "diff_unidades";
-    const unidadesExist = await diffCounts(supabase, "unidades_cache", unidades.map((x) => x.codigo_shift));
+    const unidadesExist = await diffCounts(supabase, "unidades_cache", unidadesDedup.map((x) => x.codigo_shift));
     let unidadesCriadas = 0, unidadesAtualizadas = 0;
-    if (unidades.length) {
+    if (unidadesDedup.length) {
       etapa = "upsert_unidades";
-      const { error } = await supabase.from("unidades_cache").upsert(unidades, { onConflict: "codigo_shift" });
+      const { error } = await supabase.from("unidades_cache").upsert(unidadesDedup, { onConflict: "codigo_shift" });
       if (error) {
         console.error("[sync] ERRO upsert unidades:", JSON.stringify(error));
         throw new Error("Upsert unidades: " + error.message);
       }
-      for (const x of unidades) unidadesExist.has(x.codigo_shift) ? unidadesAtualizadas++ : unidadesCriadas++;
+      for (const x of unidadesDedup) unidadesExist.has(x.codigo_shift) ? unidadesAtualizadas++ : unidadesCriadas++;
       console.log("[sync] unidades criadas:", unidadesCriadas, "atualizadas:", unidadesAtualizadas);
     }
 
@@ -315,18 +327,20 @@ serve(async (req) => {
       })
       .filter(Boolean) as any[];
     console.log("[sync] convenios válidos para upsert:", convenios.length);
+    const conveniosDedup = dedupByCodigoShift(convenios);
+    console.log(`[sync] convenios após dedup: ${conveniosDedup.length} (era ${convenios.length})`);
 
     etapa = "diff_convenios";
-    const convExist = await diffCounts(supabase, "convenios_cache", convenios.map((x) => x.codigo_shift));
+    const convExist = await diffCounts(supabase, "convenios_cache", conveniosDedup.map((x) => x.codigo_shift));
     let convCriados = 0, convAtualizados = 0;
-    if (convenios.length) {
+    if (conveniosDedup.length) {
       etapa = "upsert_convenios";
-      const { error } = await supabase.from("convenios_cache").upsert(convenios, { onConflict: "codigo_shift" });
+      const { error } = await supabase.from("convenios_cache").upsert(conveniosDedup, { onConflict: "codigo_shift" });
       if (error) {
         console.error("[sync] ERRO upsert convenios:", JSON.stringify(error));
         throw new Error("Upsert convenios: " + error.message);
       }
-      for (const x of convenios) convExist.has(x.codigo_shift) ? convAtualizados++ : convCriados++;
+      for (const x of conveniosDedup) convExist.has(x.codigo_shift) ? convAtualizados++ : convCriados++;
       console.log("[sync] convenios criados:", convCriados, "atualizados:", convAtualizados);
     }
 
