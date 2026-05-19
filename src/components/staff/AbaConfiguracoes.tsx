@@ -170,7 +170,11 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
           <CardTitle>Integração Shift LIS</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {campo("SHIFT_ENDPOINT", "Endpoint SOAP", "https://sancet.shiftcloud.com.br/...")}
+          {campo(
+            "SHIFT_ENDPOINT",
+            "Endpoint SOAP",
+            "https://sancet.shiftcloud.com.br/shift/lis/sancet/elis/s01.util.b2b.shift.consultas.Webserver.cls",
+          )}
           {campo("SHIFT_USER_ID", "Usuário (pUserId)", "Fornecido pelo TI da Sancet")}
           {campo("SHIFT_SENHA", "Senha", "Fornecido pelo TI da Sancet")}
         </CardContent>
