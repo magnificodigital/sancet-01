@@ -64,7 +64,7 @@ async function fetchDetalhe(endpoint: string, exameId: string) {
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${xml.slice(0, 200)}`);
   }
-  return parser.parse(xml);
+  return { xml, parsed: parser.parse(xml) };
 }
 
 function mapDetalhe(parsed: any) {
@@ -186,9 +186,16 @@ serve(async (req) => {
     let atualizados = 0;
     let falhados = 0;
 
-    for (const ex of exames) {
+    for (let i = 0; i < exames.length; i++) {
+      const ex = exames[i];
+      const debug = i < 3;
       try {
-        const parsed = await fetchDetalhe(endpoint, ex.codigo_shift);
+        if (debug) console.log(`[detalhes] === DEBUG exame ${i + 1}: codigo_shift=${ex.codigo_shift} ===`);
+        if (debug) console.log(`[detalhes] SOAP request enviado para id=${ex.codigo_shift}`);
+        const { xml, parsed } = await fetchDetalhe(endpoint, ex.codigo_shift);
+        if (debug) console.log(`[detalhes] SOAP response RAW (primeiros 800 chars):`, xml.substring(0, 800));
+        const parsedResult = findDeep(parsed, "WsGetExamesByIdResult") ?? parsed;
+        if (debug) console.log(`[detalhes] parsed result keys:`, Object.keys(parsedResult ?? {}));
         const det = mapDetalhe(parsed);
 
         // Só atualiza se tiver algo útil
@@ -199,17 +206,22 @@ serve(async (req) => {
         if (det.jejum_horas !== null) patch.jejum_horas = det.jejum_horas;
         if (det.preparo !== null) patch.preparo = det.preparo;
 
+        if (debug) console.log(`[detalhes] dados a atualizar:`, JSON.stringify(patch, null, 2));
+
         if (Object.keys(patch).length > 1) {
-          const { error: upErr } = await supabase
+          const updateResult = await supabase
             .from("exames_cache")
             .update(patch)
             .eq("codigo_shift", ex.codigo_shift);
-          if (upErr) {
-            console.error(`[detalhes] erro update ${ex.codigo_shift}:`, upErr.message);
+          if (debug) console.log(`[detalhes] resultado UPDATE: rows affected=`, updateResult?.count, "error=", updateResult?.error);
+          if (updateResult.error) {
+            console.error(`[detalhes] erro update ${ex.codigo_shift}:`, updateResult.error.message);
             falhados++;
           } else {
             atualizados++;
           }
+        } else if (debug) {
+          console.log(`[detalhes] patch sem campos úteis, pulando UPDATE`);
         }
       } catch (e: any) {
         falhados++;
