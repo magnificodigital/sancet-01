@@ -11,8 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TabelaPedidos } from "./TabelaPedidos";
+import { KanbanPedidos } from "./KanbanPedidos";
 import { ModalPedidoStaff } from "./ModalPedidoStaff";
 import { Pedido, STATUS_OPTIONS, statusAgendamento } from "./utils";
+import { useStaffPerfil } from "@/hooks/useStaffPerfil";
+import { cn } from "@/lib/utils";
 
 const POR_PAGINA = 20;
 
@@ -39,9 +42,28 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     );
   }
   const podeEditar = permissoes?.pedidos?.editar !== false;
+  const { nome: nomeStaff } = useStaffPerfil();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [unidades, setUnidades] = useState<UnidadeOpt[]>([]);
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
+
+  const [vista, setVista] = useState<"lista" | "kanban">(() => {
+    if (typeof window === "undefined") return "kanban";
+    const salvo = localStorage.getItem("sancet-vista-pedidos");
+    return salvo === "lista" || salvo === "kanban" ? salvo : "kanban";
+  });
+  const [largo, setLargo] = useState<boolean>(
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
+  );
+  useEffect(() => {
+    const onResize = () => setLargo(window.innerWidth >= 1024);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("sancet-vista-pedidos", vista);
+  }, [vista]);
+  const vistaEfetiva: "lista" | "kanban" = largo ? vista : "lista";
 
   const [status, setStatus] = useState<string>("todos");
   const [tipo, setTipo] = useState<string>("todos");
@@ -125,21 +147,51 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-secondary">Pedidos</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-secondary">Pedidos</h1>
+        {largo && (
+          <div className="inline-flex rounded-md border bg-white p-0.5 shadow-sm">
+            <button
+              onClick={() => setVista("lista")}
+              className={cn(
+                "rounded px-3 py-1.5 text-sm font-medium transition",
+                vistaEfetiva === "lista"
+                  ? "bg-[#C8102E] text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Lista
+            </button>
+            <button
+              onClick={() => setVista("kanban")}
+              className={cn(
+                "rounded px-3 py-1.5 text-sm font-medium transition",
+                vistaEfetiva === "kanban"
+                  ? "bg-[#C8102E] text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Kanban
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow-sm">
-        <div className="min-w-[160px]">
-          <p className="mb-1 text-xs text-muted-foreground">Status</p>
-          <Select value={status} onValueChange={(v) => { setStatus(v); setPagina(1); }}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              {STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {vistaEfetiva === "lista" && (
+          <div className="min-w-[160px]">
+            <p className="mb-1 text-xs text-muted-foreground">Status</p>
+            <Select value={status} onValueChange={(v) => { setStatus(v); setPagina(1); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="min-w-[140px]">
           <p className="mb-1 text-xs text-muted-foreground">Tipo</p>
           <Select value={tipo} onValueChange={(v) => { setTipo(v); setPagina(1); }}>
@@ -203,32 +255,44 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
         </Button>
       </div>
 
-      <TabelaPedidos pedidos={fatia} onAbrir={podeEditar ? setPedidoAberto : () => {}} />
+      {vistaEfetiva === "kanban" ? (
+        <KanbanPedidos
+          pedidos={filtrados}
+          onAbrir={podeEditar ? setPedidoAberto : () => {}}
+          onAtualizado={carregar}
+          nomeStaff={nomeStaff}
+          podeEditar={podeEditar}
+        />
+      ) : (
+        <>
+          <TabelaPedidos pedidos={fatia} onAbrir={podeEditar ? setPedidoAberto : () => {}} />
 
-      {totalPaginas > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">
-            Página {paginaAtual} de {totalPaginas} · {filtrados.length} pedidos
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={paginaAtual === 1}
-              onClick={() => setPagina((p) => p - 1)}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={paginaAtual === totalPaginas}
-              onClick={() => setPagina((p) => p + 1)}
-            >
-              Próxima
-            </Button>
-          </div>
-        </div>
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Página {paginaAtual} de {totalPaginas} · {filtrados.length} pedidos
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={paginaAtual === 1}
+                  onClick={() => setPagina((p) => p - 1)}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={paginaAtual === totalPaginas}
+                  onClick={() => setPagina((p) => p + 1)}
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <ModalPedidoStaff
