@@ -261,33 +261,98 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
         return;
       }
 
-      let atualizados = 0;
-      let semMatch = 0;
-      let erros = 0;
+      // 2-3) parse + dedup
+      const linhas_lidas = linhas.length;
+      let linhas_invalidas = 0;
+      const precoPorMnemonico = new Map<string, number>();
 
       for (const row of linhas) {
         const mnemonico = (row["Mnemônico"] ?? row["Mnemonico"] ?? "").trim().toUpperCase();
         const precoStr = (row["Preço"] ?? row["Preco"] ?? "").trim();
-        if (!mnemonico) { erros++; continue; }
+        if (!mnemonico) { linhas_invalidas++; continue; }
         const preco = parsePrecoBR(precoStr);
-        if (preco == null) { erros++; continue; }
-
-        const { data, error } = await supabase
-          .from("exames_cache")
-          .update({ preco_particular: preco, atualizado_em: new Date().toISOString() })
-          .ilike("mnemonico", mnemonico)
-          .select("id");
-
-        if (error) { erros++; continue; }
-        if (!data || data.length === 0) { semMatch++; continue; }
-        atualizados += data.length;
+        if (preco == null) { linhas_invalidas++; continue; }
+        precoPorMnemonico.set(mnemonico, preco);
       }
 
-      toast.success("Preços importados", {
-        description: `${atualizados} atualizados · ${semMatch} sem correspondência · ${erros} erros`,
+      const mnemonicos = Array.from(precoPorMnemonico.keys());
+      if (mnemonicos.length === 0) {
+        toast.error("Nenhuma linha válida encontrada");
+        return;
+      }
+
+      // 4) single query para mapear mnemonico -> id (em lotes pra evitar URL gigante)
+      const mapaIds = new Map<string, string>();
+      const loteBusca = 500;
+      for (let i = 0; i < mnemonicos.length; i += loteBusca) {
+        const slice = mnemonicos.slice(i, i + loteBusca);
+        const { data, error } = await supabase
+          .from("exames_cache")
+          .select("id, mnemonico")
+          .in("mnemonico", slice);
+        if (error) {
+          console.error("[import precos] erro buscando ids:", error);
+          toast.error("Erro ao buscar exames: " + error.message);
+          return;
+        }
+        for (const r of data ?? []) {
+          if (r.mnemonico) mapaIds.set(r.mnemonico.toUpperCase(), r.id);
+        }
+      }
+
+      // 5) montar updates
+      const mnemonicos_sem_match: string[] = [];
+      const updates: { id: string; preco_particular: number; atualizado_em: string }[] = [];
+      const agora = new Date().toISOString();
+      for (const [mn, preco] of precoPorMnemonico.entries()) {
+        const id = mapaIds.get(mn);
+        if (!id) { mnemonicos_sem_match.push(mn); continue; }
+        updates.push({ id, preco_particular: preco, atualizado_em: agora });
+      }
+
+      // 6) upsert em batches de 500
+      const batches_com_erro: { batch_index: number; error: string }[] = [];
+      let precos_atualizados = 0;
+      const lote = 500;
+      for (let i = 0; i < updates.length; i += lote) {
+        const batch = updates.slice(i, i + lote);
+        const { error } = await supabase
+          .from("exames_cache")
+          .upsert(batch, { onConflict: "id" });
+        if (error) {
+          console.error("[import precos batch fail]", {
+            batch_index: Math.floor(i / lote),
+            batch_size: batch.length,
+            error_code: error.code,
+            error_message: error.message,
+            error_details: error.details,
+          });
+          batches_com_erro.push({ batch_index: Math.floor(i / lote), error: error.message });
+        } else {
+          precos_atualizados += batch.length;
+        }
+      }
+
+      console.log("[import precos] resumo:", {
+        linhas_lidas,
+        linhas_invalidas,
+        mnemonicos_sem_match,
+        precos_atualizados,
+        batches_com_erro,
       });
+
+      if (batches_com_erro.length > 0) {
+        toast.error(`Importação parcial: ${precos_atualizados} atualizados, ${batches_com_erro.length} lotes com erro`);
+      } else {
+        toast.success(`Atualizados ${precos_atualizados} preços de ${mnemonicos.length} exames`, {
+          description: mnemonicos_sem_match.length > 0
+            ? `${mnemonicos_sem_match.length} mnemônicos sem correspondência`
+            : undefined,
+        });
+      }
       carregar();
     } catch (err: any) {
+      console.error("[import precos] erro:", err);
       toast.error("Erro ao processar CSV", { description: err?.message ?? String(err) });
     }
   };
