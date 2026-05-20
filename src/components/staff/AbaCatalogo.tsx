@@ -160,9 +160,10 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       .filter(Boolean);
 
     const precoNum = parseFloat(form.preco_reais.replace(",", "."));
-    const preco_centavos = isNaN(precoNum) ? null : Math.round(precoNum * 100);
+    const precoValido = !isNaN(precoNum);
+    const preco_centavos = precoValido ? Math.round(precoNum * 100) : null;
 
-    const payload = {
+    const payload: any = {
       nome: form.nome.trim(),
       codigo_shift: form.codigo_shift.trim(),
       outros_nomes: outros.length ? outros : null,
@@ -174,10 +175,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       disponivel_em_casa: form.disponivel_em_casa,
       ativo: form.ativo,
     };
+    if (tabela === "exames_cache") {
+      payload.preco_particular = precoValido ? precoNum : null;
+    }
 
     const { error } = editando
-      ? await supabase.from(tabela).update(payload).eq("id", editando.id)
-      : await supabase.from(tabela).insert(payload);
+      ? await (supabase as any).from(tabela).update(payload).eq("id", editando.id)
+      : await (supabase as any).from(tabela).insert(payload);
 
     setSalvando(false);
     if (error) {
