@@ -70,6 +70,24 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
   const itensVisiveis = ITENS.filter((i) => (i.id !== "equipe" && i.id !== "paginas") || isAdmin);
   const navigate = useNavigate();
   const [mobileAberto, setMobileAberto] = useState(false);
+  const [pedidosNovos, setPedidosNovos] = useState<number>(0);
+
+  useEffect(() => {
+    let cancelado = false;
+    const fetchCount = async () => {
+      const { count } = await supabase
+        .from("pedidos")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "novo");
+      if (!cancelado) setPedidosNovos(count ?? 0);
+    };
+    fetchCount();
+    const iv = setInterval(fetchCount, 30000);
+    return () => {
+      cancelado = true;
+      clearInterval(iv);
+    };
+  }, []);
 
   const sair = async () => {
     await supabase.auth.signOut();
