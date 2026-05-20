@@ -11,8 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TabelaPedidos } from "./TabelaPedidos";
+import { KanbanPedidos } from "./KanbanPedidos";
 import { ModalPedidoStaff } from "./ModalPedidoStaff";
 import { Pedido, STATUS_OPTIONS, statusAgendamento } from "./utils";
+import { useStaffPerfil } from "@/hooks/useStaffPerfil";
+import { cn } from "@/lib/utils";
 
 const POR_PAGINA = 20;
 
