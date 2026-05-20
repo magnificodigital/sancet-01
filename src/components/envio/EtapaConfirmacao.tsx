@@ -7,12 +7,16 @@ import { useSacola } from "@/stores/sacola";
 import { formatarPreco } from "@/components/catalogo/types";
 import { Unidade } from "./ListaUnidades";
 import { EnderecoColeta } from "./EtapaEndereco";
+import { Agendamento } from "./EtapaAgendamento";
+import { formatarAgendamento } from "@/lib/agendamento";
+import { CalendarCheck } from "lucide-react";
 
 type Props = {
   tipo: "particular" | "convenio";
   modalidade: "domicilio" | "unidade";
   unidade: Unidade | null;
   endereco: EnderecoColeta | null;
+  agendamento: Agendamento | null;
   enviando: boolean;
   onConfirmar: (extras: {
     numeroCarteirinha: string;
