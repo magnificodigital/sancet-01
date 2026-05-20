@@ -90,11 +90,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
     tabela === "exames_cache" ? CATEGORIAS_EXAMES : CATEGORIAS_VACINAS;
 
   const carregar = async () => {
+    const campos =
+      tabela === "exames_cache"
+        ? "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, preco_particular, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo"
+        : "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo";
     const { data } = await supabase
       .from(tabela)
-      .select(
-        "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo",
-      )
+      .select(campos)
       .order("nome");
     setItens((data as Item[]) ?? []);
   };
