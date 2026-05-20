@@ -2,6 +2,9 @@ export type ItemCatalogo = {
   codigo_shift: string;
   nome: string;
   outros_nomes: string[] | null;
+  /** Reais (exames_cache.preco_particular). */
+  preco_particular?: number | null;
+  /** Centavos (vacinas_cache.preco_centavos). */
   preco_centavos: number | null;
   prazo_resultado: string | null;
   preparo: string | null;
@@ -10,7 +13,8 @@ export type ItemCatalogo = {
   categoria: string | null;
 };
 
-export const formatarPreco = (centavos: number | null) => {
+// Mantido por compat: aceita centavos e formata em BRL.
+export const formatarPreco = (centavos: number | null | undefined) => {
   if (centavos == null) return null;
   return (centavos / 100).toLocaleString("pt-BR", {
     style: "currency",
