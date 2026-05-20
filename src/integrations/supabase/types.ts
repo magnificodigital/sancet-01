@@ -666,6 +666,14 @@ export type Database = {
         Args: { p_cpf: string; p_protocolo: string }
         Returns: Json
       }
+      pedidos_do_paciente: {
+        Args: { p_cpf: string; p_data_nasc: string }
+        Returns: Json
+      }
+      resultados_do_paciente: {
+        Args: { p_cpf: string; p_data_nasc: string }
+        Returns: Json
+      }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
