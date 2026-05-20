@@ -44,6 +44,7 @@ type Item = {
   outros_nomes: string[] | null;
   categoria: string | null;
   preco_centavos: number | null;
+  preco_particular: number | null;
   prazo_resultado: string | null;
   preparo: string | null;
   disponivel_na_unidade: boolean;
@@ -89,11 +90,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
     tabela === "exames_cache" ? CATEGORIAS_EXAMES : CATEGORIAS_VACINAS;
 
   const carregar = async () => {
-    const { data } = await supabase
+    const campos =
+      tabela === "exames_cache"
+        ? "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, preco_particular, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo"
+        : "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo";
+    const { data } = await (supabase as any)
       .from(tabela)
-      .select(
-        "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo",
-      )
+      .select(campos)
       .order("nome");
     setItens((data as Item[]) ?? []);
   };
@@ -128,7 +131,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       outros_nomes: (item.outros_nomes ?? []).join(", "),
       categoria: item.categoria ?? "",
       preco_reais:
-        item.preco_centavos != null ? (item.preco_centavos / 100).toFixed(2) : "",
+        tabela === "exames_cache"
+          ? item.preco_particular != null
+            ? Number(item.preco_particular).toFixed(2)
+            : ""
+          : item.preco_centavos != null
+            ? (item.preco_centavos / 100).toFixed(2)
+            : "",
       prazo_resultado: item.prazo_resultado ?? "",
       preparo: item.preparo ?? "",
       disponivel_na_unidade: item.disponivel_na_unidade,
@@ -151,9 +160,10 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       .filter(Boolean);
 
     const precoNum = parseFloat(form.preco_reais.replace(",", "."));
-    const preco_centavos = isNaN(precoNum) ? null : Math.round(precoNum * 100);
+    const precoValido = !isNaN(precoNum);
+    const preco_centavos = precoValido ? Math.round(precoNum * 100) : null;
 
-    const payload = {
+    const payload: any = {
       nome: form.nome.trim(),
       codigo_shift: form.codigo_shift.trim(),
       outros_nomes: outros.length ? outros : null,
@@ -165,10 +175,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       disponivel_em_casa: form.disponivel_em_casa,
       ativo: form.ativo,
     };
+    if (tabela === "exames_cache") {
+      payload.preco_particular = precoValido ? precoNum : null;
+    }
 
     const { error } = editando
-      ? await supabase.from(tabela).update(payload).eq("id", editando.id)
-      : await supabase.from(tabela).insert(payload);
+      ? await (supabase as any).from(tabela).update(payload).eq("id", editando.id)
+      : await (supabase as any).from(tabela).insert(payload);
 
     setSalvando(false);
     if (error) {
@@ -435,7 +448,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
                 <TableCell className="max-w-[260px] truncate">{i.nome}</TableCell>
                 <TableCell className="font-mono text-xs">{i.codigo_shift}</TableCell>
                 <TableCell className="text-xs">{i.categoria ?? "—"}</TableCell>
-                <TableCell>{formatarPreco(i.preco_centavos)}</TableCell>
+                <TableCell>
+                  {tabela === "exames_cache"
+                    ? i.preco_particular != null
+                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(i.preco_particular))
+                      : "—"
+                    : formatarPreco(i.preco_centavos)}
+                </TableCell>
                 <TableCell>{i.disponivel_na_unidade ? "Sim" : "Não"}</TableCell>
                 <TableCell>{i.disponivel_em_casa ? "Sim" : "Não"}</TableCell>
                 <TableCell>
