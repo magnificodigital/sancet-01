@@ -44,6 +44,7 @@ type Item = {
   outros_nomes: string[] | null;
   categoria: string | null;
   preco_centavos: number | null;
+  preco_particular: number | null;
   prazo_resultado: string | null;
   preparo: string | null;
   disponivel_na_unidade: boolean;
