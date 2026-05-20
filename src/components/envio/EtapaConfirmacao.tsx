@@ -84,6 +84,15 @@ export const EtapaConfirmacao = ({
           )}
         </div>
 
+        {agendamento && modalidade === "unidade" && (
+          <div className="flex items-start gap-2 rounded-lg border border-[#C8102E]/20 bg-[#C8102E]/5 p-3">
+            <CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#C8102E]" />
+            <p className="text-sm text-secondary">
+              {formatarAgendamento(agendamento.data, agendamento.periodo)}
+            </p>
+          </div>
+        )}
+
         <div className="border-t pt-3 flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Total</span>
           <span className="text-xl font-bold text-[#C8102E]">{formatarPreco(total())}</span>
