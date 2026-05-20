@@ -30,6 +30,7 @@ export const EtapaConfirmacao = ({
   modalidade,
   unidade,
   endereco,
+  agendamento,
   enviando,
   onConfirmar,
 }: Props) => {
