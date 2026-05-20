@@ -40,38 +40,39 @@ export const AbaDadosPessoais = () => {
 
   useEffect(() => {
     (async () => {
-      if (!paciente?.cpf) return;
-      const { data } = await supabase
-        .from("pacientes")
-        .select("nome,email,celular,cep,logradouro,numero,complemento,bairro,cidade,uf")
-        .eq("cpf", paciente.cpf)
-        .maybeSingle();
-      if (data) {
+      if (!paciente?.cpf || !paciente?.data_nascimento) return;
+      const { data } = await supabase.rpc("meu_perfil", {
+        p_cpf: paciente.cpf,
+        p_data_nasc: paciente.data_nascimento,
+      });
+      const row = data as any;
+      if (row) {
         setDados({
-          nome: data.nome ?? "",
-          email: data.email ?? "",
-          celular: data.celular ?? "",
-          cep: data.cep ?? "",
-          logradouro: data.logradouro ?? "",
-          numero: data.numero ?? "",
-          complemento: data.complemento ?? "",
-          bairro: data.bairro ?? "",
-          cidade: data.cidade ?? "",
-          uf: data.uf ?? "",
+          nome: row.nome ?? "",
+          email: row.email ?? "",
+          celular: row.celular ?? "",
+          cep: row.cep ?? "",
+          logradouro: row.logradouro ?? "",
+          numero: row.numero ?? "",
+          complemento: row.complemento ?? "",
+          bairro: row.bairro ?? "",
+          cidade: row.cidade ?? "",
+          uf: row.uf ?? "",
         });
       }
     })();
-  }, [paciente?.cpf]);
+  }, [paciente?.cpf, paciente?.data_nascimento]);
 
   const set = (k: keyof Dados, v: string) => setDados((s) => ({ ...s, [k]: v }));
 
   const salvar = async () => {
-    if (!paciente?.cpf) return;
+    if (!paciente?.cpf || !paciente?.data_nascimento) return;
     setSalvando(true);
-    const { error } = await supabase
-      .from("pacientes")
-      .update(dados)
-      .eq("cpf", paciente.cpf);
+    const { error } = await supabase.rpc("atualizar_meu_perfil", {
+      p_cpf: paciente.cpf,
+      p_data_nasc: paciente.data_nascimento,
+      p_patch: dados as any,
+    });
     setSalvando(false);
     if (error) {
       toast.error(error.message);
@@ -79,6 +80,7 @@ export const AbaDadosPessoais = () => {
     }
     toast.success("Dados atualizados!");
   };
+
 
   return (
     <div className="space-y-4 max-w-2xl">

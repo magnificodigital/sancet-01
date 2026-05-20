@@ -22,6 +22,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatarPreco } from "@/components/catalogo/types";
 import { StatusBadge } from "./StatusBadge";
 import { Pedido } from "./CardPedido";
+import { usePaciente } from "@/hooks/usePaciente";
 
 type Props = {
   pedido: Pedido | null;
@@ -37,27 +38,37 @@ const ETAPAS = [
 
 export const ModalPedido = ({ pedido, onClose }: Props) => {
   const qc = useQueryClient();
+  const { paciente } = usePaciente();
   const [resultados, setResultados] = useState<
     Array<{ id: string; nome_arquivo: string; arquivo_url: string; created_at: string }>
   >([]);
 
   useEffect(() => {
-    if (!pedido) return;
+    if (!pedido || !paciente?.cpf || !paciente?.data_nascimento) return;
     setResultados([]);
     supabase
-      .from("resultados")
-      .select("id, nome_arquivo, arquivo_url, created_at")
-      .eq("pedido_protocolo", pedido.protocolo)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setResultados((data as any) ?? []));
-  }, [pedido]);
+      .rpc("resultados_do_paciente", {
+        p_cpf: paciente.cpf,
+        p_data_nasc: paciente.data_nascimento,
+      })
+      .then(({ data }) => {
+        const todos = ((data as any) ?? []) as Array<{
+          id: string;
+          pedido_protocolo: string;
+          nome_arquivo: string;
+          arquivo_url: string;
+          created_at: string;
+        }>;
+        setResultados(todos.filter((r) => r.pedido_protocolo === pedido.protocolo));
+      });
+  }, [pedido, paciente?.cpf, paciente?.data_nascimento]);
 
   const cancelar = async () => {
-    if (!pedido) return;
-    const { error } = await supabase
-      .from("pedidos")
-      .update({ status: "cancelado" })
-      .eq("id", pedido.id);
+    if (!pedido || !paciente?.cpf) return;
+    const { error } = await supabase.rpc("cancelar_meu_pedido", {
+      p_protocolo: pedido.protocolo,
+      p_cpf: paciente.cpf,
+    });
     if (error) {
       toast.error(error.message);
       return;
@@ -66,6 +77,7 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
     qc.invalidateQueries({ queryKey: ["pedidos"] });
     onClose();
   };
+
 
   if (!pedido) {
     return (

@@ -150,24 +150,10 @@ const Cadastro = () => {
       toast.error("Data de nascimento inválida.");
       return false;
     }
-    setCarregando(true);
-    try {
-      const { data: existente } = await supabase
-        .from("pacientes")
-        .select("id")
-        .eq("cpf", cpfLimpo)
-        .maybeSingle();
-      if (existente) {
-        toast.error("CPF já cadastrado.", {
-          action: { label: "Entrar aqui", onClick: () => navigate("/entrar") },
-        });
-        return false;
-      }
-      return true;
-    } finally {
-      setCarregando(false);
-    }
+    // Sem pre-check: a constraint UNIQUE no CPF (erro 23505) cuida de duplicatas no INSERT.
+    return true;
   };
+
 
   const finalizar = async () => {
     const cpfLimpo = apenasDigitos(form.cpf);
@@ -199,7 +185,15 @@ const Cadastro = () => {
 
       if (error) throw error;
 
-      salvarPaciente({ id: inserido.id, nome: inserido.nome ?? nomeFinal, cpf: inserido.cpf });
+      salvarPaciente({
+        id: inserido.id,
+        nome: inserido.nome ?? nomeFinal,
+        cpf: inserido.cpf,
+        data_nascimento: dataISO,
+        email: form.email,
+        telefone: apenasDigitos(form.celular),
+      });
+
       toast.success("Cadastro realizado com sucesso!");
       navigate("/agendamentos");
     } catch (err: any) {

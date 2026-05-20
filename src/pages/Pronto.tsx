@@ -22,30 +22,22 @@ const Pronto = () => {
   const voucherRef = useRef<HTMLDivElement>(null);
 
   const { data: pedido, isLoading, isError } = useQuery({
-    queryKey: ["pedido", protocolo],
-    enabled: !!protocolo,
+    queryKey: ["pedido", protocolo, paciente?.cpf],
+    enabled: !!protocolo && !!paciente?.cpf,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pedidos")
-        .select("protocolo, modalidade_coleta, paciente_nome, itens, valor_total_centavos, tipo_solicitacao, unidade_nome, data_agendamento, periodo_agendamento")
-        .eq("protocolo", protocolo!)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("pedido_por_protocolo", {
+        p_protocolo: protocolo!,
+        p_cpf: paciente!.cpf,
+      });
       if (error) throw error;
-      return data;
+      return data as any;
     },
   });
 
   useEffect(() => {
-    (async () => {
-      if (!paciente?.cpf) return;
-      const { data } = await supabase
-        .from("pacientes")
-        .select("email")
-        .eq("cpf", paciente.cpf)
-        .maybeSingle();
-      setEmailPaciente(data?.email ?? "");
-    })();
-  }, [paciente?.cpf]);
+    setEmailPaciente(paciente?.email ?? "");
+  }, [paciente?.email]);
+
 
 
   const copiar = () => {
