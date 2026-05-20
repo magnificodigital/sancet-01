@@ -19,13 +19,18 @@ import {
 } from "@/components/ui/select";
 import { BadgeStatus } from "./BadgeStatus";
 import {
+  formatarAgendamentoCurto,
   formatarData,
   formatarPreco,
   Pedido,
+  rotuloPeriodo,
   STATUS_OPTIONS,
+  statusAgendamento,
 } from "./utils";
 import { ConfirmarExclusao } from "./ConfirmarExclusao";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
+import { CalendarCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Props = {
   pedido: Pedido | null;
@@ -88,8 +93,9 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const [confirmarExcluir, setConfirmarExcluir] = useState(false);
   const [excluindoPedido, setExcluindoPedido] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const { isAdmin, permissoes } = useStaffPerfil();
+  const { isAdmin, permissoes, nome: nomeStaff } = useStaffPerfil();
   const podeExcluirPedido = isAdmin || permissoes?.pedidos?.excluir === true;
+  const [mudandoTransicao, setMudandoTransicao] = useState<string | null>(null);
 
   const carregarResultados = async (protocolo: string) => {
     const { data } = await supabase
@@ -124,12 +130,29 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const mudouStatus = novoStatus !== pedido.status;
 
   const salvarStatus = async () => {
-    setSalvando(true);
+    await aplicarMudancaStatus(novoStatus, false);
+  };
+
+  const aplicarMudancaStatus = async (alvo: string, viaBotao: boolean) => {
+    if (alvo === pedido.status) return;
+    if (viaBotao) setMudandoTransicao(alvo);
+    else setSalvando(true);
+
+    const quando = new Date().toLocaleString("pt-BR");
+    const autor = nomeStaff || "staff";
+    const linha = `[${quando}] Status alterado para '${alvo}' por ${autor}.`;
+    const observacoes = pedido.observacoes
+      ? `${pedido.observacoes}\n${linha}`
+      : linha;
+
     const { error } = await supabase
       .from("pedidos")
-      .update({ status: novoStatus })
+      .update({ status: alvo, observacoes })
       .eq("id", pedido.id);
-    setSalvando(false);
+
+    if (viaBotao) setMudandoTransicao(null);
+    else setSalvando(false);
+
     if (error) {
       toast.error("Erro ao atualizar status");
       return;
@@ -138,6 +161,19 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     onSalvo?.();
     onClose();
   };
+
+  const transicoes: { alvo: string; label: string; variant?: "destructive" | "default" }[] = (() => {
+    const t: { alvo: string; label: string; variant?: "destructive" | "default" }[] = [];
+    if (pedido.status === "novo") t.push({ alvo: "confirmado", label: "Confirmar" });
+    if (pedido.status === "confirmado") t.push({ alvo: "atendido", label: "Marcar como atendido" });
+    if (pedido.status === "atendido") t.push({ alvo: "concluido", label: "Concluir" });
+    if (pedido.status !== "cancelado" && pedido.status !== "concluido") {
+      t.push({ alvo: "cancelado", label: "Cancelar", variant: "destructive" });
+    }
+    return t;
+  })();
+
+  const agStatus = statusAgendamento(pedido.data_agendamento, pedido.status);
 
   const onSelecionarArquivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -231,6 +267,52 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
+            {pedido.data_agendamento && (
+              <div
+                className={cn(
+                  "flex items-start gap-2 rounded-lg border p-3",
+                  agStatus === "atrasado"
+                    ? "border-red-200 bg-red-50"
+                    : agStatus === "hoje"
+                      ? "border-orange-200 bg-orange-50"
+                      : agStatus === "amanha"
+                        ? "border-blue-200 bg-blue-50"
+                        : "border-[#C8102E]/20 bg-[#C8102E]/5",
+                )}
+              >
+                <CalendarCheck
+                  className={cn(
+                    "mt-0.5 h-5 w-5 shrink-0",
+                    agStatus === "atrasado"
+                      ? "text-red-600"
+                      : agStatus === "hoje"
+                        ? "text-orange-600"
+                        : agStatus === "amanha"
+                          ? "text-blue-600"
+                          : "text-[#C8102E]",
+                  )}
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Agendamento
+                  </p>
+                  <p className="text-sm font-semibold text-secondary">
+                    {formatarAgendamentoCurto(pedido.data_agendamento, pedido.periodo_agendamento)}
+                    {pedido.periodo_agendamento && (
+                      <span className="ml-1 text-muted-foreground font-normal">
+                        ({rotuloPeriodo(pedido.periodo_agendamento)})
+                      </span>
+                    )}
+                  </p>
+                  {agStatus === "atrasado" && (
+                    <p className="mt-0.5 text-xs font-medium text-red-700">
+                      Pedido atrasado — agendamento já passou.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1 text-sm">
               <p>
                 <span className="text-muted-foreground">Tipo:</span>{" "}
@@ -301,7 +383,37 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
               </div>
             )}
 
+            {transicoes.length > 0 && (
+              <div className="space-y-2 rounded-lg border bg-white p-3">
+                <p className="text-sm font-medium">Ações</p>
+                <div className="flex flex-wrap gap-2">
+                  {transicoes.map((t) => (
+                    <Button
+                      key={t.alvo}
+                      size="sm"
+                      variant={t.variant === "destructive" ? "outline" : "default"}
+                      className={cn(
+                        t.variant === "destructive"
+                          ? "border-red-200 text-red-700 hover:bg-red-50"
+                          : "text-white",
+                      )}
+                      style={
+                        t.variant === "destructive"
+                          ? undefined
+                          : { backgroundColor: "#C8102E" }
+                      }
+                      disabled={mudandoTransicao !== null}
+                      onClick={() => aplicarMudancaStatus(t.alvo, true)}
+                    >
+                      {mudandoTransicao === t.alvo ? "Salvando..." : t.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2 rounded-lg border bg-white p-3">
+
               <label className="text-sm font-medium">Alterar status:</label>
               <Select value={novoStatus} onValueChange={setNovoStatus}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
