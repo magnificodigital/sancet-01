@@ -25,7 +25,7 @@ const Pronto = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pedidos")
-        .select("protocolo, modalidade_coleta, paciente_cpf, paciente_nome, itens, valor_total_centavos, tipo_solicitacao")
+        .select("protocolo, modalidade_coleta, paciente_cpf, paciente_nome, itens, valor_total_centavos, tipo_solicitacao, unidade_nome, data_agendamento, periodo_agendamento")
         .eq("protocolo", protocolo!)
         .maybeSingle();
       if (error) throw error;
