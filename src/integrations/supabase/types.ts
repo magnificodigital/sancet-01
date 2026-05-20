@@ -291,6 +291,7 @@ export type Database = {
           convenio_codigo_shift: string | null
           convenio_nome: string | null
           created_at: string | null
+          data_agendamento: string | null
           endereco_coleta: Json | null
           id: string
           itens: Json
@@ -300,6 +301,7 @@ export type Database = {
           paciente_cpf: string
           paciente_id: string | null
           paciente_nome: string | null
+          periodo_agendamento: string | null
           protocolo: string
           status: string
           status_pagamento: string
@@ -319,6 +321,7 @@ export type Database = {
           convenio_codigo_shift?: string | null
           convenio_nome?: string | null
           created_at?: string | null
+          data_agendamento?: string | null
           endereco_coleta?: Json | null
           id?: string
           itens?: Json
@@ -328,6 +331,7 @@ export type Database = {
           paciente_cpf: string
           paciente_id?: string | null
           paciente_nome?: string | null
+          periodo_agendamento?: string | null
           protocolo?: string
           status?: string
           status_pagamento?: string
@@ -347,6 +351,7 @@ export type Database = {
           convenio_codigo_shift?: string | null
           convenio_nome?: string | null
           created_at?: string | null
+          data_agendamento?: string | null
           endereco_coleta?: Json | null
           id?: string
           itens?: Json
@@ -356,6 +361,7 @@ export type Database = {
           paciente_cpf?: string
           paciente_id?: string | null
           paciente_nome?: string | null
+          periodo_agendamento?: string | null
           protocolo?: string
           status?: string
           status_pagamento?: string
