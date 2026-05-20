@@ -130,12 +130,29 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const mudouStatus = novoStatus !== pedido.status;
 
   const salvarStatus = async () => {
-    setSalvando(true);
+    await aplicarMudancaStatus(novoStatus, false);
+  };
+
+  const aplicarMudancaStatus = async (alvo: string, viaBotao: boolean) => {
+    if (alvo === pedido.status) return;
+    if (viaBotao) setMudandoTransicao(alvo);
+    else setSalvando(true);
+
+    const quando = new Date().toLocaleString("pt-BR");
+    const autor = nomeStaff || "staff";
+    const linha = `[${quando}] Status alterado para '${alvo}' por ${autor}.`;
+    const observacoes = pedido.observacoes
+      ? `${pedido.observacoes}\n${linha}`
+      : linha;
+
     const { error } = await supabase
       .from("pedidos")
-      .update({ status: novoStatus })
+      .update({ status: alvo, observacoes })
       .eq("id", pedido.id);
-    setSalvando(false);
+
+    if (viaBotao) setMudandoTransicao(null);
+    else setSalvando(false);
+
     if (error) {
       toast.error("Erro ao atualizar status");
       return;
@@ -144,6 +161,19 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     onSalvo?.();
     onClose();
   };
+
+  const transicoes: { alvo: string; label: string; variant?: "destructive" | "default" }[] = (() => {
+    const t: { alvo: string; label: string; variant?: "destructive" | "default" }[] = [];
+    if (pedido.status === "novo") t.push({ alvo: "confirmado", label: "Confirmar" });
+    if (pedido.status === "confirmado") t.push({ alvo: "atendido", label: "Marcar como atendido" });
+    if (pedido.status === "atendido") t.push({ alvo: "concluido", label: "Concluir" });
+    if (pedido.status !== "cancelado" && pedido.status !== "concluido") {
+      t.push({ alvo: "cancelado", label: "Cancelar", variant: "destructive" });
+    }
+    return t;
+  })();
+
+  const agStatus = statusAgendamento(pedido.data_agendamento, pedido.status);
 
   const onSelecionarArquivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
