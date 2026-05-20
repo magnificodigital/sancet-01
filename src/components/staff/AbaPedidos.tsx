@@ -255,32 +255,44 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
         </Button>
       </div>
 
-      <TabelaPedidos pedidos={fatia} onAbrir={podeEditar ? setPedidoAberto : () => {}} />
+      {vistaEfetiva === "kanban" ? (
+        <KanbanPedidos
+          pedidos={filtrados}
+          onAbrir={podeEditar ? setPedidoAberto : () => {}}
+          onAtualizado={carregar}
+          nomeStaff={nomeStaff}
+          podeEditar={podeEditar}
+        />
+      ) : (
+        <>
+          <TabelaPedidos pedidos={fatia} onAbrir={podeEditar ? setPedidoAberto : () => {}} />
 
-      {totalPaginas > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">
-            Página {paginaAtual} de {totalPaginas} · {filtrados.length} pedidos
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={paginaAtual === 1}
-              onClick={() => setPagina((p) => p - 1)}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={paginaAtual === totalPaginas}
-              onClick={() => setPagina((p) => p + 1)}
-            >
-              Próxima
-            </Button>
-          </div>
-        </div>
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Página {paginaAtual} de {totalPaginas} · {filtrados.length} pedidos
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={paginaAtual === 1}
+                  onClick={() => setPagina((p) => p - 1)}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={paginaAtual === totalPaginas}
+                  onClick={() => setPagina((p) => p + 1)}
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <ModalPedidoStaff
