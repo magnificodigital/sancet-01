@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaciente } from "@/hooks/usePaciente";
+import { formatarAgendamento, parseDateOnly } from "@/lib/agendamento";
+import { CalendarCheck } from "lucide-react";
 
 const Pronto = () => {
   const { protocolo } = useParams();
