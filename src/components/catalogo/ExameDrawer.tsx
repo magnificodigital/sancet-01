@@ -7,9 +7,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Clock, ClipboardList, Home, ShoppingBag, Trash2 } from "lucide-react";
-import { ItemCatalogo, formatarPreco } from "./types";
+import { ItemCatalogo } from "./types";
 import { useSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
+import { formatBRL } from "@/lib/preco";
 
 type Props = {
   item: ItemCatalogo | null;
@@ -32,7 +33,8 @@ export const ExameDrawer = ({ item, tipo, onClose }: Props) => {
         tipo,
         nome: item.nome,
         outrosNomes: (item.outros_nomes ?? []).join(", "),
-        precoCentavos: item.preco_centavos,
+        precoParticular: tipo === "exame" ? item.preco_particular ?? null : null,
+        precoCentavos: tipo === "vacina" ? item.preco_centavos : null,
         prazoResultado: item.prazo_resultado,
         preparo: item.preparo,
         disponivelNaUnidade: item.disponivel_na_unidade,
@@ -41,7 +43,14 @@ export const ExameDrawer = ({ item, tipo, onClose }: Props) => {
     }
   };
 
-  const preco = item ? formatarPreco(item.preco_centavos) : null;
+  const valorReais = item
+    ? tipo === "exame"
+      ? item.preco_particular ?? null
+      : item.preco_centavos != null
+        ? item.preco_centavos / 100
+        : null
+    : null;
+  const preco = item ? formatBRL(valorReais) : null;
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>

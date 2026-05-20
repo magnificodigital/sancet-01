@@ -30,6 +30,7 @@ type CatalogoItem = {
   tipo: "exame" | "vacina";
   nome: string;
   outros_nomes: string[] | null;
+  preco_particular?: number | null;
   preco_centavos: number | null;
   prazo_resultado: string | null;
   preparo: string | null;
@@ -71,7 +72,7 @@ export const LeitorReceita = () => {
         supabase
           .from("exames_cache")
           .select(
-            "codigo_shift, nome, outros_nomes, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa",
+            "codigo_shift, nome, outros_nomes, preco_particular, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa",
           )
           .eq("ativo", true),
         supabase
@@ -86,8 +87,8 @@ export const LeitorReceita = () => {
       if (vacRes.error) throw vacRes.error;
 
       const cat: CatalogoItem[] = [
-        ...(exRes.data ?? []).map((e) => ({ ...e, tipo: "exame" as const })),
-        ...(vacRes.data ?? []).map((v) => ({ ...v, tipo: "vacina" as const })),
+        ...(exRes.data ?? []).map((e: any) => ({ ...e, tipo: "exame" as const })),
+        ...(vacRes.data ?? []).map((v: any) => ({ ...v, tipo: "vacina" as const, preco_particular: null })),
       ];
       setCatalogo(cat);
 
@@ -129,7 +130,8 @@ export const LeitorReceita = () => {
           tipo: it.tipo,
           nome: it.nome,
           outrosNomes: (it.outros_nomes ?? []).join(", "),
-          precoCentavos: it.preco_centavos,
+          precoParticular: it.tipo === "exame" ? it.preco_particular ?? null : null,
+          precoCentavos: it.tipo === "vacina" ? it.preco_centavos : null,
           prazoResultado: it.prazo_resultado,
           preparo: it.preparo,
           disponivelNaUnidade: it.disponivel_na_unidade,

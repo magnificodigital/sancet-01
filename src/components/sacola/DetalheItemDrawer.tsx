@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, Clock, ClipboardList, Home, Trash2 } from "lucide-react";
 import { ItemSacola, useSacola } from "@/stores/sacola";
-import { formatarPreco } from "@/components/catalogo/types";
+import { formatBRL, precoItemReais } from "@/lib/preco";
 
 type Props = {
   item: ItemSacola | null;
@@ -28,14 +28,17 @@ export const DetalheItemDrawer = ({ item, onClose }: Props) => {
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {item.precoCentavos != null && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2">Valor</h4>
-                  <Badge className="bg-primary text-primary-foreground text-base px-3 py-1">
-                    {formatarPreco(item.precoCentavos)}
-                  </Badge>
-                </div>
-              )}
+              {(() => {
+                const r = precoItemReais(item);
+                return r != null ? (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Valor</h4>
+                    <Badge className="bg-primary text-primary-foreground text-base px-3 py-1">
+                      {formatBRL(r)}
+                    </Badge>
+                  </div>
+                ) : null;
+              })()}
 
               {item.prazoResultado && (
                 <div>

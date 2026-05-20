@@ -123,13 +123,17 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas }: Pro
   const { data, isLoading } = useQuery({
     queryKey: [tabela],
     queryFn: async () => {
+      const colunas =
+        tipo === "exame"
+          ? "codigo_shift, nome, outros_nomes, preco_particular, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, categoria"
+          : "codigo_shift, nome, outros_nomes, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, categoria";
       const { data, error } = await supabase
         .from(tabela)
-        .select("codigo_shift, nome, outros_nomes, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, categoria")
+        .select(colunas)
         .eq("ativo", true)
         .order("nome");
       if (error) throw error;
-      return (data ?? []) as ItemCatalogo[];
+      return (data ?? []) as unknown as ItemCatalogo[];
     },
   });
 
@@ -200,7 +204,8 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas }: Pro
                 tipo,
                 nome: item.nome,
                 outrosNomes: (item.outros_nomes ?? []).join(", "),
-                precoCentavos: item.preco_centavos,
+                precoParticular: tipo === "exame" ? item.preco_particular ?? null : null,
+                precoCentavos: tipo === "vacina" ? item.preco_centavos : null,
                 prazoResultado: item.prazo_resultado,
                 preparo: item.preparo,
                 disponivelNaUnidade: item.disponivel_na_unidade,

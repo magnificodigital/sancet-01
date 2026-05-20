@@ -14,7 +14,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useSacola, ItemSacola } from "@/stores/sacola";
-import { formatarPreco } from "@/components/catalogo/types";
+import { formatBRL, precoItemReais } from "@/lib/preco";
 
 type Props = {
   onVerDetalhes: (item: ItemSacola) => void;
@@ -44,11 +44,14 @@ export const ListaItensSacola = ({ onVerDetalhes }: Props) => {
                   </p>
                 )}
               </div>
-              {item.precoCentavos != null && (
-                <Badge className="bg-primary text-primary-foreground whitespace-nowrap">
-                  {formatarPreco(item.precoCentavos)}
-                </Badge>
-              )}
+              {(() => {
+                const r = precoItemReais(item);
+                return r != null ? (
+                  <Badge className="bg-primary text-primary-foreground whitespace-nowrap">
+                    {formatBRL(r)}
+                  </Badge>
+                ) : null;
+              })()}
             </div>
             <div className="flex items-center justify-between pt-2 border-t">
               <button

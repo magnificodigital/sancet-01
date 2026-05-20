@@ -13,7 +13,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useSacola } from "@/stores/sacola";
-import { formatarPreco } from "@/components/catalogo/types";
+import { formatBRL, precoItemReais } from "@/lib/preco";
 import { Unidade } from "./ListaUnidades";
 import { EnderecoColeta } from "./EtapaEndereco";
 import { Agendamento } from "./EtapaAgendamento";
@@ -132,7 +132,7 @@ export const EtapaConfirmacao = ({
         !!arquivo &&
         (!exigePlano || !!planoSel)));
 
-  const totalParticular = itens.reduce((acc, i) => acc + (i.precoCentavos ?? 0), 0);
+  const totalParticular = itens.reduce((acc, i) => acc + (precoItemReais(i) ?? 0), 0);
 
   return (
     <div className="space-y-5">
@@ -142,29 +142,32 @@ export const EtapaConfirmacao = ({
         <div>
           <h3 className="font-semibold mb-2 text-secondary">Itens</h3>
           <ul className="space-y-2 text-sm">
-            {itens.map((i) => (
-              <li key={i.codigoShift} className="space-y-0.5">
-                <div className="flex justify-between gap-2">
-                  <span className="truncate">
-                    {i.codigoShift}-{i.nome}
-                  </span>
-                  <span
-                    className={cn(
-                      "whitespace-nowrap text-muted-foreground",
-                      tipo === "convenio" && "line-through",
-                    )}
-                  >
-                    {i.precoCentavos != null ? formatarPreco(i.precoCentavos) : "—"}
-                  </span>
-                </div>
-                {tipo === "convenio" && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">
-                    <ShieldCheck className="h-3 w-3" />
-                    Coberto pelo convênio (sujeito à autorização)
-                  </span>
-                )}
-              </li>
-            ))}
+            {itens.map((i) => {
+              const r = precoItemReais(i);
+              return (
+                <li key={i.codigoShift} className="space-y-0.5">
+                  <div className="flex justify-between gap-2">
+                    <span className="truncate">
+                      {i.codigoShift}-{i.nome}
+                    </span>
+                    <span
+                      className={cn(
+                        "whitespace-nowrap text-muted-foreground",
+                        tipo === "convenio" && "line-through",
+                      )}
+                    >
+                      {formatBRL(r)}
+                    </span>
+                  </div>
+                  {tipo === "convenio" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">
+                      <ShieldCheck className="h-3 w-3" />
+                      Coberto pelo convênio (sujeito à autorização)
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
 
@@ -201,7 +204,7 @@ export const EtapaConfirmacao = ({
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Total</span>
             <span className="text-xl font-bold text-[#C8102E]">
-              {tipo === "convenio" ? formatarPreco(0) : formatarPreco(totalParticular)}
+              {tipo === "convenio" ? formatBRL(0) : formatBRL(totalParticular)}
             </span>
           </div>
           {tipo === "convenio" && (
