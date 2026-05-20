@@ -94,7 +94,7 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       tabela === "exames_cache"
         ? "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, preco_particular, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo"
         : "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo";
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from(tabela)
       .select(campos)
       .order("nome");
