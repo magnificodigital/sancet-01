@@ -9,12 +9,58 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { BadgeStatus } from "./BadgeStatus";
-import { formatarData, Pedido } from "./utils";
+import {
+  formatarAgendamentoCurto,
+  formatarData,
+  Pedido,
+  rotuloPeriodo,
+  statusAgendamento,
+} from "./utils";
+import { cn } from "@/lib/utils";
 
 type Props = {
   pedidos: Pedido[];
   onAbrir: (p: Pedido) => void;
   vazioMsg?: string;
+};
+
+const AgendamentoCell = ({ p }: { p: Pedido }) => {
+  const s = statusAgendamento(p.data_agendamento, p.status);
+  if (s === "sem") return <span className="text-muted-foreground">—</span>;
+
+  const per = rotuloPeriodo(p.periodo_agendamento);
+
+  if (s === "hoje") {
+    return (
+      <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-800">
+        Hoje{per ? ` — ${per}` : ""}
+      </span>
+    );
+  }
+  if (s === "amanha") {
+    return (
+      <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
+        Amanhã{per ? ` — ${per}` : ""}
+      </span>
+    );
+  }
+  if (s === "atrasado") {
+    return (
+      <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800">
+        Atrasado
+      </span>
+    );
+  }
+  return (
+    <span
+      className={cn(
+        "text-xs",
+        s === "passado" ? "text-muted-foreground" : "text-foreground",
+      )}
+    >
+      {formatarAgendamentoCurto(p.data_agendamento, p.periodo_agendamento)}
+    </span>
+  );
 };
 
 export const TabelaPedidos = ({ pedidos, onAbrir, vazioMsg = "Nenhum pedido." }: Props) => {
@@ -35,6 +81,7 @@ export const TabelaPedidos = ({ pedidos, onAbrir, vazioMsg = "Nenhum pedido." }:
             <TableHead>Paciente</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Modalidade</TableHead>
+            <TableHead>Agendamento</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Data</TableHead>
             <TableHead className="text-right">Ações</TableHead>
@@ -74,6 +121,9 @@ export const TabelaPedidos = ({ pedidos, onAbrir, vazioMsg = "Nenhum pedido." }:
                     </>
                   )}
                 </span>
+              </TableCell>
+              <TableCell>
+                <AgendamentoCell p={p} />
               </TableCell>
               <TableCell>
                 <BadgeStatus status={p.status} />
