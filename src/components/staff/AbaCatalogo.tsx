@@ -282,13 +282,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       }
 
       // 4) single query para mapear mnemonico -> id (em lotes pra evitar URL gigante)
-      const mapaIds = new Map<string, string>();
+      const mapaInfo = new Map<string, { id: string; codigo_shift: string; nome: string }>();
       const loteBusca = 500;
       for (let i = 0; i < mnemonicos.length; i += loteBusca) {
         const slice = mnemonicos.slice(i, i + loteBusca);
         const { data, error } = await supabase
           .from("exames_cache")
-          .select("id, mnemonico")
+          .select("id, mnemonico, codigo_shift, nome")
           .in("mnemonico", slice);
         if (error) {
           console.error("[import precos] erro buscando ids:", error);
@@ -296,18 +296,18 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
           return;
         }
         for (const r of data ?? []) {
-          if (r.mnemonico) mapaIds.set(r.mnemonico.toUpperCase(), r.id);
+          if (r.mnemonico) mapaInfo.set(r.mnemonico.toUpperCase(), { id: r.id, codigo_shift: r.codigo_shift, nome: r.nome });
         }
       }
 
       // 5) montar updates
       const mnemonicos_sem_match: string[] = [];
-      const updates: { id: string; preco_particular: number; atualizado_em: string }[] = [];
+      const updates: { id: string; codigo_shift: string; nome: string; preco_particular: number; atualizado_em: string }[] = [];
       const agora = new Date().toISOString();
       for (const [mn, preco] of precoPorMnemonico.entries()) {
-        const id = mapaIds.get(mn);
-        if (!id) { mnemonicos_sem_match.push(mn); continue; }
-        updates.push({ id, preco_particular: preco, atualizado_em: agora });
+        const info = mapaInfo.get(mn);
+        if (!info) { mnemonicos_sem_match.push(mn); continue; }
+        updates.push({ id: info.id, codigo_shift: info.codigo_shift, nome: info.nome, preco_particular: preco, atualizado_em: agora });
       }
 
       // 6) upsert em batches de 500
