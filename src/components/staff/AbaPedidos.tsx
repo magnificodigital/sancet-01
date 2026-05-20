@@ -12,13 +12,23 @@ import {
 } from "@/components/ui/select";
 import { TabelaPedidos } from "./TabelaPedidos";
 import { ModalPedidoStaff } from "./ModalPedidoStaff";
-import { Pedido, STATUS_OPTIONS } from "./utils";
+import { Pedido, STATUS_OPTIONS, statusAgendamento } from "./utils";
 
 const POR_PAGINA = 20;
 
 type Props = {
   permissoes?: { pedidos: { ver: boolean; editar: boolean; excluir: boolean } } | null;
 };
+
+type UnidadeOpt = { codigo_shift: string; nome: string };
+
+type FiltroAgendamento =
+  | "todos"
+  | "hoje"
+  | "amanha"
+  | "proximos7"
+  | "atrasados"
+  | "sem";
 
 export const AbaPedidos = ({ permissoes }: Props = {}) => {
   if (permissoes?.pedidos?.ver === false) {
@@ -30,11 +40,14 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
   }
   const podeEditar = permissoes?.pedidos?.editar !== false;
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [unidades, setUnidades] = useState<UnidadeOpt[]>([]);
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
 
   const [status, setStatus] = useState<string>("todos");
   const [tipo, setTipo] = useState<string>("todos");
   const [modalidade, setModalidade] = useState<string>("todos");
+  const [unidade, setUnidade] = useState<string>("todos");
+  const [agendamento, setAgendamento] = useState<FiltroAgendamento>("todos");
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
 
@@ -42,21 +55,51 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     const { data } = await supabase
       .from("pedidos")
       .select("*")
+      .order("data_agendamento", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(500);
     setPedidos((data as Pedido[]) ?? []);
   };
 
+  const carregarUnidades = async () => {
+    const { data } = await supabase
+      .from("unidades_cache")
+      .select("codigo_shift, nome")
+      .order("nome");
+    setUnidades((data as UnidadeOpt[]) ?? []);
+  };
+
   useEffect(() => {
     carregar();
+    carregarUnidades();
   }, []);
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const em7 = new Date(hoje);
+    em7.setDate(em7.getDate() + 7);
+
     return pedidos.filter((p) => {
       if (status !== "todos" && p.status !== status) return false;
       if (tipo !== "todos" && p.tipo_solicitacao !== tipo) return false;
       if (modalidade !== "todos" && p.modalidade_coleta !== modalidade) return false;
+      if (unidade !== "todos" && p.unidade_codigo_shift !== unidade) return false;
+
+      if (agendamento !== "todos") {
+        const sa = statusAgendamento(p.data_agendamento, p.status);
+        if (agendamento === "hoje" && sa !== "hoje") return false;
+        if (agendamento === "amanha" && sa !== "amanha") return false;
+        if (agendamento === "atrasados" && sa !== "atrasado") return false;
+        if (agendamento === "sem" && sa !== "sem") return false;
+        if (agendamento === "proximos7") {
+          if (!p.data_agendamento) return false;
+          const d = new Date(p.data_agendamento + "T00:00:00");
+          if (d < hoje || d > em7) return false;
+        }
+      }
+
       if (q) {
         const matchProtocolo = p.protocolo.toLowerCase().includes(q);
         const matchCpf = (p.paciente_cpf ?? "").toLowerCase().includes(q);
@@ -64,7 +107,7 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
       }
       return true;
     });
-  }, [pedidos, status, tipo, modalidade, busca]);
+  }, [pedidos, status, tipo, modalidade, unidade, agendamento, busca]);
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
   const paginaAtual = Math.min(pagina, totalPaginas);
@@ -74,6 +117,8 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     setStatus("todos");
     setTipo("todos");
     setModalidade("todos");
+    setUnidade("todos");
+    setAgendamento("todos");
     setBusca("");
     setPagina(1);
   };
@@ -117,7 +162,33 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
             </SelectContent>
           </Select>
         </div>
-        <div className="relative min-w-[260px] flex-1">
+        <div className="min-w-[180px]">
+          <p className="mb-1 text-xs text-muted-foreground">Unidade</p>
+          <Select value={unidade} onValueChange={(v) => { setUnidade(v); setPagina(1); }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas</SelectItem>
+              {unidades.map((u) => (
+                <SelectItem key={u.codigo_shift} value={u.codigo_shift}>{u.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="min-w-[170px]">
+          <p className="mb-1 text-xs text-muted-foreground">Agendamento</p>
+          <Select value={agendamento} onValueChange={(v) => { setAgendamento(v as FiltroAgendamento); setPagina(1); }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="hoje">Hoje</SelectItem>
+              <SelectItem value="amanha">Amanhã</SelectItem>
+              <SelectItem value="proximos7">Próximos 7 dias</SelectItem>
+              <SelectItem value="atrasados">Atrasados</SelectItem>
+              <SelectItem value="sem">Sem agendamento</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="relative min-w-[240px] flex-1">
           <p className="mb-1 text-xs text-muted-foreground">Buscar</p>
           <Search className="absolute left-3 top-[34px] h-4 w-4 text-muted-foreground" />
           <Input
