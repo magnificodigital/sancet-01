@@ -19,13 +19,18 @@ import {
 } from "@/components/ui/select";
 import { BadgeStatus } from "./BadgeStatus";
 import {
+  formatarAgendamentoCurto,
   formatarData,
   formatarPreco,
   Pedido,
+  rotuloPeriodo,
   STATUS_OPTIONS,
+  statusAgendamento,
 } from "./utils";
 import { ConfirmarExclusao } from "./ConfirmarExclusao";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
+import { CalendarCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Props = {
   pedido: Pedido | null;
