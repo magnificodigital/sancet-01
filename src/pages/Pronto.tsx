@@ -27,7 +27,7 @@ const Pronto = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pedidos")
-        .select("protocolo, modalidade_coleta, paciente_cpf, paciente_nome, itens, valor_total_centavos, tipo_solicitacao, unidade_nome, data_agendamento, periodo_agendamento")
+        .select("protocolo, modalidade_coleta, paciente_nome, itens, valor_total_centavos, tipo_solicitacao, unidade_nome, data_agendamento, periodo_agendamento")
         .eq("protocolo", protocolo!)
         .maybeSingle();
       if (error) throw error;
@@ -37,15 +37,16 @@ const Pronto = () => {
 
   useEffect(() => {
     (async () => {
-      if (!pedido?.paciente_cpf) return;
+      if (!paciente?.cpf) return;
       const { data } = await supabase
         .from("pacientes")
         .select("email")
-        .eq("cpf", pedido.paciente_cpf)
+        .eq("cpf", paciente.cpf)
         .maybeSingle();
-      setEmailPaciente(data?.email ?? paciente?.nome ?? "");
+      setEmailPaciente(data?.email ?? "");
     })();
-  }, [pedido?.paciente_cpf, paciente?.nome]);
+  }, [paciente?.cpf]);
+
 
   const copiar = () => {
     if (!protocolo) return;
