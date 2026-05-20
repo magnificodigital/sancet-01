@@ -9,10 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { EtapaTipoAtendimento } from "@/components/envio/EtapaTipoAtendimento";
 import { EtapaUnidade } from "@/components/envio/EtapaUnidade";
 import { EtapaEndereco, EnderecoColeta } from "@/components/envio/EtapaEndereco";
+import { EtapaAgendamento, Agendamento } from "@/components/envio/EtapaAgendamento";
 import { EtapaConfirmacao } from "@/components/envio/EtapaConfirmacao";
 import { Unidade } from "@/components/envio/ListaUnidades";
-
-const IMG = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600";
+import { dateToISO } from "@/lib/agendamento";
 
 const EnviarPedido = () => {
   const navigate = useNavigate();
@@ -24,10 +24,11 @@ const EnviarPedido = () => {
   const { paciente, logado } = usePaciente();
   const { itens, total, limpar } = useSacola();
 
-  const [etapa, setEtapa] = useState<1 | 2 | 3>(1);
+  const [etapa, setEtapa] = useState<1 | 2 | 3 | 4>(1);
   const [modalidade, setModalidade] = useState<"domicilio" | "unidade" | null>(null);
   const [unidade, setUnidade] = useState<Unidade | null>(null);
   const [endereco, setEndereco] = useState<EnderecoColeta | null>(null);
+  const [agendamento, setAgendamento] = useState<Agendamento | null>(null);
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
@@ -61,7 +62,7 @@ const EnviarPedido = () => {
         urlCarteirinha = path;
       }
 
-      const payload = {
+      const payload: any = {
         paciente_id: paciente.id,
         paciente_cpf: paciente.cpf,
         paciente_nome: paciente.nome,
@@ -78,6 +79,11 @@ const EnviarPedido = () => {
         termos_aceitos: true,
         termos_aceitos_em: new Date().toISOString(),
       };
+
+      if (modalidade === "unidade" && agendamento) {
+        payload.data_agendamento = dateToISO(agendamento.data);
+        payload.periodo_agendamento = agendamento.periodo;
+      }
 
       const { data, error } = await supabase
         .from("pedidos")
@@ -127,16 +133,25 @@ const EnviarPedido = () => {
               <EtapaEndereco
                 onConfirmar={(e) => {
                   setEndereco(e);
-                  setEtapa(3);
+                  setEtapa(4);
                 }}
               />
             )}
-            {etapa === 3 && modalidade && (
+            {etapa === 3 && modalidade === "unidade" && (
+              <EtapaAgendamento
+                onConfirmar={(a) => {
+                  setAgendamento(a);
+                  setEtapa(4);
+                }}
+              />
+            )}
+            {etapa === 4 && modalidade && (
               <EtapaConfirmacao
                 tipo={tipo}
                 modalidade={modalidade}
                 unidade={unidade}
                 endereco={endereco}
+                agendamento={agendamento}
                 enviando={enviando}
                 onConfirmar={handleConfirmarPedido}
               />
