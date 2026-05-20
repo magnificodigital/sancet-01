@@ -650,6 +650,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      atualizar_meu_perfil: {
+        Args: { p_cpf: string; p_data_nasc: string; p_patch: Json }
+        Returns: Json
+      }
+      cancelar_meu_pedido: {
+        Args: { p_cpf: string; p_protocolo: string }
+        Returns: boolean
+      }
+      confirmar_pagamento_manual: {
+        Args: { p_cpf: string; p_protocolo: string }
+        Returns: boolean
+      }
       gerar_protocolo_sancet: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -659,6 +671,10 @@ export type Database = {
         Returns: boolean
       }
       login_paciente: {
+        Args: { p_cpf: string; p_data_nasc: string }
+        Returns: Json
+      }
+      meu_perfil: {
         Args: { p_cpf: string; p_data_nasc: string }
         Returns: Json
       }

@@ -40,15 +40,13 @@ const Entrar = () => {
 
     setCarregando(true);
     try {
-      const { data: rows, error } = await supabase
-        .from("pacientes")
-        .select("id, nome, cpf")
-        .eq("cpf", cpfLimpo)
-        .eq("data_nascimento", dataISO)
-        .maybeSingle();
-
+      const { data, error } = await supabase.rpc("login_paciente", {
+        p_cpf: cpfLimpo,
+        p_data_nasc: dataISO,
+      });
       if (error) throw error;
-      if (!rows) {
+      const row = data as any;
+      if (!row) {
         toast.error("Dados não encontrados.", {
           description: "Verifique o CPF e a data de nascimento.",
           action: {
@@ -59,8 +57,15 @@ const Entrar = () => {
         return;
       }
 
-      salvarPaciente({ id: rows.id, nome: rows.nome ?? "", cpf: rows.cpf });
-      toast.success(`Bem-vindo(a), ${rows.nome ?? "paciente"}!`);
+      salvarPaciente({
+        id: row.id,
+        nome: row.nome ?? "",
+        cpf: row.cpf,
+        data_nascimento: dataISO,
+        email: row.email ?? null,
+        telefone: row.telefone ?? null,
+      });
+      toast.success(`Bem-vindo(a), ${row.nome ?? "paciente"}!`);
       navigate("/agendamentos");
     } catch (err) {
       toast.error("Erro ao entrar. Tente novamente.");
@@ -69,6 +74,7 @@ const Entrar = () => {
       setCarregando(false);
     }
   };
+
 
   return (
     <div

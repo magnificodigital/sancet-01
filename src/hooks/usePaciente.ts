@@ -4,6 +4,9 @@ export type PacienteSessao = {
   id: string;
   nome: string;
   cpf: string;
+  data_nascimento: string; // ISO yyyy-mm-dd
+  email?: string | null;
+  telefone?: string | null;
 };
 
 const STORAGE_KEY = "sancet-paciente";
@@ -13,7 +16,9 @@ function ler(): PacienteSessao | null {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as PacienteSessao;
+    const p = JSON.parse(raw) as Partial<PacienteSessao>;
+    if (!p?.id || !p?.cpf || !p?.data_nascimento) return null;
+    return p as PacienteSessao;
   } catch {
     return null;
   }
