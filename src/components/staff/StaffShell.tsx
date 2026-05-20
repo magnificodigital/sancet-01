@@ -122,7 +122,12 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
               )}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              <span className="flex-1 text-left">{item.label}</span>
+              {item.id === "pedidos" && pedidosNovos > 0 && (
+                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-[#C8102E] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                  {pedidosNovos > 99 ? "99+" : pedidosNovos}
+                </span>
+              )}
             </button>
           );
         })}
