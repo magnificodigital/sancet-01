@@ -42,9 +42,28 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     );
   }
   const podeEditar = permissoes?.pedidos?.editar !== false;
+  const { nome: nomeStaff } = useStaffPerfil();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [unidades, setUnidades] = useState<UnidadeOpt[]>([]);
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
+
+  const [vista, setVista] = useState<"lista" | "kanban">(() => {
+    if (typeof window === "undefined") return "kanban";
+    const salvo = localStorage.getItem("sancet-vista-pedidos");
+    return salvo === "lista" || salvo === "kanban" ? salvo : "kanban";
+  });
+  const [largo, setLargo] = useState<boolean>(
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
+  );
+  useEffect(() => {
+    const onResize = () => setLargo(window.innerWidth >= 1024);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("sancet-vista-pedidos", vista);
+  }, [vista]);
+  const vistaEfetiva: "lista" | "kanban" = largo ? vista : "lista";
 
   const [status, setStatus] = useState<string>("todos");
   const [tipo, setTipo] = useState<string>("todos");
