@@ -34,25 +34,26 @@ export const EtapaEndereco = ({ onConfirmar }: Props) => {
 
   useEffect(() => {
     (async () => {
-      if (!paciente?.id) return;
-      const { data } = await supabase
-        .from("pacientes")
-        .select("cep,logradouro,numero,complemento,bairro,cidade,uf")
-        .eq("id", paciente.id)
-        .maybeSingle();
-      if (data) {
+      if (!paciente?.cpf || !paciente?.data_nascimento) return;
+      const { data } = await supabase.rpc("meu_perfil", {
+        p_cpf: paciente.cpf,
+        p_data_nasc: paciente.data_nascimento,
+      });
+      const row = data as any;
+      if (row) {
         setEnd({
-          cep: data.cep ?? "",
-          logradouro: data.logradouro ?? "",
-          numero: data.numero ?? "",
-          complemento: data.complemento ?? "",
-          bairro: data.bairro ?? "",
-          cidade: data.cidade ?? "",
-          uf: data.uf ?? "",
+          cep: row.cep ?? "",
+          logradouro: row.logradouro ?? "",
+          numero: row.numero ?? "",
+          complemento: row.complemento ?? "",
+          bairro: row.bairro ?? "",
+          cidade: row.cidade ?? "",
+          uf: row.uf ?? "",
         });
       }
     })();
-  }, [paciente?.id]);
+  }, [paciente?.cpf, paciente?.data_nascimento]);
+
 
   const set = (k: keyof EnderecoColeta, v: string) =>
     setEnd((s) => ({ ...s, [k]: v }));

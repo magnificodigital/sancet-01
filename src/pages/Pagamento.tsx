@@ -7,6 +7,8 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePaciente } from "@/hooks/usePaciente";
+
 
 type Etapa = "carregando" | "aguardando_pix" | "pago" | "erro";
 
@@ -25,6 +27,7 @@ type Pedido = {
 const Pagamento = () => {
   const { protocolo } = useParams();
   const navigate = useNavigate();
+  const { paciente } = usePaciente();
   const [etapa, setEtapa] = useState<Etapa>("carregando");
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [pixData, setPixData] = useState<PixData | null>(null);
@@ -32,21 +35,19 @@ const Pagamento = () => {
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
-    if (!protocolo) return;
+    if (!protocolo || !paciente?.cpf) return;
 
     supabase
-      .from("pedidos")
-      .select("protocolo, valor_total_centavos, itens, status_pagamento")
-      .eq("protocolo", protocolo)
-      .maybeSingle()
+      .rpc("pedido_por_protocolo", { p_protocolo: protocolo, p_cpf: paciente.cpf })
       .then(({ data, error }) => {
-        if (error || !data) {
+        const row = data as any;
+        if (error || !row) {
           setEtapa("erro");
           return;
         }
-        setPedido(data as Pedido);
+        setPedido(row as Pedido);
 
-        if (data.status_pagamento === "pago") {
+        if (row.status_pagamento === "pago") {
           navigate(`/pronto/${protocolo}`, { replace: true });
           return;
         }
@@ -54,9 +55,9 @@ const Pagamento = () => {
         supabase.functions
           .invoke("sancet-criar-pagamento", {
             body: {
-              protocolo: data.protocolo,
-              valor_centavos: data.valor_total_centavos,
-              descricao: `Pedido Sancet ${data.protocolo}`,
+              protocolo: row.protocolo,
+              valor_centavos: row.valor_total_centavos,
+              descricao: `Pedido Sancet ${row.protocolo}`,
             },
           })
           .then(({ data: pix, error: pixErr }) => {
@@ -68,24 +69,23 @@ const Pagamento = () => {
             setEtapa("aguardando_pix");
           });
       });
-  }, [protocolo, navigate]);
+  }, [protocolo, navigate, paciente?.cpf]);
 
   useEffect(() => {
-    if (etapa !== "aguardando_pix" || !protocolo) return;
+    if (etapa !== "aguardando_pix" || !protocolo || !paciente?.cpf) return;
     const timer = setInterval(async () => {
-      const { data } = await supabase
-        .from("pedidos")
-        .select("status_pagamento")
-        .eq("protocolo", protocolo)
-        .maybeSingle();
-      if (data?.status_pagamento === "pago") {
+      const { data } = await supabase.rpc("pedido_por_protocolo", {
+        p_protocolo: protocolo,
+        p_cpf: paciente.cpf,
+      });
+      if ((data as any)?.status_pagamento === "pago") {
         clearInterval(timer);
         setEtapa("pago");
         setTimeout(() => navigate(`/pronto/${protocolo}`), 2000);
       }
     }, 8000);
     return () => clearInterval(timer);
-  }, [etapa, protocolo, navigate]);
+  }, [etapa, protocolo, navigate, paciente?.cpf]);
 
   const copiarCodigo = () => {
     if (!pixData?.pix_code) return;
@@ -96,14 +96,15 @@ const Pagamento = () => {
   };
 
   const confirmarManual = async () => {
-    if (!protocolo) return;
+    if (!protocolo || !paciente?.cpf) return;
     setConfirming(true);
-    await supabase
-      .from("pedidos")
-      .update({ status_pagamento: "aguardando_confirmacao" })
-      .eq("protocolo", protocolo);
+    await supabase.rpc("confirmar_pagamento_manual", {
+      p_protocolo: protocolo,
+      p_cpf: paciente.cpf,
+    });
     navigate(`/pronto/${protocolo}`);
   };
+
 
   const formatarPreco = (centavos: number) =>
     (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

@@ -40,33 +40,36 @@ const Agendamentos = () => {
 
   const { data: pedidos, isLoading } = useQuery({
     queryKey: ["pedidos", paciente?.cpf],
-    enabled: !!paciente?.cpf,
+    enabled: !!paciente?.cpf && !!paciente?.data_nascimento,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pedidos")
-        .select(
-          "id,protocolo,status,created_at,itens,modalidade_coleta,unidade_nome,tipo_solicitacao,valor_total_centavos,endereco_coleta,convenio_nome,numero_carteirinha,url_carteirinha"
-        )
-        .eq("paciente_cpf", paciente!.cpf)
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.rpc("pedidos_do_paciente", {
+        p_cpf: paciente!.cpf,
+        p_data_nasc: paciente!.data_nascimento,
+      });
       if (error) throw error;
-      return (data ?? []) as unknown as Pedido[];
+      return ((data as any) ?? []) as Pedido[];
     },
   });
 
   const { data: resultados } = useQuery({
     queryKey: ["resultados", paciente?.cpf],
-    enabled: !!paciente?.cpf,
+    enabled: !!paciente?.cpf && !!paciente?.data_nascimento,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("resultados")
-        .select("id, pedido_protocolo, nome_arquivo, arquivo_url, created_at")
-        .eq("paciente_cpf", paciente!.cpf)
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.rpc("resultados_do_paciente", {
+        p_cpf: paciente!.cpf,
+        p_data_nasc: paciente!.data_nascimento,
+      });
       if (error) throw error;
-      return data ?? [];
+      return ((data as any) ?? []) as Array<{
+        id: string;
+        pedido_protocolo: string;
+        nome_arquivo: string;
+        arquivo_url: string;
+        created_at: string;
+      }>;
     },
   });
+
 
   const agendados = (pedidos ?? []).filter((p) => STATUS_AGENDADOS.includes(p.status));
   const cancelados = (pedidos ?? []).filter((p) => p.status === "cancelado");
