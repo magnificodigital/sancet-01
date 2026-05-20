@@ -14,7 +14,7 @@ type ExameRow = {
   codigo_shift: string;
   nome: string;
   descricao: string | null;
-  preco_centavos: number | null;
+  preco_particular: number | null;
   prazo_resultado: string | null;
   preparo: string | null;
   outros_nomes: string[] | null;
@@ -22,10 +22,7 @@ type ExameRow = {
   disponivel_na_unidade: boolean;
 };
 
-const formatarPreco = (centavos: number | null) => {
-  if (centavos == null) return "Sob consulta";
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(centavos / 100);
-};
+import { formatBRL } from "@/lib/preco";
 
 export const BlocoExamesDestaque = ({ config }: { config: ConfigExamesDestaque }) => {
   const [exames, setExames] = useState<ExameRow[]>([]);
@@ -39,7 +36,7 @@ export const BlocoExamesDestaque = ({ config }: { config: ConfigExamesDestaque }
     (async () => {
       const { data } = await supabase
         .from("exames_cache")
-        .select("id, codigo_shift, nome, descricao, preco_centavos, prazo_resultado, preparo, outros_nomes, disponivel_em_casa, disponivel_na_unidade")
+        .select("id, codigo_shift, nome, descricao, preco_particular, prazo_resultado, preparo, outros_nomes, disponivel_em_casa, disponivel_na_unidade")
         .in("id", config.exames_ids);
       const mapa = new Map((data ?? []).map((e: any) => [e.id, e as ExameRow]));
       // Manter ordem definida em config
@@ -54,7 +51,8 @@ export const BlocoExamesDestaque = ({ config }: { config: ConfigExamesDestaque }
       tipo: "exame",
       nome: e.nome,
       outrosNomes: (e.outros_nomes ?? []).join(", "),
-      precoCentavos: e.preco_centavos,
+      precoParticular: e.preco_particular,
+      precoCentavos: null,
       prazoResultado: e.prazo_resultado,
       preparo: e.preparo,
       disponivelNaUnidade: e.disponivel_na_unidade,
@@ -92,7 +90,7 @@ export const BlocoExamesDestaque = ({ config }: { config: ConfigExamesDestaque }
                   <p className="text-sm text-gray-600 line-clamp-2">{e.descricao}</p>
                 )}
                 <p className="text-xl font-bold mt-auto" style={{ color: VERMELHO }}>
-                  {formatarPreco(e.preco_centavos)}
+                  {formatBRL(e.preco_particular)}
                 </p>
                 {config.mostrar_botao_carrinho && (
                   <Button

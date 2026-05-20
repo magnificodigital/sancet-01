@@ -1,11 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { precoItemReais } from "@/lib/preco";
 
 export type ItemSacola = {
   codigoShift: string;
   tipo: "exame" | "vacina";
   nome: string;
   outrosNomes: string;
+  /** Em REAIS — usado por exames (exames_cache.preco_particular). */
+  precoParticular: number | null;
+  /** Em CENTAVOS — usado por vacinas (vacinas_cache.preco_centavos). */
   precoCentavos: number | null;
   prazoResultado: string | null;
   preparo: string | null;
@@ -20,6 +24,7 @@ type SacolaStore = {
   remover: (codigo: string) => void;
   limpar: () => void;
   setNaoAdicionados: (termos: string[]) => void;
+  /** Retorna o total em CENTAVOS (para gravar em pedidos.valor_total_centavos). */
   total: () => number;
   quantidade: () => number;
 };
@@ -42,12 +47,17 @@ export const useSacola = create<SacolaStore>()(
         })),
       limpar: () => set({ itens: [], naoAdicionados: [] }),
       setNaoAdicionados: (termos) => set({ naoAdicionados: termos }),
-      total: () =>
-        get().itens.reduce((acc, i) => acc + (i.precoCentavos ?? 0), 0),
+      total: () => {
+        const reais = get().itens.reduce(
+          (acc, i) => acc + (precoItemReais(i) ?? 0),
+          0,
+        );
+        return Math.round(reais * 100);
+      },
       quantidade: () => get().itens.length,
     }),
     {
       name: "sancet-sacola",
-    }
-  )
+    },
+  ),
 );
