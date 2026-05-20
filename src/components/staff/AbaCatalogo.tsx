@@ -448,7 +448,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
                 <TableCell className="max-w-[260px] truncate">{i.nome}</TableCell>
                 <TableCell className="font-mono text-xs">{i.codigo_shift}</TableCell>
                 <TableCell className="text-xs">{i.categoria ?? "—"}</TableCell>
-                <TableCell>{formatarPreco(i.preco_centavos)}</TableCell>
+                <TableCell>
+                  {tabela === "exames_cache"
+                    ? i.preco_particular != null
+                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(i.preco_particular))
+                      : "—"
+                    : formatarPreco(i.preco_centavos)}
+                </TableCell>
                 <TableCell>{i.disponivel_na_unidade ? "Sim" : "Não"}</TableCell>
                 <TableCell>{i.disponivel_em_casa ? "Sim" : "Não"}</TableCell>
                 <TableCell>
