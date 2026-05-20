@@ -131,7 +131,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       outros_nomes: (item.outros_nomes ?? []).join(", "),
       categoria: item.categoria ?? "",
       preco_reais:
-        item.preco_centavos != null ? (item.preco_centavos / 100).toFixed(2) : "",
+        tabela === "exames_cache"
+          ? item.preco_particular != null
+            ? Number(item.preco_particular).toFixed(2)
+            : ""
+          : item.preco_centavos != null
+            ? (item.preco_centavos / 100).toFixed(2)
+            : "",
       prazo_resultado: item.prazo_resultado ?? "",
       preparo: item.preparo ?? "",
       disponivel_na_unidade: item.disponivel_na_unidade,
