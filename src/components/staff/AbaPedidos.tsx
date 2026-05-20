@@ -147,21 +147,51 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-secondary">Pedidos</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-secondary">Pedidos</h1>
+        {largo && (
+          <div className="inline-flex rounded-md border bg-white p-0.5 shadow-sm">
+            <button
+              onClick={() => setVista("lista")}
+              className={cn(
+                "rounded px-3 py-1.5 text-sm font-medium transition",
+                vistaEfetiva === "lista"
+                  ? "bg-[#C8102E] text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Lista
+            </button>
+            <button
+              onClick={() => setVista("kanban")}
+              className={cn(
+                "rounded px-3 py-1.5 text-sm font-medium transition",
+                vistaEfetiva === "kanban"
+                  ? "bg-[#C8102E] text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Kanban
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow-sm">
-        <div className="min-w-[160px]">
-          <p className="mb-1 text-xs text-muted-foreground">Status</p>
-          <Select value={status} onValueChange={(v) => { setStatus(v); setPagina(1); }}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              {STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {vistaEfetiva === "lista" && (
+          <div className="min-w-[160px]">
+            <p className="mb-1 text-xs text-muted-foreground">Status</p>
+            <Select value={status} onValueChange={(v) => { setStatus(v); setPagina(1); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="min-w-[140px]">
           <p className="mb-1 text-xs text-muted-foreground">Tipo</p>
           <Select value={tipo} onValueChange={(v) => { setTipo(v); setPagina(1); }}>
