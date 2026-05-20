@@ -302,6 +302,8 @@ export type Database = {
           paciente_id: string | null
           paciente_nome: string | null
           periodo_agendamento: string | null
+          plano_codigo: string | null
+          plano_descricao: string | null
           protocolo: string
           status: string
           status_pagamento: string
@@ -332,6 +334,8 @@ export type Database = {
           paciente_id?: string | null
           paciente_nome?: string | null
           periodo_agendamento?: string | null
+          plano_codigo?: string | null
+          plano_descricao?: string | null
           protocolo?: string
           status?: string
           status_pagamento?: string
@@ -362,6 +366,8 @@ export type Database = {
           paciente_id?: string | null
           paciente_nome?: string | null
           periodo_agendamento?: string | null
+          plano_codigo?: string | null
+          plano_descricao?: string | null
           protocolo?: string
           status?: string
           status_pagamento?: string
