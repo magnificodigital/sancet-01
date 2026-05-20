@@ -44,7 +44,11 @@ const EnviarPedido = () => {
 
   const handleConfirmarPedido = async (extras: {
     numeroCarteirinha: string;
+    convenioId: string | null;
     convenioNome: string;
+    convenioCodigoShift: string | null;
+    planoCodigo: string | null;
+    planoDescricao: string | null;
     arquivoCarteirinha: File | null;
   }) => {
     if (!paciente) return;
@@ -62,6 +66,8 @@ const EnviarPedido = () => {
         urlCarteirinha = path;
       }
 
+      const ehConvenio = tipo === "convenio";
+
       const payload: any = {
         paciente_id: paciente.id,
         paciente_cpf: paciente.cpf,
@@ -72,10 +78,13 @@ const EnviarPedido = () => {
         unidade_nome: unidade?.nome ?? null,
         endereco_coleta: modalidade === "domicilio" ? (endereco as any) : null,
         itens: itens as any,
-        convenio_nome: tipo === "convenio" ? extras.convenioNome : null,
-        numero_carteirinha: tipo === "convenio" ? extras.numeroCarteirinha : null,
+        convenio_codigo_shift: ehConvenio ? extras.convenioCodigoShift : null,
+        convenio_nome: ehConvenio ? extras.convenioNome : null,
+        plano_codigo: ehConvenio ? extras.planoCodigo : null,
+        plano_descricao: ehConvenio ? extras.planoDescricao : null,
+        numero_carteirinha: ehConvenio ? extras.numeroCarteirinha : null,
         url_carteirinha: urlCarteirinha,
-        valor_total_centavos: total(),
+        valor_total_centavos: ehConvenio ? 0 : total(),
         termos_aceitos: true,
         termos_aceitos_em: new Date().toISOString(),
       };
