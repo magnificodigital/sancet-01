@@ -383,7 +383,37 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
               </div>
             )}
 
+            {transicoes.length > 0 && (
+              <div className="space-y-2 rounded-lg border bg-white p-3">
+                <p className="text-sm font-medium">Ações</p>
+                <div className="flex flex-wrap gap-2">
+                  {transicoes.map((t) => (
+                    <Button
+                      key={t.alvo}
+                      size="sm"
+                      variant={t.variant === "destructive" ? "outline" : "default"}
+                      className={cn(
+                        t.variant === "destructive"
+                          ? "border-red-200 text-red-700 hover:bg-red-50"
+                          : "text-white",
+                      )}
+                      style={
+                        t.variant === "destructive"
+                          ? undefined
+                          : { backgroundColor: "#C8102E" }
+                      }
+                      disabled={mudandoTransicao !== null}
+                      onClick={() => aplicarMudancaStatus(t.alvo, true)}
+                    >
+                      {mudandoTransicao === t.alvo ? "Salvando..." : t.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2 rounded-lg border bg-white p-3">
+
               <label className="text-sm font-medium">Alterar status:</label>
               <Select value={novoStatus} onValueChange={setNovoStatus}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
