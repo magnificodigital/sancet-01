@@ -93,8 +93,9 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const [confirmarExcluir, setConfirmarExcluir] = useState(false);
   const [excluindoPedido, setExcluindoPedido] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const { isAdmin, permissoes } = useStaffPerfil();
+  const { isAdmin, permissoes, nome: nomeStaff } = useStaffPerfil();
   const podeExcluirPedido = isAdmin || permissoes?.pedidos?.excluir === true;
+  const [mudandoTransicao, setMudandoTransicao] = useState<string | null>(null);
 
   const carregarResultados = async (protocolo: string) => {
     const { data } = await supabase
