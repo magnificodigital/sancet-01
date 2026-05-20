@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, ImageOff, Pencil, Plus } from "lucide-react";
+import { Loader2, ImageOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,10 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -71,12 +75,17 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
     );
   }
   const podeEditar = permissoes?.unidades?.editar !== false;
+  const podeExcluir = permissoes?.unidades?.excluir !== false;
   const [unidades, setUnidades] = useState<Un[]>([]);
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [editando, setEditando] = useState<Un | null>(null);
   const [form, setForm] = useState<Form>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [mostrarInativas, setMostrarInativas] = useState(false);
+  const [excluindo, setExcluindo] = useState<Un | null>(null);
+  const [confirmacaoTexto, setConfirmacaoTexto] = useState("");
+  const [deletando, setDeletando] = useState(false);
 
   const carregar = async () => {
     const { data } = await supabase
@@ -179,6 +188,27 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
     toast.success(novo ? "Ativada" : "Desativada");
   };
 
+  const abrirExcluir = (u: Un) => {
+    setExcluindo(u);
+    setConfirmacaoTexto("");
+  };
+
+  const confirmarExcluir = async () => {
+    if (!excluindo) return;
+    if (confirmacaoTexto !== excluindo.nome) return;
+    setDeletando(true);
+    const { error } = await supabase.from("unidades_cache").delete().eq("id", excluindo.id);
+    setDeletando(false);
+    if (error) {
+      toast.error("Erro ao excluir: " + error.message);
+      return;
+    }
+    toast.success("Unidade excluída permanentemente");
+    setUnidades((prev) => prev.filter((x) => x.id !== excluindo.id));
+    setExcluindo(null);
+    setConfirmacaoTexto("");
+  };
+
   const onSelecionarFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -199,20 +229,28 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
     }
   };
 
+  const unidadesVisiveis = mostrarInativas ? unidades : unidades.filter((u) => u.ativo);
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-secondary">Unidades</h1>
-        {podeEditar && (
-          <Button
-            size="sm"
-            onClick={abrirNovo}
-            className="gap-1.5 text-white"
-            style={{ backgroundColor: "#C8102E" }}
-          >
-            <Plus className="h-4 w-4" /> Nova unidade
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+            <Switch checked={mostrarInativas} onCheckedChange={setMostrarInativas} />
+            Mostrar inativas
+          </label>
+          {podeEditar && (
+            <Button
+              size="sm"
+              onClick={abrirNovo}
+              className="gap-1.5 text-white"
+              style={{ backgroundColor: "#C8102E" }}
+            >
+              <Plus className="h-4 w-4" /> Nova unidade
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-white">
@@ -227,12 +265,12 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
               <TableHead>Horário</TableHead>
               <TableHead>Domicílio</TableHead>
               <TableHead>Ativo</TableHead>
-              <TableHead className="w-[80px]"></TableHead>
+              <TableHead className="w-[160px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {unidades.map((u) => (
-              <TableRow key={u.id}>
+            {unidadesVisiveis.map((u) => (
+              <TableRow key={u.id} className={!u.ativo ? "opacity-60" : ""}>
                 <TableCell>
                   {u.foto_url ? (
                     <img src={u.foto_url} alt={u.nome} className="h-10 w-10 rounded-full object-cover" />
@@ -242,7 +280,14 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="max-w-[220px] truncate">{u.nome}</TableCell>
+                <TableCell className="max-w-[220px]">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate">{u.nome}</span>
+                    {!u.ativo && (
+                      <Badge variant="secondary" className="shrink-0 text-xs">Inativa</Badge>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="max-w-[220px] truncate">{u.endereco ?? "—"}</TableCell>
                 <TableCell>{u.cidade ? `${u.cidade}${u.uf ? "/" + u.uf : ""}` : "—"}</TableCell>
                 <TableCell>{u.telefone ?? "—"}</TableCell>
@@ -252,24 +297,85 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
                   <Switch checked={u.ativo} disabled={!podeEditar} onCheckedChange={(v) => toggleAtivo(u, v)} />
                 </TableCell>
                 <TableCell>
-                  {podeEditar && (
-                    <Button variant="ghost" size="sm" onClick={() => abrirEditar(u)} className="gap-1">
-                      <Pencil className="h-3.5 w-3.5" /> Editar
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {podeEditar && (
+                      <Button variant="ghost" size="sm" onClick={() => abrirEditar(u)} className="gap-1">
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </Button>
+                    )}
+                    {podeExcluir && !u.ativo && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => abrirExcluir(u)}
+                        className="gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        title="Excluir permanentemente"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
-            {unidades.length === 0 && (
+            {unidadesVisiveis.length === 0 && (
               <TableRow>
                 <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
-                  Nenhuma unidade. Clique em "Nova unidade" para adicionar.
+                  {unidades.length === 0
+                    ? 'Nenhuma unidade. Clique em "Nova unidade" para adicionar.'
+                    : "Nenhuma unidade ativa. Ative o filtro \"Mostrar inativas\" para ver as desativadas."}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={!!excluindo} onOpenChange={(open) => { if (!open) { setExcluindo(null); setConfirmacaoTexto(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Excluir unidade permanentemente</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 pt-2 text-sm">
+                <p>
+                  Esta ação é <strong>IRREVERSÍVEL</strong>. Para confirmar, digite o nome da unidade:{" "}
+                  <strong>{excluindo?.nome}</strong>
+                </p>
+                {excluindo?.codigo_shift && /^\d+$/.test(excluindo.codigo_shift) && (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900">
+                    ⚠️ Esta unidade tem <code className="font-mono">codigo_shift</code> numérico (vinda da Shift).
+                    O próximo Sync Shift vai recriá-la sem foto.
+                  </div>
+                )}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={confirmacaoTexto}
+            onChange={(e) => setConfirmacaoTexto(e.target.value)}
+            placeholder="Digite o nome exato da unidade"
+            autoFocus
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setExcluindo(null); setConfirmacaoTexto(""); }}
+              disabled={deletando}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmarExcluir}
+              disabled={deletando || !excluindo || confirmacaoTexto !== excluindo.nome}
+              className="gap-1.5"
+            >
+              {deletando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={drawerAberto} onOpenChange={setDrawerAberto}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
