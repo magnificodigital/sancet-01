@@ -7,12 +7,16 @@ import { useSacola } from "@/stores/sacola";
 import { formatarPreco } from "@/components/catalogo/types";
 import { Unidade } from "./ListaUnidades";
 import { EnderecoColeta } from "./EtapaEndereco";
+import { Agendamento } from "./EtapaAgendamento";
+import { formatarAgendamento } from "@/lib/agendamento";
+import { CalendarCheck } from "lucide-react";
 
 type Props = {
   tipo: "particular" | "convenio";
   modalidade: "domicilio" | "unidade";
   unidade: Unidade | null;
   endereco: EnderecoColeta | null;
+  agendamento: Agendamento | null;
   enviando: boolean;
   onConfirmar: (extras: {
     numeroCarteirinha: string;
@@ -26,6 +30,7 @@ export const EtapaConfirmacao = ({
   modalidade,
   unidade,
   endereco,
+  agendamento,
   enviando,
   onConfirmar,
 }: Props) => {
@@ -78,6 +83,15 @@ export const EtapaConfirmacao = ({
             </p>
           )}
         </div>
+
+        {agendamento && modalidade === "unidade" && (
+          <div className="flex items-start gap-2 rounded-lg border border-[#C8102E]/20 bg-[#C8102E]/5 p-3">
+            <CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#C8102E]" />
+            <p className="text-sm text-secondary">
+              {formatarAgendamento(agendamento.data, agendamento.periodo)}
+            </p>
+          </div>
+        )}
 
         <div className="border-t pt-3 flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Total</span>

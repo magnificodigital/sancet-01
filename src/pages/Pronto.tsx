@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaciente } from "@/hooks/usePaciente";
+import { formatarAgendamento, parseDateOnly } from "@/lib/agendamento";
+import { CalendarCheck } from "lucide-react";
 
 const Pronto = () => {
   const { protocolo } = useParams();
@@ -25,7 +27,7 @@ const Pronto = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pedidos")
-        .select("protocolo, modalidade_coleta, paciente_cpf, paciente_nome, itens, valor_total_centavos, tipo_solicitacao")
+        .select("protocolo, modalidade_coleta, paciente_cpf, paciente_nome, itens, valor_total_centavos, tipo_solicitacao, unidade_nome, data_agendamento, periodo_agendamento")
         .eq("protocolo", protocolo!)
         .maybeSingle();
       if (error) throw error;
@@ -164,6 +166,42 @@ const Pronto = () => {
                       {pedido.modalidade_coleta === "domicilio" ? "🏠 Coleta em domicílio" : "🏥 Na unidade"}
                     </p>
                   </div>
+
+                  {(pedido as any).data_agendamento && (pedido as any).periodo_agendamento && (
+                    <div className="rounded-lg border border-[#C8102E]/20 bg-[#C8102E]/5 p-3">
+                      <div className="flex items-start gap-2">
+                        <CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#C8102E]" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-secondary">
+                            {formatarAgendamento(
+                              (pedido as any).data_agendamento,
+                              (pedido as any).periodo_agendamento,
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Compareça à unidade{" "}
+                            <span className="font-medium text-secondary">
+                              {pedido.unidade_nome ?? ""}
+                            </span>{" "}
+                            no dia{" "}
+                            <span className="font-medium text-secondary">
+                              {(() => {
+                                const d = parseDateOnly((pedido as any).data_agendamento);
+                                return d
+                                  ? d.toLocaleDateString("pt-BR")
+                                  : (pedido as any).data_agendamento;
+                              })()}
+                            </span>{" "}
+                            no período{" "}
+                            <span className="font-medium text-secondary">
+                              {(pedido as any).periodo_agendamento === "manha" ? "da manhã" : "da tarde"}
+                            </span>
+                            . Apresente este voucher na recepção.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {pedido.itens && Array.isArray(pedido.itens) && pedido.itens.length > 0 && (
                     <div>
