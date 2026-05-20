@@ -658,6 +658,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      login_paciente: {
+        Args: { p_cpf: string; p_data_nasc: string }
+        Returns: Json
+      }
+      pedido_por_protocolo: {
+        Args: { p_cpf: string; p_protocolo: string }
+        Returns: Json
+      }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
