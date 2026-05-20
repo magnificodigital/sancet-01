@@ -267,6 +267,52 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
+            {pedido.data_agendamento && (
+              <div
+                className={cn(
+                  "flex items-start gap-2 rounded-lg border p-3",
+                  agStatus === "atrasado"
+                    ? "border-red-200 bg-red-50"
+                    : agStatus === "hoje"
+                      ? "border-orange-200 bg-orange-50"
+                      : agStatus === "amanha"
+                        ? "border-blue-200 bg-blue-50"
+                        : "border-[#C8102E]/20 bg-[#C8102E]/5",
+                )}
+              >
+                <CalendarCheck
+                  className={cn(
+                    "mt-0.5 h-5 w-5 shrink-0",
+                    agStatus === "atrasado"
+                      ? "text-red-600"
+                      : agStatus === "hoje"
+                        ? "text-orange-600"
+                        : agStatus === "amanha"
+                          ? "text-blue-600"
+                          : "text-[#C8102E]",
+                  )}
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Agendamento
+                  </p>
+                  <p className="text-sm font-semibold text-secondary">
+                    {formatarAgendamentoCurto(pedido.data_agendamento, pedido.periodo_agendamento)}
+                    {pedido.periodo_agendamento && (
+                      <span className="ml-1 text-muted-foreground font-normal">
+                        ({rotuloPeriodo(pedido.periodo_agendamento)})
+                      </span>
+                    )}
+                  </p>
+                  {agStatus === "atrasado" && (
+                    <p className="mt-0.5 text-xs font-medium text-red-700">
+                      Pedido atrasado — agendamento já passou.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1 text-sm">
               <p>
                 <span className="text-muted-foreground">Tipo:</span>{" "}
