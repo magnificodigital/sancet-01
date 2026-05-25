@@ -70,6 +70,8 @@ type Props = {
 export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAdmin }: Props) => {
   const itensVisiveis = ITENS.filter((i) => (i.id !== "equipe" && i.id !== "paginas") || isAdmin);
   const navigate = useNavigate();
+  const location = useLocation();
+  const checkinAtivo = location.pathname.startsWith("/staff/checkin");
   const [mobileAberto, setMobileAberto] = useState(false);
   const [pedidosNovos, setPedidosNovos] = useState<number>(0);
 
