@@ -162,9 +162,13 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     onClose();
   };
 
-  const transicoes: { alvo: string; label: string; variant?: "destructive" | "default" }[] = (() => {
-    const t: { alvo: string; label: string; variant?: "destructive" | "default" }[] = [];
+  const transicoes: { alvo: string; label: string; variant?: "destructive" | "default" | "success" }[] = (() => {
+    const t: { alvo: string; label: string; variant?: "destructive" | "default" | "success" }[] = [];
     if (pedido.status === "novo") t.push({ alvo: "confirmado", label: "Confirmar" });
+    if (pedido.status === "novo" || pedido.status === "confirmado") {
+      t.push({ alvo: "em_atendimento", label: "Iniciar atendimento", variant: "success" });
+    }
+    if (pedido.status === "em_atendimento") t.push({ alvo: "atendido", label: "Marcar como atendido" });
     if (pedido.status === "confirmado") t.push({ alvo: "atendido", label: "Marcar como atendido" });
     if (pedido.status === "atendido") t.push({ alvo: "concluido", label: "Concluir" });
     if (pedido.status !== "cancelado" && pedido.status !== "concluido") {
