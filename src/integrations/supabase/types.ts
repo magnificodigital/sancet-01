@@ -662,6 +662,10 @@ export type Database = {
         Args: { p_cpf: string; p_protocolo: string }
         Returns: boolean
       }
+      criar_pedido_paciente: {
+        Args: { p_cpf: string; p_data_nasc: string; p_pedido: Json }
+        Returns: Json
+      }
       gerar_protocolo_sancet: { Args: never; Returns: string }
       has_role: {
         Args: {
