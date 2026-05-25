@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StaffShell, StaffTab } from "@/components/staff/StaffShell";
@@ -17,10 +17,17 @@ import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [carregando, setCarregando] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
-  const [aba, setAba] = useState<StaffTab>("visao");
+  const abaInicial = (searchParams.get("aba") as StaffTab) || "visao";
+  const [aba, setAba] = useState<StaffTab>(abaInicial);
   const staffPerfil = useStaffPerfil();
+
+  const trocarAba = (t: StaffTab) => {
+    setAba(t);
+    setSearchParams({ aba: t }, { replace: true });
+  };
 
   useEffect(() => {
     let active = true;
@@ -56,7 +63,7 @@ const StaffDashboard = () => {
   }
 
   return (
-    <StaffShell abaAtiva={aba} onTrocarAba={setAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin}>
+    <StaffShell abaAtiva={aba} onTrocarAba={trocarAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin}>
       {aba === "visao" && <AbaVisaoGeral />}
       {aba === "pedidos" && <AbaPedidos permissoes={staffPerfil.permissoes} />}
       {aba === "pacientes" && <AbaPacientes permissoes={staffPerfil.permissoes} />}

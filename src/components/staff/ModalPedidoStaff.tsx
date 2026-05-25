@@ -162,9 +162,13 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     onClose();
   };
 
-  const transicoes: { alvo: string; label: string; variant?: "destructive" | "default" }[] = (() => {
-    const t: { alvo: string; label: string; variant?: "destructive" | "default" }[] = [];
+  const transicoes: { alvo: string; label: string; variant?: "destructive" | "default" | "success" }[] = (() => {
+    const t: { alvo: string; label: string; variant?: "destructive" | "default" | "success" }[] = [];
     if (pedido.status === "novo") t.push({ alvo: "confirmado", label: "Confirmar" });
+    if (pedido.status === "novo" || pedido.status === "confirmado") {
+      t.push({ alvo: "em_atendimento", label: "Iniciar atendimento", variant: "success" });
+    }
+    if (pedido.status === "em_atendimento") t.push({ alvo: "atendido", label: "Marcar como atendido" });
     if (pedido.status === "confirmado") t.push({ alvo: "atendido", label: "Marcar como atendido" });
     if (pedido.status === "atendido") t.push({ alvo: "concluido", label: "Concluir" });
     if (pedido.status !== "cancelado" && pedido.status !== "concluido") {
@@ -387,27 +391,32 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
               <div className="space-y-2 rounded-lg border bg-white p-3">
                 <p className="text-sm font-medium">Ações</p>
                 <div className="flex flex-wrap gap-2">
-                  {transicoes.map((t) => (
-                    <Button
-                      key={t.alvo}
-                      size="sm"
-                      variant={t.variant === "destructive" ? "outline" : "default"}
-                      className={cn(
-                        t.variant === "destructive"
-                          ? "border-red-200 text-red-700 hover:bg-red-50"
-                          : "text-white",
-                      )}
-                      style={
-                        t.variant === "destructive"
-                          ? undefined
-                          : { backgroundColor: "#C8102E" }
-                      }
-                      disabled={mudandoTransicao !== null}
-                      onClick={() => aplicarMudancaStatus(t.alvo, true)}
-                    >
-                      {mudandoTransicao === t.alvo ? "Salvando..." : t.label}
-                    </Button>
-                  ))}
+                  {transicoes.map((t) => {
+                    const isSuccess = t.variant === "success";
+                    const isDestructive = t.variant === "destructive";
+                    return (
+                      <Button
+                        key={t.alvo}
+                        size={isSuccess ? "lg" : "sm"}
+                        variant={isDestructive ? "outline" : "default"}
+                        className={cn(
+                          isDestructive
+                            ? "border-red-200 text-red-700 hover:bg-red-50"
+                            : "text-white",
+                          isSuccess && "bg-green-600 hover:bg-green-700",
+                        )}
+                        style={
+                          isDestructive || isSuccess
+                            ? undefined
+                            : { backgroundColor: "#C8102E" }
+                        }
+                        disabled={mudandoTransicao !== null}
+                        onClick={() => aplicarMudancaStatus(t.alvo, true)}
+                      >
+                        {mudandoTransicao === t.alvo ? "Salvando..." : t.label}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             )}

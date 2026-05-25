@@ -17,6 +17,7 @@ import Pronto from "./pages/Pronto.tsx";
 import Pagamento from "./pages/Pagamento.tsx";
 import StaffLogin from "./pages/StaffLogin.tsx";
 import StaffDashboard from "./pages/StaffDashboard.tsx";
+import StaffCheckin from "./pages/StaffCheckin.tsx";
 import StaffAlterarSenha from "./pages/StaffAlterarSenha.tsx";
 import StaffPaginaEditor from "./pages/StaffPaginaEditor.tsx";
 import LandingPublica from "./pages/LandingPublica.tsx";
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/pagamento/:protocolo" element={<Pagamento />} />
           <Route path="/staff/login" element={<StaffLogin />} />
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
+          <Route path="/staff/checkin" element={<StaffCheckin />} />
           <Route path="/staff/alterar-senha" element={<StaffAlterarSenha />} />
           <Route path="/staff/paginas/:id" element={<StaffPaginaEditor />} />
           <Route path="/p/:slug" element={<LandingPublica />} />
