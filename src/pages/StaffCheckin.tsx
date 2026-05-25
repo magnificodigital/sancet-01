@@ -158,12 +158,37 @@ const StaffCheckin = () => {
               )}
             </Button>
           </div>
+          <Button
+            type="button"
+            onClick={() => setScannerAberto(true)}
+            aria-label="Escanear QR code com a câmera"
+            className="mt-3 h-14 w-full text-base text-white"
+            style={{ backgroundColor: "#0B1F3A" }}
+          >
+            <Camera className="mr-2 h-5 w-5" />
+            Escanear com câmera
+          </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Compatível com leitor USB · Pressione Enter para confirmar
           </p>
         </form>
 
       </div>
+
+      <ScannerQR
+        open={scannerAberto}
+        onClose={() => {
+          setScannerAberto(false);
+          focar();
+        }}
+        onScan={(texto) => {
+          setScannerAberto(false);
+          const extraido = extrairProtocolo(texto);
+          setProtocolo(extraido);
+          buscarProtocolo(extraido);
+        }}
+      />
+
 
 
       <ModalPedidoStaff
