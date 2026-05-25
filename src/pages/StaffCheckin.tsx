@@ -90,21 +90,6 @@ const StaffCheckin = () => {
     focar();
   };
 
-  const iniciarAtendimento = async () => {
-    if (!pedido) return;
-    setIniciando(true);
-    const { error } = await supabase
-      .from("pedidos")
-      .update({ status: "em_atendimento" })
-      .eq("id", pedido.id);
-    setIniciando(false);
-    if (error) {
-      toast.error("Erro ao iniciar atendimento");
-      return;
-    }
-    toast.success("Atendimento iniciado!");
-    fecharModal();
-  };
 
   if (carregandoAuth) {
     return (
