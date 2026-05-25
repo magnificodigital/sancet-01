@@ -160,40 +160,8 @@ const StaffCheckin = () => {
           </p>
         </form>
 
-        {pedido && (
-          <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-white p-4 shadow-lg md:left-60">
-            <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-mono text-sm font-bold">{pedido.protocolo}</p>
-                <p className="truncate text-sm text-muted-foreground">
-                  {pedido.paciente_nome ?? "—"} · {pedido.paciente_cpf}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={fecharModal}>
-                  Voltar
-                </Button>
-                {pedido.status !== "em_atendimento" &&
-                  pedido.status !== "atendido" &&
-                  pedido.status !== "concluido" &&
-                  pedido.status !== "cancelado" && (
-                    <Button
-                      onClick={iniciarAtendimento}
-                      disabled={iniciando}
-                      className="bg-green-600 text-white hover:bg-green-700"
-                      size="lg"
-                    >
-                      {iniciando ? (
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      ) : null}
-                      Iniciar atendimento
-                    </Button>
-                  )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
 
       <ModalPedidoStaff
         pedido={pedido}
