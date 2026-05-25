@@ -59,7 +59,9 @@ const Pronto = () => {
     (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const qrUrl = protocolo
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(protocolo)}&bgcolor=ffffff&color=1B3A6B&margin=8`
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
+        `${window.location.origin}/staff/checkin?protocolo=${protocolo}`,
+      )}&bgcolor=ffffff&color=1B3A6B&margin=8`
     : null;
 
   return (
