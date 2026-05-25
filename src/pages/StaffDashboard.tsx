@@ -63,7 +63,7 @@ const StaffDashboard = () => {
   }
 
   return (
-    <StaffShell abaAtiva={aba} onTrocarAba={setAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin}>
+    <StaffShell abaAtiva={aba} onTrocarAba={trocarAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin}>
       {aba === "visao" && <AbaVisaoGeral />}
       {aba === "pedidos" && <AbaPedidos permissoes={staffPerfil.permissoes} />}
       {aba === "pacientes" && <AbaPacientes permissoes={staffPerfil.permissoes} />}
