@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Loader2, QrCode, Search } from "lucide-react";
+import { Camera, Loader2, QrCode, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { StaffShell } from "@/components/staff/StaffShell";
@@ -8,6 +8,7 @@ import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ModalPedidoStaff } from "@/components/staff/ModalPedidoStaff";
+import { ScannerQR } from "@/components/staff/ScannerQR";
 import { Pedido } from "@/components/staff/utils";
 
 const StaffCheckin = () => {
