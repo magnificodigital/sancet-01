@@ -18,7 +18,6 @@ const StaffCheckin = () => {
   const [protocolo, setProtocolo] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [pedido, setPedido] = useState<Pedido | null>(null);
-  const [iniciando, setIniciando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { isAdmin } = useStaffPerfil();
 
