@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Loader2, QrCode, Search } from "lucide-react";
+import { Camera, Loader2, QrCode, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { StaffShell } from "@/components/staff/StaffShell";
@@ -8,6 +8,7 @@ import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ModalPedidoStaff } from "@/components/staff/ModalPedidoStaff";
+import { ScannerQR } from "@/components/staff/ScannerQR";
 import { Pedido } from "@/components/staff/utils";
 
 const StaffCheckin = () => {
@@ -18,6 +19,7 @@ const StaffCheckin = () => {
   const [protocolo, setProtocolo] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [pedido, setPedido] = useState<Pedido | null>(null);
+  const [scannerAberto, setScannerAberto] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { isAdmin } = useStaffPerfil();
 
@@ -156,12 +158,37 @@ const StaffCheckin = () => {
               )}
             </Button>
           </div>
+          <Button
+            type="button"
+            onClick={() => setScannerAberto(true)}
+            aria-label="Escanear QR code com a câmera"
+            className="mt-3 h-14 w-full text-base text-white"
+            style={{ backgroundColor: "#0B1F3A" }}
+          >
+            <Camera className="mr-2 h-5 w-5" />
+            Escanear com câmera
+          </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Compatível com leitor USB · Pressione Enter para confirmar
           </p>
         </form>
 
       </div>
+
+      <ScannerQR
+        open={scannerAberto}
+        onClose={() => {
+          setScannerAberto(false);
+          focar();
+        }}
+        onScan={(texto) => {
+          setScannerAberto(false);
+          const extraido = extrairProtocolo(texto);
+          setProtocolo(extraido);
+          buscarProtocolo(extraido);
+        }}
+      />
+
 
 
       <ModalPedidoStaff
