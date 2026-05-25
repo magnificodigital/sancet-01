@@ -17,10 +17,17 @@ import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [carregando, setCarregando] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
-  const [aba, setAba] = useState<StaffTab>("visao");
+  const abaInicial = (searchParams.get("aba") as StaffTab) || "visao";
+  const [aba, setAba] = useState<StaffTab>(abaInicial);
   const staffPerfil = useStaffPerfil();
+
+  const trocarAba = (t: StaffTab) => {
+    setAba(t);
+    setSearchParams({ aba: t }, { replace: true });
+  };
 
   useEffect(() => {
     let active = true;
