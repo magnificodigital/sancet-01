@@ -42,8 +42,25 @@ const StaffCheckin = () => {
     };
   }, [navigate]);
 
+  const extrairProtocolo = (input: string): string => {
+    const txt = input.trim();
+    if (!txt) return "";
+    // Tenta extrair de URL (ex: https://.../staff/checkin?protocolo=SAN-...)
+    try {
+      const url = new URL(txt);
+      const qp = url.searchParams.get("protocolo");
+      if (qp) return qp.trim().toUpperCase();
+    } catch {
+      // não é URL, segue
+    }
+    // Regex de fallback: captura SAN-AAAA-XXXXXX em qualquer lugar
+    const match = txt.match(/SAN-\d{4}-[A-Z0-9]+/i);
+    if (match) return match[0].toUpperCase();
+    return txt.toUpperCase();
+  };
+
   const buscarProtocolo = async (proto: string) => {
-    const limpo = proto.trim().toUpperCase();
+    const limpo = extrairProtocolo(proto);
     if (!limpo) return;
     setBuscando(true);
     const { data, error } = await supabase
