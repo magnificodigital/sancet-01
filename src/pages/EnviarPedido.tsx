@@ -69,15 +69,13 @@ const EnviarPedido = () => {
       const ehConvenio = tipo === "convenio";
 
       const payload: any = {
-        paciente_id: paciente.id,
-        paciente_cpf: paciente.cpf,
         paciente_nome: paciente.nome,
         tipo_solicitacao: tipo,
         modalidade_coleta: modalidade ?? "unidade",
         unidade_codigo_shift: unidade?.codigo_shift ?? null,
         unidade_nome: unidade?.nome ?? null,
-        endereco_coleta: modalidade === "domicilio" ? (endereco as any) : null,
-        itens: itens as any,
+        endereco_coleta: modalidade === "domicilio" ? endereco : null,
+        itens,
         convenio_codigo_shift: ehConvenio ? extras.convenioCodigoShift : null,
         convenio_nome: ehConvenio ? extras.convenioNome : null,
         plano_codigo: ehConvenio ? extras.planoCodigo : null,
@@ -86,7 +84,6 @@ const EnviarPedido = () => {
         url_carteirinha: urlCarteirinha,
         valor_total_centavos: ehConvenio ? 0 : total(),
         termos_aceitos: true,
-        termos_aceitos_em: new Date().toISOString(),
       };
 
       if (modalidade === "unidade" && agendamento) {
@@ -94,19 +91,21 @@ const EnviarPedido = () => {
         payload.periodo_agendamento = agendamento.periodo;
       }
 
-      const { data, error } = await supabase
-        .from("pedidos")
-        .insert(payload)
-        .select("protocolo")
-        .single();
+      const { data, error } = await supabase.rpc("criar_pedido_paciente", {
+        p_cpf: paciente.cpf,
+        p_data_nasc: paciente.data_nascimento,
+        p_pedido: payload,
+      });
       if (error) throw error;
+      const protocolo = (data as any)?.protocolo as string;
+      if (!protocolo) throw new Error("Resposta inválida ao criar pedido.");
 
-      localStorage.setItem("sancet-ultimo-protocolo", data.protocolo);
+      localStorage.setItem("sancet-ultimo-protocolo", protocolo);
       limpar();
       if (tipo === "particular") {
-        navigate(`/pagamento/${data.protocolo}`);
+        navigate(`/pagamento/${protocolo}`);
       } else {
-        navigate(`/pronto/${data.protocolo}`);
+        navigate(`/pronto/${protocolo}`);
       }
     } catch (e: any) {
       toast.error(e?.message ?? "Não foi possível enviar o pedido.");
