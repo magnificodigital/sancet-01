@@ -46,6 +46,7 @@ const App = () => (
           <Route path="/pagamento/:protocolo" element={<Pagamento />} />
           <Route path="/staff/login" element={<StaffLogin />} />
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
+          <Route path="/staff/checkin" element={<StaffCheckin />} />
           <Route path="/staff/alterar-senha" element={<StaffAlterarSenha />} />
           <Route path="/staff/paginas/:id" element={<StaffPaginaEditor />} />
           <Route path="/p/:slug" element={<LandingPublica />} />
