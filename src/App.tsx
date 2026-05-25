@@ -17,6 +17,7 @@ import Pronto from "./pages/Pronto.tsx";
 import Pagamento from "./pages/Pagamento.tsx";
 import StaffLogin from "./pages/StaffLogin.tsx";
 import StaffDashboard from "./pages/StaffDashboard.tsx";
+import StaffCheckin from "./pages/StaffCheckin.tsx";
 import StaffAlterarSenha from "./pages/StaffAlterarSenha.tsx";
 import StaffPaginaEditor from "./pages/StaffPaginaEditor.tsx";
 import LandingPublica from "./pages/LandingPublica.tsx";
