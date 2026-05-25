@@ -110,9 +110,9 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
 
       <nav className="flex-1 space-y-1 p-3">
         {itensVisiveis.map((item) => {
-          const ativo = abaAtiva === item.id;
+          const ativo = !checkinAtivo && abaAtiva === item.id;
           const Icon = item.icon;
-          return (
+          const botao = (
             <button
               key={item.id}
               onClick={() => {
@@ -133,6 +133,28 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
               )}
             </button>
           );
+          if (item.id === "pedidos") {
+            return (
+              <div key="pedidos-group" className="space-y-1">
+                {botao}
+                <button
+                  key="checkin"
+                  onClick={() => {
+                    navigate("/staff/checkin");
+                    setMobileAberto(false);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-md border-l-[3px] border-transparent px-3 py-2 text-sm transition",
+                    checkinAtivo ? "bg-white/15 border-white font-medium" : "hover:bg-white/10",
+                  )}
+                >
+                  <QrCode className="h-4 w-4" />
+                  <span className="flex-1 text-left">Check-in</span>
+                </button>
+              </div>
+            );
+          }
+          return botao;
         })}
       </nav>
 
