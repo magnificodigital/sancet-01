@@ -142,32 +142,30 @@ export const EtapaConfirmacao = ({
         <div>
           <h3 className="font-semibold mb-2 text-secondary">Itens</h3>
           <ul className="space-y-2 text-sm">
-            {itens.map((i) => {
-              const r = precoItemReais(i);
-              return (
-                <li key={i.codigoShift} className="space-y-0.5">
-                  <div className="flex justify-between gap-2">
-                    <span className="truncate">
-                      {i.codigoShift}-{i.nome}
-                    </span>
-                    <span
-                      className={cn(
-                        "whitespace-nowrap text-muted-foreground",
-                        tipo === "convenio" && "line-through",
-                      )}
-                    >
-                      {formatBRL(r)}
-                    </span>
-                  </div>
-                  {tipo === "convenio" && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">
+            {itens.map((i) => (
+              <li key={i.codigoShift} className="space-y-0.5">
+                <div className="flex justify-between gap-2 items-center">
+                  <span className="truncate">
+                    {i.codigoShift}-{i.nome}
+                  </span>
+                  {tipo === "convenio" ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 shrink-0">
                       <ShieldCheck className="h-3 w-3" />
-                      Coberto pelo convênio (sujeito à autorização)
+                      Coberto pelo convênio
+                    </span>
+                  ) : (
+                    <span className="whitespace-nowrap text-muted-foreground">
+                      {formatBRL(precoItemReais(i))}
                     </span>
                   )}
-                </li>
-              );
-            })}
+                </div>
+                {tipo === "convenio" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Sujeito à autorização da operadora
+                  </p>
+                )}
+              </li>
+            ))}
           </ul>
         </div>
 
