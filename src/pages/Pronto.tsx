@@ -212,7 +212,23 @@ const Pronto = () => {
                     </div>
                   )}
 
-                  {pedido.valor_total_centavos > 0 && (
+                  {pedido.tipo_solicitacao === "convenio" && (
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                      <div className="flex items-start gap-2">
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-green-800">
+                            Coberto pelo convênio
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Eventuais coparticipações são informadas pela operadora no momento do atendimento.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {pedido.tipo_solicitacao === "particular" && pedido.valor_total_centavos > 0 && (
                     <div className="border-t border-border pt-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</p>
                       <p className="mt-1 text-2xl font-bold text-[#C8102E]">
