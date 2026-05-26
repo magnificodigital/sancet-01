@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Mail, Copy, CheckCircle2, AlertCircle,
-  Printer, MessageCircle,
+  Printer, MessageCircle, ShieldCheck, CalendarCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/PageShell";
@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaciente } from "@/hooks/usePaciente";
 import { formatarAgendamento, parseDateOnly } from "@/lib/agendamento";
-import { CalendarCheck } from "lucide-react";
 
 const Pronto = () => {
   const { protocolo } = useParams();
