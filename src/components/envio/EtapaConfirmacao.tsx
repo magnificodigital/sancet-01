@@ -199,16 +199,18 @@ export const EtapaConfirmacao = ({
         )}
 
         <div className="border-t pt-3">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Total</span>
-            <span className="text-xl font-bold text-[#C8102E]">
-              {tipo === "convenio" ? formatBRL(0) : formatBRL(totalParticular)}
-            </span>
-          </div>
-          {tipo === "convenio" && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Valor coberto pelo plano. Eventuais coparticipações são informadas pela operadora.
-            </p>
+          {tipo === "convenio" ? (
+            <div className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
+              Valor coberto pelo plano. Eventuais coparticipações são informadas
+              pela operadora no momento do atendimento.
+            </div>
+          ) : (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Total</span>
+              <span className="text-xl font-bold text-[#C8102E]">
+                {formatBRL(totalParticular)}
+              </span>
+            </div>
           )}
         </div>
       </div>
