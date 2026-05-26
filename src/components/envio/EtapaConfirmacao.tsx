@@ -142,32 +142,30 @@ export const EtapaConfirmacao = ({
         <div>
           <h3 className="font-semibold mb-2 text-secondary">Itens</h3>
           <ul className="space-y-2 text-sm">
-            {itens.map((i) => {
-              const r = precoItemReais(i);
-              return (
-                <li key={i.codigoShift} className="space-y-0.5">
-                  <div className="flex justify-between gap-2">
-                    <span className="truncate">
-                      {i.codigoShift}-{i.nome}
-                    </span>
-                    <span
-                      className={cn(
-                        "whitespace-nowrap text-muted-foreground",
-                        tipo === "convenio" && "line-through",
-                      )}
-                    >
-                      {formatBRL(r)}
-                    </span>
-                  </div>
-                  {tipo === "convenio" && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">
+            {itens.map((i) => (
+              <li key={i.codigoShift} className="space-y-0.5">
+                <div className="flex justify-between gap-2 items-center">
+                  <span className="truncate">
+                    {i.codigoShift}-{i.nome}
+                  </span>
+                  {tipo === "convenio" ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 shrink-0">
                       <ShieldCheck className="h-3 w-3" />
-                      Coberto pelo convênio (sujeito à autorização)
+                      Coberto pelo convênio
+                    </span>
+                  ) : (
+                    <span className="whitespace-nowrap text-muted-foreground">
+                      {formatBRL(precoItemReais(i))}
                     </span>
                   )}
-                </li>
-              );
-            })}
+                </div>
+                {tipo === "convenio" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Sujeito à autorização da operadora
+                  </p>
+                )}
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -201,16 +199,18 @@ export const EtapaConfirmacao = ({
         )}
 
         <div className="border-t pt-3">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Total</span>
-            <span className="text-xl font-bold text-[#C8102E]">
-              {tipo === "convenio" ? formatBRL(0) : formatBRL(totalParticular)}
-            </span>
-          </div>
-          {tipo === "convenio" && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Valor coberto pelo plano. Eventuais coparticipações são informadas pela operadora.
-            </p>
+          {tipo === "convenio" ? (
+            <div className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
+              Valor coberto pelo plano. Eventuais coparticipações são informadas
+              pela operadora no momento do atendimento.
+            </div>
+          ) : (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Total</span>
+              <span className="text-xl font-bold text-[#C8102E]">
+                {formatBRL(totalParticular)}
+              </span>
+            </div>
           )}
         </div>
       </div>
