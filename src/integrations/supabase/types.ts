@@ -292,6 +292,7 @@ export type Database = {
           convenio_nome: string | null
           created_at: string | null
           data_agendamento: string | null
+          deficiencias: string | null
           endereco_coleta: Json | null
           id: string
           itens: Json
@@ -324,6 +325,7 @@ export type Database = {
           convenio_nome?: string | null
           created_at?: string | null
           data_agendamento?: string | null
+          deficiencias?: string | null
           endereco_coleta?: Json | null
           id?: string
           itens?: Json
@@ -356,6 +358,7 @@ export type Database = {
           convenio_nome?: string | null
           created_at?: string | null
           data_agendamento?: string | null
+          deficiencias?: string | null
           endereco_coleta?: Json | null
           id?: string
           itens?: Json
