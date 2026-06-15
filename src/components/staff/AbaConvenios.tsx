@@ -312,21 +312,30 @@ export const AbaConvenios = () => {
             Gerenciados via importação de planilha (não vem da sync da Shift).
           </p>
         </div>
-        <label>
-          <input
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={importarPlanilha}
-            disabled={importando}
-          />
-          <Button asChild disabled={importando} className="gap-2 text-white cursor-pointer" style={{ backgroundColor: "#C8102E" }}>
-            <span>
-              {importando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {importando ? "Importando..." : "Importar planilha de convênios"}
-            </span>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => setModalConvenio(true)}
+            variant="outline"
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" /> Novo convênio
           </Button>
-        </label>
+          <label>
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={importarPlanilha}
+              disabled={importando}
+            />
+            <Button asChild disabled={importando} className="gap-2 text-white cursor-pointer" style={{ backgroundColor: "#C8102E" }}>
+              <span>
+                {importando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {importando ? "Importando..." : "Importar planilha"}
+              </span>
+            </Button>
+          </label>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[340px,1fr]">
