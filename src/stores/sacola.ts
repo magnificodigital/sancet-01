@@ -7,9 +7,7 @@ export type ItemSacola = {
   tipo: "exame" | "vacina";
   nome: string;
   outrosNomes: string;
-  /** Em REAIS — usado por exames (exames_cache.preco_particular). */
   precoParticular: number | null;
-  /** Em CENTAVOS — usado por vacinas (vacinas_cache.preco_centavos). */
   precoCentavos: number | null;
   prazoResultado: string | null;
   preparo: string | null;
@@ -17,23 +15,65 @@ export type ItemSacola = {
   disponivelEmCasa: boolean;
 };
 
+export type TipoCompra = "particular" | "convenio" | null;
+
+export type ConvenioCtx = {
+  convenio_id: string | null;
+  convenio_nome: string | null;
+  convenio_codigo_shift: string | null;
+  plano_codigo: string | null;
+  plano_descricao: string | null;
+  numero_carteirinha: string | null;
+};
+
 type SacolaStore = {
+  // contexto
+  tipo: TipoCompra;
+  convenio_id: string | null;
+  convenio_nome: string | null;
+  convenio_codigo_shift: string | null;
+  plano_codigo: string | null;
+  plano_descricao: string | null;
+  numero_carteirinha: string | null;
+
+  // itens
   itens: ItemSacola[];
   naoAdicionados: string[];
+
+  // actions
+  setTipo: (tipo: TipoCompra) => void;
+  setConvenio: (dados: ConvenioCtx) => void;
+  limparContexto: () => void;
   adicionar: (item: ItemSacola) => void;
   remover: (codigo: string) => void;
   limpar: () => void;
   setNaoAdicionados: (termos: string[]) => void;
-  /** Retorna o total em CENTAVOS (para gravar em pedidos.valor_total_centavos). */
   total: () => number;
   quantidade: () => number;
+};
+
+const CONVENIO_VAZIO: ConvenioCtx = {
+  convenio_id: null,
+  convenio_nome: null,
+  convenio_codigo_shift: null,
+  plano_codigo: null,
+  plano_descricao: null,
+  numero_carteirinha: null,
 };
 
 export const useSacola = create<SacolaStore>()(
   persist(
     (set, get) => ({
+      tipo: null,
+      ...CONVENIO_VAZIO,
       itens: [],
       naoAdicionados: [],
+
+      setTipo: (tipo) => set({ tipo }),
+      setConvenio: (dados) => set({ ...dados }),
+      limparContexto: () =>
+        set({ tipo: null, itens: [], ...CONVENIO_VAZIO }),
+
       adicionar: (item) =>
         set((state) => {
           if (state.itens.some((i) => i.codigoShift === item.codigoShift)) {
