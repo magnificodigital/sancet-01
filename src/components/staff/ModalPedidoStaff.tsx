@@ -426,6 +426,41 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
               </div>
             )}
 
+            {Array.isArray(pedido.emails_enviados) && pedido.emails_enviados.length > 0 && (
+              <div className="rounded-lg border bg-white p-3 text-sm">
+                <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                  Notificações
+                </p>
+                <ul className="space-y-1.5">
+                  {(pedido.emails_enviados as any[]).map((e, idx) => (
+                    <li
+                      key={idx}
+                      className="flex flex-wrap items-center gap-2 border-b last:border-b-0 pb-1.5 last:pb-0"
+                    >
+                      <span
+                        className={cn(
+                          "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase",
+                          e.status === "ok"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800",
+                        )}
+                      >
+                        {e.status}
+                      </span>
+                      <span className="text-xs font-medium">{e.tipo}</span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {Array.isArray(e.destinatarios) ? e.destinatarios.join(", ") : "—"}
+                      </span>
+                      <span className="ml-auto text-[11px] text-muted-foreground">
+                        {e.timestamp ? formatarData(e.timestamp) : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+
             {transicoes.length > 0 && (
               <div className="space-y-2 rounded-lg border bg-white p-3">
                 <p className="text-sm font-medium">Ações</p>
