@@ -30,13 +30,13 @@ type Props = {
   podeEditar: boolean;
 };
 
-const COLUNAS: { id: string; label: string }[] = [
-  { id: "novo", label: "Novo" },
-  { id: "em_analise", label: "Em análise" },
-  { id: "confirmado", label: "Confirmado" },
-  { id: "atendido", label: "Atendido" },
-  { id: "concluido", label: "Concluído" },
-  { id: "cancelado", label: "Cancelado" },
+const COLUNAS: { id: string; label: string; emoji: string; bg: string; header: string }[] = [
+  { id: "novo", label: "Novo", emoji: "🆕", bg: "bg-red-50/60", header: "bg-red-100/70 text-red-900" },
+  { id: "em_analise", label: "Em análise", emoji: "🔍", bg: "bg-blue-50/60", header: "bg-blue-100/70 text-blue-900" },
+  { id: "confirmado", label: "Confirmado", emoji: "✅", bg: "bg-green-50/60", header: "bg-green-100/70 text-green-900" },
+  { id: "atendido", label: "Atendido", emoji: "🏥", bg: "bg-purple-50/60", header: "bg-purple-100/70 text-purple-900" },
+  { id: "concluido", label: "Concluído", emoji: "☑️", bg: "bg-slate-50/60", header: "bg-slate-200/70 text-slate-900" },
+  { id: "cancelado", label: "Cancelado", emoji: "❌", bg: "bg-zinc-50/60", header: "bg-zinc-200/70 text-zinc-700" },
 ];
 
 const TRANSICOES: Record<string, string[]> = {
@@ -160,22 +160,29 @@ const DraggableCard = ({
 const Coluna = ({
   id,
   label,
+  emoji,
+  bg,
+  header,
   pedidos,
   onAbrir,
   podeEditar,
 }: {
   id: string;
   label: string;
+  emoji: string;
+  bg: string;
+  header: string;
   pedidos: Pedido[];
   onAbrir: (p: Pedido) => void;
   podeEditar: boolean;
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div className="flex w-[280px] shrink-0 flex-col rounded-lg bg-muted/40">
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <p className="text-sm font-semibold text-secondary">
-          {label} <span className="text-muted-foreground">({pedidos.length})</span>
+    <div className={cn("flex w-[280px] shrink-0 flex-col rounded-lg border", bg)}>
+      <div className={cn("flex items-center justify-between rounded-t-lg border-b px-3 py-2", header)}>
+        <p className="text-sm font-semibold">
+          <span className="mr-1">{emoji}</span>
+          {label} <span className="opacity-70">({pedidos.length})</span>
         </p>
       </div>
       <div
@@ -304,6 +311,9 @@ export const KanbanPedidos = ({
             key={c.id}
             id={c.id}
             label={c.label}
+            emoji={c.emoji}
+            bg={c.bg}
+            header={c.header}
             pedidos={porColuna[c.id] ?? []}
             onAbrir={onAbrir}
             podeEditar={podeEditar}
