@@ -137,7 +137,12 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
     else toast.success("Configurações salvas!");
   };
 
-  const campo = (chave: string, label: string, placeholder = "") => {
+  const campo = (
+    chave: string,
+    label: string,
+    placeholder = "",
+    helper?: string,
+  ) => {
     const sensivel = SENSIVEIS.has(chave);
     const revelado = revelados.has(chave);
     return (
@@ -162,6 +167,7 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
             </button>
           )}
         </div>
+        {helper && <p className="text-xs text-muted-foreground">{helper}</p>}
       </div>
     );
   };
