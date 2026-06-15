@@ -56,6 +56,15 @@ type TipoDocumento = "rg" | "certidao";
 const MAX_BYTES = 10 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/jpg,application/pdf";
 
+type ConvenioPreset = {
+  id: string;
+  nome: string;
+  codigo_shift: string;
+  planoCodigo: string | null;
+  planoDescricao: string | null;
+  numeroCarteirinha: string;
+} | null;
+
 type Props = {
   tipo: "particular" | "convenio";
   modalidade: "domicilio" | "unidade";
@@ -63,6 +72,7 @@ type Props = {
   endereco: EnderecoColeta | null;
   agendamento: Agendamento | null;
   enviando: boolean;
+  convenioPreset?: ConvenioPreset;
   onConfirmar: (extras: {
     numeroCarteirinha: string;
     convenioId: string | null;
@@ -189,9 +199,11 @@ export const EtapaConfirmacao = ({
   agendamento,
   enviando,
   onConfirmar,
-}: Props) => {
+}: Props & { convenioPreset?: ConvenioPreset }) => {
   const { itens } = useSacola();
-  const [numeroCarteirinha, setNumeroCarteirinha] = useState("");
+  const [numeroCarteirinha, setNumeroCarteirinha] = useState(
+    convenioPreset?.numeroCarteirinha ?? "",
+  );
   const [arquivoCarteirinha, setArquivoCarteirinha] = useState<File | null>(null);
   const [arquivoPedidoMedico, setArquivoPedidoMedico] = useState<File | null>(null);
   const [arquivoRgFrente, setArquivoRgFrente] = useState<File | null>(null);
