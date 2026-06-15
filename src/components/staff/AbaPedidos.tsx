@@ -145,6 +145,17 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     setPagina(1);
   };
 
+  const contadores = useMemo(() => {
+    let hoje = 0, atrasados = 0, novos = 0;
+    for (const p of pedidos) {
+      const sa = statusAgendamento(p.data_agendamento, p.status);
+      if (sa === "hoje") hoje++;
+      if (sa === "atrasado") atrasados++;
+      if (p.status === "novo") novos++;
+    }
+    return { total: pedidos.length, hoje, atrasados, novos };
+  }, [pedidos]);
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -175,6 +186,24 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {[
+          { label: "Total", value: contadores.total, onClick: limpar, cls: "border-border bg-white text-foreground hover:bg-muted" },
+          { label: "Hoje", value: contadores.hoje, onClick: () => { setAgendamento("hoje"); setPagina(1); }, cls: "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100" },
+          { label: "Atrasados", value: contadores.atrasados, onClick: () => { setAgendamento("atrasados"); setPagina(1); }, cls: "border-red-200 bg-red-50 text-red-800 hover:bg-red-100" },
+          { label: "Novos", value: contadores.novos, onClick: () => { setStatus("novo"); setPagina(1); }, cls: "border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100" },
+        ].map((c) => (
+          <button
+            key={c.label}
+            onClick={c.onClick}
+            className={cn("flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium shadow-sm transition", c.cls)}
+          >
+            <span className="text-xs uppercase tracking-wide opacity-75">{c.label}</span>
+            <span className="text-base font-bold">{c.value}</span>
+          </button>
+        ))}
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow-sm">
