@@ -497,14 +497,25 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
             {!pedido.url_receita &&
               !pedido.url_pedido_medico &&
               !pedido.url_carteirinha &&
-              !pedido.url_identidade ? (
+              !pedido.url_identidade &&
+              !pedido.url_rg_frente &&
+              !pedido.url_rg_verso &&
+              !pedido.url_certidao_nascimento &&
+              !pedido.url_relatorio_medico ? (
                 <p className="text-sm text-muted-foreground">Nenhum documento enviado</p>
               ) : (
                 <>
-                  <DocLink label="Ver receita" url={pedido.url_receita} />
-                  <DocLink label="Ver pedido médico" url={pedido.url_pedido_medico} />
-                  <DocLink label="Ver carteirinha" url={pedido.url_carteirinha} />
-                  <DocLink label="Ver identidade" url={pedido.url_identidade} />
+                  <DocLink label="RG — Frente" url={pedido.url_rg_frente ?? null} />
+                  <DocLink label="RG — Verso" url={pedido.url_rg_verso ?? null} />
+                  <DocLink
+                    label="Certidão de Nascimento"
+                    url={pedido.url_certidao_nascimento ?? null}
+                  />
+                  <DocLink label="Pedido médico" url={pedido.url_pedido_medico} />
+                  <DocLink label="Relatório médico" url={pedido.url_relatorio_medico ?? null} />
+                  <DocLink label="Carteirinha do convênio" url={pedido.url_carteirinha} />
+                  <DocLink label="Receita" url={pedido.url_receita} />
+                  <DocLink label="Identidade (legado)" url={pedido.url_identidade} />
                 </>
               )}
           </TabsContent>
