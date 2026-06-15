@@ -77,6 +77,7 @@ export type Pedido = {
   created_at: string | null;
   data_agendamento: string | null;
   periodo_agendamento: "manha" | "tarde" | null;
+  emails_enviados?: any;
 };
 
 // ===== Agendamento helpers =====
