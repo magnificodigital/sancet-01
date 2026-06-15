@@ -8,6 +8,7 @@ import { CardEscolhaTipo } from "@/components/sacola/CardEscolhaTipo";
 import { ListaItensSacola } from "@/components/sacola/ListaItensSacola";
 import { ListaNaoAdicionados } from "@/components/sacola/ListaNaoAdicionados";
 import { DetalheItemDrawer } from "@/components/sacola/DetalheItemDrawer";
+import { HeaderContexto } from "@/components/catalogo/HeaderContexto";
 
 const Sacola = () => {
   const { itens, naoAdicionados } = useSacola();
@@ -24,6 +25,7 @@ const Sacola = () => {
   return (
     <PageShell>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <HeaderContexto />
         <h1 className="text-3xl font-bold text-secondary mb-6">Sua Sacola</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
