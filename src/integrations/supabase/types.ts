@@ -293,6 +293,7 @@ export type Database = {
           created_at: string | null
           data_agendamento: string | null
           deficiencias: string | null
+          emails_enviados: Json
           endereco_coleta: Json | null
           id: string
           itens: Json
@@ -331,6 +332,7 @@ export type Database = {
           created_at?: string | null
           data_agendamento?: string | null
           deficiencias?: string | null
+          emails_enviados?: Json
           endereco_coleta?: Json | null
           id?: string
           itens?: Json
@@ -369,6 +371,7 @@ export type Database = {
           created_at?: string | null
           data_agendamento?: string | null
           deficiencias?: string | null
+          emails_enviados?: Json
           endereco_coleta?: Json | null
           id?: string
           itens?: Json

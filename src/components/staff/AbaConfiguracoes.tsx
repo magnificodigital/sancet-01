@@ -38,6 +38,9 @@ const CHAVES = [
   "MERCADOPAGO_ACCESS_TOKEN",
   "PAGHIPER_API_KEY",
   "PAGHIPER_TOKEN",
+  "RESEND_API_KEY",
+  "RESEND_EMAIL_FROM",
+  "RESEND_EMAILS_ADMIN",
 ];
 
 const SENSIVEIS = new Set([
@@ -48,6 +51,7 @@ const SENSIVEIS = new Set([
   "MERCADOPAGO_ACCESS_TOKEN",
   "PAGHIPER_API_KEY",
   "PAGHIPER_TOKEN",
+  "RESEND_API_KEY",
 ]);
 
 type Props = {
@@ -133,7 +137,12 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
     else toast.success("Configurações salvas!");
   };
 
-  const campo = (chave: string, label: string, placeholder = "") => {
+  const campo = (
+    chave: string,
+    label: string,
+    placeholder = "",
+    helper?: string,
+  ) => {
     const sensivel = SENSIVEIS.has(chave);
     const revelado = revelados.has(chave);
     return (
@@ -158,6 +167,7 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
             </button>
           )}
         </div>
+        {helper && <p className="text-xs text-muted-foreground">{helper}</p>}
       </div>
     );
   };
@@ -256,6 +266,35 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
             {campo("PAGHIPER_API_KEY", "API Key", "apk_...")}
             {campo("PAGHIPER_TOKEN", "Token", "...")}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>📧 Notificações por Email (Resend)</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Configure o envio automático de emails para pacientes e equipe interna.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {campo(
+            "RESEND_API_KEY",
+            "API Key do Resend",
+            "re_...",
+            "Crie em resend.com → API Keys",
+          )}
+          {campo(
+            "RESEND_EMAIL_FROM",
+            "Email remetente (from)",
+            "onboarding@resend.dev",
+            "Use onboarding@resend.dev para testes ou um email do seu domínio verificado no Resend. Ex: noreply@sendmail.sancet.com.br",
+          )}
+          {campo(
+            "RESEND_EMAILS_ADMIN",
+            "Emails que recebem notificações",
+            "recepcao@sancet.com.br, gestor@sancet.com.br",
+            "Separe múltiplos emails por vírgula. Cada pedido novo dispara email para todos.",
+          )}
         </CardContent>
       </Card>
 

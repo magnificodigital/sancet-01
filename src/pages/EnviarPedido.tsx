@@ -127,7 +127,17 @@ const EnviarPedido = () => {
       });
       if (error) throw error;
       const protocolo = (data as any)?.protocolo as string;
+      const pedidoId = (data as any)?.id as string | undefined;
       if (!protocolo) throw new Error("Resposta inválida ao criar pedido.");
+
+      // Dispara email (não bloqueia)
+      if (pedidoId) {
+        supabase.functions
+          .invoke("enviar-email-pedido", {
+            body: { pedido_id: pedidoId, tipo: "novo" },
+          })
+          .catch(() => {});
+      }
 
       localStorage.setItem("sancet-ultimo-protocolo", protocolo);
       limpar();
