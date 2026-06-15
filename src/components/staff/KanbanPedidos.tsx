@@ -160,22 +160,29 @@ const DraggableCard = ({
 const Coluna = ({
   id,
   label,
+  emoji,
+  bg,
+  header,
   pedidos,
   onAbrir,
   podeEditar,
 }: {
   id: string;
   label: string;
+  emoji: string;
+  bg: string;
+  header: string;
   pedidos: Pedido[];
   onAbrir: (p: Pedido) => void;
   podeEditar: boolean;
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div className="flex w-[280px] shrink-0 flex-col rounded-lg bg-muted/40">
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <p className="text-sm font-semibold text-secondary">
-          {label} <span className="text-muted-foreground">({pedidos.length})</span>
+    <div className={cn("flex w-[280px] shrink-0 flex-col rounded-lg border", bg)}>
+      <div className={cn("flex items-center justify-between rounded-t-lg border-b px-3 py-2", header)}>
+        <p className="text-sm font-semibold">
+          <span className="mr-1">{emoji}</span>
+          {label} <span className="opacity-70">({pedidos.length})</span>
         </p>
       </div>
       <div
