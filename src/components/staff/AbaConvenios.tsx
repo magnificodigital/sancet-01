@@ -148,6 +148,17 @@ export const AbaConvenios = () => {
     setConvenios((prev) => prev.map((c) => (c.id === selecionado ? { ...c, qtd_planos: (c.qtd_planos ?? 0) + 1 } : c)));
   };
 
+  const removerConvenio = async (convenio: Convenio) => {
+    if (!confirm(`Remover o convênio "${convenio.nome}" e todos os seus ${convenio.qtd_planos ?? 0} planos?`)) return;
+    const { error } = await supabase.from("convenios_cache").delete().eq("id", convenio.id);
+    if (error) {
+      toast.error("Erro ao remover convênio", { description: error.message });
+      return;
+    }
+    if (selecionado === convenio.id) setSelecionado(null);
+    setConvenios((prev) => prev.filter((c) => c.id !== convenio.id));
+  };
+
   const removerPlano = async (plano: Plano) => {
     if (!confirm(`Remover plano ${plano.codigo_item}?`)) return;
     const { error } = await supabase.from("convenios_planos").delete().eq("id", plano.id);
@@ -361,11 +372,11 @@ export const AbaConvenios = () => {
               ) : (
                 <ul>
                   {filtrados.map((c) => (
-                    <li key={c.id}>
+                    <li key={c.id} className="flex items-center border-b">
                       <button
                         onClick={() => setSelecionado(c.id)}
                         className={cn(
-                          "flex w-full items-center justify-between border-b px-4 py-2.5 text-left text-sm transition hover:bg-muted/50",
+                          "flex flex-1 items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-muted/50",
                           selecionado === c.id && "bg-muted",
                         )}
                       >
@@ -373,6 +384,17 @@ export const AbaConvenios = () => {
                         <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                           {c.qtd_planos}
                         </span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removerConvenio(c);
+                        }}
+                        className="px-3 py-2.5 text-muted-foreground transition hover:text-destructive"
+                        aria-label={`Remover convênio ${c.nome}`}
+                        title="Remover convênio"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </li>
                   ))}
