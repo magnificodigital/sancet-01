@@ -164,15 +164,27 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
 
   const transicoes: { alvo: string; label: string; variant?: "destructive" | "default" | "success" }[] = (() => {
     const t: { alvo: string; label: string; variant?: "destructive" | "default" | "success" }[] = [];
-    if (pedido.status === "novo") t.push({ alvo: "confirmado", label: "Confirmar" });
-    if (pedido.status === "novo" || pedido.status === "confirmado") {
-      t.push({ alvo: "em_atendimento", label: "Iniciar atendimento", variant: "success" });
-    }
-    if (pedido.status === "em_atendimento") t.push({ alvo: "atendido", label: "Marcar como atendido" });
-    if (pedido.status === "confirmado") t.push({ alvo: "atendido", label: "Marcar como atendido" });
-    if (pedido.status === "atendido") t.push({ alvo: "concluido", label: "Concluir" });
-    if (pedido.status !== "cancelado" && pedido.status !== "concluido") {
-      t.push({ alvo: "cancelado", label: "Cancelar", variant: "destructive" });
+    switch (pedido.status) {
+      case "novo":
+        t.push({ alvo: "confirmado", label: "Confirmar" });
+        t.push({ alvo: "em_analise", label: "Marcar em análise" });
+        t.push({ alvo: "cancelado", label: "Cancelar", variant: "destructive" });
+        break;
+      case "em_analise":
+        t.push({ alvo: "confirmado", label: "Confirmar" });
+        t.push({ alvo: "cancelado", label: "Cancelar", variant: "destructive" });
+        break;
+      case "confirmado":
+        t.push({ alvo: "atendido", label: "Marcar como atendido", variant: "success" });
+        t.push({ alvo: "cancelado", label: "Cancelar", variant: "destructive" });
+        break;
+      case "atendido":
+        t.push({ alvo: "concluido", label: "Concluir", variant: "success" });
+        t.push({ alvo: "cancelado", label: "Cancelar", variant: "destructive" });
+        break;
+      case "cancelado":
+        t.push({ alvo: "novo", label: "Reabrir como Novo" });
+        break;
     }
     return t;
   })();
