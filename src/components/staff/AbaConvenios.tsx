@@ -388,38 +388,106 @@ export const AbaConvenios = () => {
               {convenioAtual ? convenioAtual.nome : "Selecione um convênio"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {!convenioAtual ? (
               <p className="text-sm text-muted-foreground">Escolha um convênio à esquerda para ver seus planos.</p>
-            ) : planos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Este convênio ainda não tem planos.</p>
             ) : (
-              <div className="max-h-[calc(100vh-280px)] overflow-y-auto rounded-md border">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-muted/50">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium">Código</th>
-                      <th className="px-3 py-2 text-left font-medium">Descrição</th>
-                      <th className="px-3 py-2 text-right font-medium w-20">Ativo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {planos.map((p) => (
-                      <tr key={p.id} className="border-t">
-                        <td className="px-3 py-2 font-mono text-xs">{p.codigo_item}</td>
-                        <td className="px-3 py-2">{p.descricao}</td>
-                        <td className="px-3 py-2 text-right">
-                          <Switch checked={p.ativo} onCheckedChange={(v) => togglePlano(p, v)} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="rounded-md border bg-muted/30 p-3">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Adicionar plano manualmente</p>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      placeholder="Código"
+                      value={novoPlanoCodigo}
+                      onChange={(e) => setNovoPlanoCodigo(e.target.value)}
+                      className="sm:max-w-[140px]"
+                    />
+                    <Input
+                      placeholder="Descrição"
+                      value={novoPlanoDesc}
+                      onChange={(e) => setNovoPlanoDesc(e.target.value)}
+                    />
+                    <Button onClick={adicionarPlano} disabled={salvandoPlano} className="gap-2">
+                      {salvandoPlano ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      Adicionar
+                    </Button>
+                  </div>
+                </div>
+                {planos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Este convênio ainda não tem planos.</p>
+                ) : (
+                  <div className="max-h-[calc(100vh-380px)] overflow-y-auto rounded-md border">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-muted/50">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">Código</th>
+                          <th className="px-3 py-2 text-left font-medium">Descrição</th>
+                          <th className="px-3 py-2 text-right font-medium w-20">Ativo</th>
+                          <th className="px-3 py-2 text-right font-medium w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {planos.map((p) => (
+                          <tr key={p.id} className="border-t">
+                            <td className="px-3 py-2 font-mono text-xs">{p.codigo_item}</td>
+                            <td className="px-3 py-2">{p.descricao}</td>
+                            <td className="px-3 py-2 text-right">
+                              <Switch checked={p.ativo} onCheckedChange={(v) => togglePlano(p, v)} />
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removerPlano(p)}
+                                aria-label="Remover plano"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={modalConvenio} onOpenChange={setModalConvenio}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo convênio</DialogTitle>
+            <DialogDescription>
+              Cadastre um convênio manualmente. Você poderá adicionar os planos em seguida.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="novo-conv-nome">Nome do convênio</Label>
+            <Input
+              id="novo-conv-nome"
+              value={novoNome}
+              onChange={(e) => setNovoNome(e.target.value)}
+              placeholder="Ex: Unimed Regional"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") criarConvenio();
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalConvenio(false)} disabled={salvandoConvenio}>
+              Cancelar
+            </Button>
+            <Button onClick={criarConvenio} disabled={salvandoConvenio} className="gap-2">
+              {salvandoConvenio ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Criar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
