@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Upload, Shield, Loader2 } from "lucide-react";
+import { Search, Upload, Shield, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { lerCsvComEncoding, csvParaObjetos } from "@/lib/csv-import";
 
