@@ -159,7 +159,7 @@ export const AbaConvenios = () => {
     setConvenios((prev) => prev.map((c) => (c.id === selecionado ? { ...c, qtd_planos: Math.max(0, (c.qtd_planos ?? 1) - 1) } : c)));
   };
 
-
+  const importarPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
