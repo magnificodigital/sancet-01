@@ -269,6 +269,35 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>📧 Notificações por Email (Resend)</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Configure o envio automático de emails para pacientes e equipe interna.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {campo(
+            "RESEND_API_KEY",
+            "API Key do Resend",
+            "re_...",
+            "Crie em resend.com → API Keys",
+          )}
+          {campo(
+            "RESEND_EMAIL_FROM",
+            "Email remetente (from)",
+            "onboarding@resend.dev",
+            "Use onboarding@resend.dev para testes ou um email do seu domínio verificado no Resend. Ex: noreply@sendmail.sancet.com.br",
+          )}
+          {campo(
+            "RESEND_EMAILS_ADMIN",
+            "Emails que recebem notificações",
+            "recepcao@sancet.com.br, gestor@sancet.com.br",
+            "Separe múltiplos emails por vírgula. Cada pedido novo dispara email para todos.",
+          )}
+        </CardContent>
+      </Card>
+
       {podeEditar && (
         <Button
           onClick={salvar}
