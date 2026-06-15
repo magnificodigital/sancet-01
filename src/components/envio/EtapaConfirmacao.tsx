@@ -199,7 +199,8 @@ export const EtapaConfirmacao = ({
   agendamento,
   enviando,
   onConfirmar,
-}: Props & { convenioPreset?: ConvenioPreset }) => {
+  convenioPreset,
+}: Props) => {
   const { itens } = useSacola();
   const [numeroCarteirinha, setNumeroCarteirinha] = useState(
     convenioPreset?.numeroCarteirinha ?? "",
