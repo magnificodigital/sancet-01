@@ -310,14 +310,19 @@ export type Database = {
           status_pagamento: string
           termos_aceitos: boolean
           termos_aceitos_em: string | null
+          tipo_documento_identidade: string | null
           tipo_solicitacao: string
           unidade_codigo_shift: string | null
           unidade_nome: string | null
           updated_at: string | null
           url_carteirinha: string | null
+          url_certidao_nascimento: string | null
           url_identidade: string | null
           url_pedido_medico: string | null
           url_receita: string | null
+          url_relatorio_medico: string | null
+          url_rg_frente: string | null
+          url_rg_verso: string | null
           valor_total_centavos: number | null
         }
         Insert: {
@@ -343,14 +348,19 @@ export type Database = {
           status_pagamento?: string
           termos_aceitos?: boolean
           termos_aceitos_em?: string | null
+          tipo_documento_identidade?: string | null
           tipo_solicitacao?: string
           unidade_codigo_shift?: string | null
           unidade_nome?: string | null
           updated_at?: string | null
           url_carteirinha?: string | null
+          url_certidao_nascimento?: string | null
           url_identidade?: string | null
           url_pedido_medico?: string | null
           url_receita?: string | null
+          url_relatorio_medico?: string | null
+          url_rg_frente?: string | null
+          url_rg_verso?: string | null
           valor_total_centavos?: number | null
         }
         Update: {
@@ -376,14 +386,19 @@ export type Database = {
           status_pagamento?: string
           termos_aceitos?: boolean
           termos_aceitos_em?: string | null
+          tipo_documento_identidade?: string | null
           tipo_solicitacao?: string
           unidade_codigo_shift?: string | null
           unidade_nome?: string | null
           updated_at?: string | null
           url_carteirinha?: string | null
+          url_certidao_nascimento?: string | null
           url_identidade?: string | null
           url_pedido_medico?: string | null
           url_receita?: string | null
+          url_relatorio_medico?: string | null
+          url_rg_frente?: string | null
+          url_rg_verso?: string | null
           valor_total_centavos?: number | null
         }
         Relationships: [
