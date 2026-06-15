@@ -56,6 +56,15 @@ type TipoDocumento = "rg" | "certidao";
 const MAX_BYTES = 10 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/jpg,application/pdf";
 
+type ConvenioPreset = {
+  id: string;
+  nome: string;
+  codigo_shift: string;
+  planoCodigo: string | null;
+  planoDescricao: string | null;
+  numeroCarteirinha: string;
+} | null;
+
 type Props = {
   tipo: "particular" | "convenio";
   modalidade: "domicilio" | "unidade";
@@ -63,6 +72,7 @@ type Props = {
   endereco: EnderecoColeta | null;
   agendamento: Agendamento | null;
   enviando: boolean;
+  convenioPreset?: ConvenioPreset;
   onConfirmar: (extras: {
     numeroCarteirinha: string;
     convenioId: string | null;
@@ -189,9 +199,12 @@ export const EtapaConfirmacao = ({
   agendamento,
   enviando,
   onConfirmar,
+  convenioPreset,
 }: Props) => {
   const { itens } = useSacola();
-  const [numeroCarteirinha, setNumeroCarteirinha] = useState("");
+  const [numeroCarteirinha, setNumeroCarteirinha] = useState(
+    convenioPreset?.numeroCarteirinha ?? "",
+  );
   const [arquivoCarteirinha, setArquivoCarteirinha] = useState<File | null>(null);
   const [arquivoPedidoMedico, setArquivoPedidoMedico] = useState<File | null>(null);
   const [arquivoRgFrente, setArquivoRgFrente] = useState<File | null>(null);
@@ -216,6 +229,22 @@ export const EtapaConfirmacao = ({
   const [erros, setErros] = useState<string[]>([]);
   const [modalErros, setModalErros] = useState<{ label: string; id: string }[]>([]);
   const [showErros, setShowErros] = useState(false);
+
+  // Pré-popula convênio/plano vindos do contexto global (paciente já escolheu antes).
+  useEffect(() => {
+    if (!convenioPreset) return;
+    setConvSel({
+      id: convenioPreset.id,
+      nome: convenioPreset.nome,
+      codigo_shift: convenioPreset.codigo_shift,
+    });
+    if (convenioPreset.planoCodigo) {
+      setPlanoSel({
+        codigo_item: convenioPreset.planoCodigo,
+        descricao: convenioPreset.planoDescricao ?? "",
+      });
+    }
+  }, [convenioPreset]);
 
   useEffect(() => {
     if (tipo !== "convenio") return;
@@ -418,7 +447,24 @@ export const EtapaConfirmacao = ({
         </div>
       </div>
 
-      {tipo === "convenio" && (
+      {tipo === "convenio" && convenioPreset && (
+        <div className="rounded-xl border bg-blue-50/40 p-4 space-y-1.5 text-sm">
+          <div className="flex items-center gap-2 text-blue-900 font-semibold">
+            <ShieldCheck className="h-4 w-4" />
+            Convênio confirmado
+          </div>
+          <p><span className="text-muted-foreground">Convênio:</span> <strong>{convenioPreset.nome}</strong></p>
+          {convenioPreset.planoDescricao && (
+            <p><span className="text-muted-foreground">Plano:</span> {convenioPreset.planoDescricao}</p>
+          )}
+          <p><span className="text-muted-foreground">Carteirinha:</span> {convenioPreset.numeroCarteirinha}</p>
+          <p className="text-xs text-muted-foreground pt-1">
+            Para alterar, troque o convênio em <strong>Exames</strong>.
+          </p>
+        </div>
+      )}
+
+      {tipo === "convenio" && !convenioPreset && (
         <div className="space-y-3">
           <div id="campo-convenio">
             <Label>Convênio</Label>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/PageShell";
@@ -13,16 +13,26 @@ import { EtapaAgendamento, Agendamento } from "@/components/envio/EtapaAgendamen
 import { EtapaConfirmacao } from "@/components/envio/EtapaConfirmacao";
 import { Unidade } from "@/components/envio/ListaUnidades";
 import { dateToISO } from "@/lib/agendamento";
+import { HeaderContexto } from "@/components/catalogo/HeaderContexto";
 
 const EnviarPedido = () => {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const tipo = (params.get("tipo") === "convenio" ? "convenio" : "particular") as
-    | "convenio"
-    | "particular";
-
   const { paciente, logado } = usePaciente();
-  const { itens, total, limpar } = useSacola();
+  const {
+    itens,
+    total,
+    limpar,
+    tipo,
+    convenio_id,
+    convenio_nome,
+    convenio_codigo_shift,
+    plano_codigo,
+    plano_descricao,
+    numero_carteirinha,
+    limparContexto,
+  } = useSacola();
+
+  const tipoEfetivo: "particular" | "convenio" = tipo ?? "particular";
 
   const [etapa, setEtapa] = useState<1 | 2 | 3 | 4>(1);
   const [modalidade, setModalidade] = useState<"domicilio" | "unidade" | null>(null);
@@ -31,11 +41,16 @@ const EnviarPedido = () => {
   const [agendamento, setAgendamento] = useState<Agendamento | null>(null);
   const [enviando, setEnviando] = useState(false);
 
+  // Guards
   useEffect(() => {
-    if (!logado) {
-      navigate(`/entrar?redirect=${encodeURIComponent("/enviar-pedido?tipo=" + tipo)}`);
+    if (!tipo) {
+      navigate("/exames", { replace: true });
+      return;
     }
-  }, [logado, navigate, tipo]);
+    if (!logado) {
+      navigate(`/entrar?redirect=${encodeURIComponent("/enviar-pedido")}`);
+    }
+  }, [tipo, logado, navigate]);
 
   const handleEscolherModalidade = (m: "domicilio" | "unidade") => {
     setModalidade(m);
@@ -88,11 +103,11 @@ const EnviarPedido = () => {
         uploadDoc(extras.arquivoRelatorioMedico, "relatorio-medico"),
       ]);
 
-      const ehConvenio = tipo === "convenio";
+      const ehConvenio = tipoEfetivo === "convenio";
 
       const payload: any = {
         paciente_nome: paciente.nome,
-        tipo_solicitacao: tipo,
+        tipo_solicitacao: tipoEfetivo,
         modalidade_coleta: modalidade ?? "unidade",
         unidade_codigo_shift: unidade?.codigo_shift ?? null,
         unidade_nome: unidade?.nome ?? null,
@@ -130,7 +145,6 @@ const EnviarPedido = () => {
       const pedidoId = (data as any)?.id as string | undefined;
       if (!protocolo) throw new Error("Resposta inválida ao criar pedido.");
 
-      // Dispara email (não bloqueia)
       if (pedidoId) {
         supabase.functions
           .invoke("enviar-email-pedido", {
@@ -141,7 +155,8 @@ const EnviarPedido = () => {
 
       localStorage.setItem("sancet-ultimo-protocolo", protocolo);
       limpar();
-      if (tipo === "particular") {
+      limparContexto();
+      if (tipoEfetivo === "particular") {
         navigate(`/pagamento/${protocolo}`);
       } else {
         navigate(`/pronto/${protocolo}`);
@@ -156,6 +171,7 @@ const EnviarPedido = () => {
   return (
     <PageShell>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <HeaderContexto />
         <Link
           to="/sacola"
           className="inline-flex items-center gap-1 text-sm text-secondary hover:underline mb-4"
@@ -194,13 +210,25 @@ const EnviarPedido = () => {
             )}
             {etapa === 4 && modalidade && (
               <EtapaConfirmacao
-                tipo={tipo}
+                tipo={tipoEfetivo}
                 modalidade={modalidade}
                 unidade={unidade}
                 endereco={endereco}
                 agendamento={agendamento}
                 enviando={enviando}
                 onConfirmar={handleConfirmarPedido}
+                convenioPreset={
+                  tipoEfetivo === "convenio" && convenio_id
+                    ? {
+                        id: convenio_id,
+                        nome: convenio_nome ?? "",
+                        codigo_shift: convenio_codigo_shift ?? "",
+                        planoCodigo: plano_codigo,
+                        planoDescricao: plano_descricao,
+                        numeroCarteirinha: numero_carteirinha ?? "",
+                      }
+                    : null
+                }
               />
             )}
           </div>

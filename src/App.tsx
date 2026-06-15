@@ -5,6 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import Exames from "./pages/Exames.tsx";
+import SelecaoTipoCompra from "./pages/SelecaoTipoCompra.tsx";
+import ExamesParticular from "./pages/ExamesParticular.tsx";
+import ExamesConvenio from "./pages/ExamesConvenio.tsx";
+import EscolherConvenio from "./pages/EscolherConvenio.tsx";
 import Vacinas from "./pages/Vacinas.tsx";
 import Sacola from "./pages/Sacola.tsx";
 import EnviarPedido from "./pages/EnviarPedido.tsx";
@@ -33,7 +37,11 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/exames" element={<Exames />} />
+          <Route path="/exames" element={<SelecaoTipoCompra />} />
+          <Route path="/exames/particular" element={<ExamesParticular />} />
+          <Route path="/exames/convenio/escolher-convenio" element={<EscolherConvenio />} />
+          <Route path="/exames/convenio/catalogo" element={<ExamesConvenio />} />
+          <Route path="/exames-legacy" element={<Exames />} />
           <Route path="/vacinas" element={<Vacinas />} />
           <Route path="/sacola" element={<Sacola />} />
           <Route path="/enviar-pedido" element={<EnviarPedido />} />

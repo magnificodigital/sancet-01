@@ -21,8 +21,9 @@ type Props = {
 };
 
 export const ListaItensSacola = ({ onVerDetalhes }: Props) => {
-  const { itens, remover, limpar } = useSacola();
+  const { itens, remover, limpar, tipo } = useSacola();
   const [expandido, setExpandido] = useState(false);
+  const ehConvenio = tipo === "convenio";
 
   const visiveis = expandido ? itens : itens.slice(0, 5);
 
@@ -44,14 +45,20 @@ export const ListaItensSacola = ({ onVerDetalhes }: Props) => {
                   </p>
                 )}
               </div>
-              {(() => {
-                const r = precoItemReais(item);
-                return r != null ? (
-                  <Badge className="bg-primary text-primary-foreground whitespace-nowrap">
-                    {formatBRL(r)}
-                  </Badge>
-                ) : null;
-              })()}
+              {ehConvenio ? (
+                <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border border-green-200 whitespace-nowrap">
+                  Coberto pelo convênio
+                </Badge>
+              ) : (
+                (() => {
+                  const r = precoItemReais(item);
+                  return r != null ? (
+                    <Badge className="bg-primary text-primary-foreground whitespace-nowrap">
+                      {formatBRL(r)}
+                    </Badge>
+                  ) : null;
+                })()
+              )}
             </div>
             <div className="flex items-center justify-between pt-2 border-t">
               <button

@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, FlaskConical, Home, ShoppingBag, Trash2 } from "lucide-react";
+import { Building2, FlaskConical, Home, ShieldCheck, ShoppingBag, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useSacola } from "@/stores/sacola";
+import { formatBRL, precoItemReais } from "@/lib/preco";
 import { ItemCatalogo } from "./types";
 import { ExameDrawer } from "./ExameDrawer";
 
@@ -15,6 +16,8 @@ type Props = {
   busca: string;
   emCasa: boolean;
   categoriasSelecionadas: string[];
+  /** Padrão true. Em fluxo convênio, passar false para esconder preço e mostrar badge de cobertura. */
+  mostrarPreco?: boolean;
 };
 
 const PAGE_SIZE = 20;
@@ -113,7 +116,7 @@ const MOCK_VACINAS: ItemCatalogo[] = [
   },
 ];
 
-export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas }: Props) => {
+export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostrarPreco = true }: Props) => {
   const [pagina, setPagina] = useState(1);
   const [selecionado, setSelecionado] = useState<ItemCatalogo | null>(null);
   const { itens: itensSacola, adicionar, remover } = useSacola();
@@ -228,7 +231,7 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas }: Pro
                       {item.outros_nomes.join(", ")}
                     </p>
                   )}
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
                     {item.disponivel_na_unidade && (
                       <Badge variant="secondary" className="gap-1.5 font-normal">
                         <Building2 className="h-3 w-3" /> Na unidade
@@ -239,7 +242,28 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas }: Pro
                         <Home className="h-3 w-3" /> Em casa
                       </Badge>
                     )}
+                    {mostrarPreco && tipo === "exame" && item.preco_particular != null && (
+                      <span className="ml-auto text-sm font-bold text-[#C8102E]">
+                        {formatBRL(Number(item.preco_particular))}
+                      </span>
+                    )}
+                    {mostrarPreco && tipo === "vacina" && item.preco_centavos != null && (
+                      <span className="ml-auto text-sm font-bold text-[#C8102E]">
+                        {formatBRL(item.preco_centavos / 100)}
+                      </span>
+                    )}
+                    {!mostrarPreco && (
+                      <Badge className="ml-auto bg-green-100 text-green-800 hover:bg-green-100 gap-1.5 font-normal border border-green-200">
+                        <ShieldCheck className="h-3 w-3" />
+                        Coberto pelo convênio
+                      </Badge>
+                    )}
                   </div>
+                  {!mostrarPreco && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Sujeito à autorização da operadora.
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex gap-2 md:flex-shrink-0">
