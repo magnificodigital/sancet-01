@@ -447,7 +447,24 @@ export const EtapaConfirmacao = ({
         </div>
       </div>
 
-      {tipo === "convenio" && (
+      {tipo === "convenio" && convenioPreset && (
+        <div className="rounded-xl border bg-blue-50/40 p-4 space-y-1.5 text-sm">
+          <div className="flex items-center gap-2 text-blue-900 font-semibold">
+            <ShieldCheck className="h-4 w-4" />
+            Convênio confirmado
+          </div>
+          <p><span className="text-muted-foreground">Convênio:</span> <strong>{convenioPreset.nome}</strong></p>
+          {convenioPreset.planoDescricao && (
+            <p><span className="text-muted-foreground">Plano:</span> {convenioPreset.planoDescricao}</p>
+          )}
+          <p><span className="text-muted-foreground">Carteirinha:</span> {convenioPreset.numeroCarteirinha}</p>
+          <p className="text-xs text-muted-foreground pt-1">
+            Para alterar, troque o convênio em <strong>Exames</strong>.
+          </p>
+        </div>
+      )}
+
+      {tipo === "convenio" && !convenioPreset && (
         <div className="space-y-3">
           <div id="campo-convenio">
             <Label>Convênio</Label>
