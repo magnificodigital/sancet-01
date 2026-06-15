@@ -63,6 +63,7 @@ export type Pedido = {
   url_carteirinha: string | null;
   url_identidade: string | null;
   observacoes: string | null;
+  deficiencias?: string | null;
   status: string;
   status_pagamento: string;
   valor_total_centavos: number | null;

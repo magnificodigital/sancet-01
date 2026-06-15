@@ -19,6 +19,7 @@ import { EnderecoColeta } from "./EtapaEndereco";
 import { Agendamento } from "./EtapaAgendamento";
 import { formatarAgendamento } from "@/lib/agendamento";
 import { CalendarCheck, Check, ChevronsUpDown, ShieldCheck } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,7 @@ type Props = {
     planoCodigo: string | null;
     planoDescricao: string | null;
     arquivoCarteirinha: File | null;
+    deficiencias: string;
   }) => void;
 };
 
@@ -62,6 +64,7 @@ export const EtapaConfirmacao = ({
   const [numeroCarteirinha, setNumeroCarteirinha] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [aceito, setAceito] = useState(false);
+  const [deficiencias, setDeficiencias] = useState("");
 
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [convSel, setConvSel] = useState<ConvenioSelecionado>(null);
@@ -358,6 +361,32 @@ export const EtapaConfirmacao = ({
         </div>
       )}
 
+      <div className="rounded-xl border bg-card p-5 space-y-3">
+        <div>
+          <h3 className="font-semibold text-secondary">Dados Pessoais</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Preencha o formulário abaixo com os dados da pessoa que irá realizar o(s) exame(s).
+            Não use seus dados se você está preenchendo para outra pessoa.
+          </p>
+        </div>
+
+        <div>
+          <Label htmlFor="deficiencias">Necessidades especiais (opcional)</Label>
+          <Textarea
+            id="deficiencias"
+            value={deficiencias}
+            onChange={(e) => setDeficiencias(e.target.value.slice(0, 500))}
+            maxLength={500}
+            placeholder="Ex.: cadeirante, baixa visão, surdez..."
+            className="mt-1"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Caso possua alguma deficiência (física, auditiva, visual ou intelectual),
+            descreva para que possamos preparar o melhor atendimento.
+          </p>
+        </div>
+      </div>
+
       <label className="flex items-start gap-3 text-sm">
         <Checkbox
           checked={aceito}
@@ -381,6 +410,7 @@ export const EtapaConfirmacao = ({
             planoCodigo: planoSel?.codigo_item ?? null,
             planoDescricao: planoSel?.descricao ?? null,
             arquivoCarteirinha: arquivo,
+            deficiencias: deficiencias.trim(),
           })
         }
         className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white"

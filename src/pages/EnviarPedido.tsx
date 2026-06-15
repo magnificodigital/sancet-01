@@ -50,6 +50,7 @@ const EnviarPedido = () => {
     planoCodigo: string | null;
     planoDescricao: string | null;
     arquivoCarteirinha: File | null;
+    deficiencias: string;
   }) => {
     if (!paciente) return;
     setEnviando(true);
@@ -83,6 +84,7 @@ const EnviarPedido = () => {
         numero_carteirinha: ehConvenio ? extras.numeroCarteirinha : null,
         url_carteirinha: urlCarteirinha,
         valor_total_centavos: ehConvenio ? 0 : total(),
+        deficiencias: extras.deficiencias || null,
         termos_aceitos: true,
       };
 

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { mascaraCEP } from "@/lib/mascaras";
 import { ListaUnidades, Unidade } from "./ListaUnidades";
 import { PainelUnidade } from "./PainelUnidade";
@@ -39,6 +40,13 @@ export const EtapaUnidade = ({ onConfirmar }: Props) => {
       </div>
 
       <ListaUnidades onEscolher={setSelecionada} />
+
+      <Alert className="bg-muted/50 border-muted-foreground/20">
+        <Info className="h-4 w-4" />
+        <AlertDescription className="text-sm text-muted-foreground">
+          Os exames deste pedido só poderão ser realizados na unidade selecionada.
+        </AlertDescription>
+      </Alert>
 
       <PainelUnidade
         unidade={selecionada}
