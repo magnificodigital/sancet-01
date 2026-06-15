@@ -230,6 +230,22 @@ export const EtapaConfirmacao = ({
   const [modalErros, setModalErros] = useState<{ label: string; id: string }[]>([]);
   const [showErros, setShowErros] = useState(false);
 
+  // Pré-popula convênio/plano vindos do contexto global (paciente já escolheu antes).
+  useEffect(() => {
+    if (!convenioPreset) return;
+    setConvSel({
+      id: convenioPreset.id,
+      nome: convenioPreset.nome,
+      codigo_shift: convenioPreset.codigo_shift,
+    });
+    if (convenioPreset.planoCodigo) {
+      setPlanoSel({
+        codigo_item: convenioPreset.planoCodigo,
+        descricao: convenioPreset.planoDescricao ?? "",
+      });
+    }
+  }, [convenioPreset]);
+
   useEffect(() => {
     if (tipo !== "convenio") return;
     supabase
