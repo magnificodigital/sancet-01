@@ -50,22 +50,43 @@ const EnviarPedido = () => {
     planoCodigo: string | null;
     planoDescricao: string | null;
     arquivoCarteirinha: File | null;
+    arquivoPedidoMedico: File | null;
+    arquivoRgFrente: File | null;
+    arquivoRgVerso: File | null;
+    arquivoCertidao: File | null;
+    arquivoRelatorioMedico: File | null;
+    tipoDocumentoIdentidade: "rg" | "certidao";
     deficiencias: string;
   }) => {
     if (!paciente) return;
     setEnviando(true);
     try {
-      let urlCarteirinha: string | null = null;
-
-      if (extras.arquivoCarteirinha) {
-        const ext = extras.arquivoCarteirinha.name.split(".").pop();
-        const path = `${paciente.cpf}/${Date.now()}-carteirinha.${ext}`;
+      const uploadDoc = async (file: File | null, sufixo: string) => {
+        if (!file) return null;
+        const ext = file.name.split(".").pop();
+        const path = `${paciente.cpf}/${Date.now()}-${sufixo}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("documentos-pedidos")
-          .upload(path, extras.arquivoCarteirinha);
+          .upload(path, file);
         if (upErr) throw upErr;
-        urlCarteirinha = path;
-      }
+        return path;
+      };
+
+      const [
+        urlCarteirinha,
+        urlPedidoMedico,
+        urlRgFrente,
+        urlRgVerso,
+        urlCertidao,
+        urlRelatorioMedico,
+      ] = await Promise.all([
+        uploadDoc(extras.arquivoCarteirinha, "carteirinha"),
+        uploadDoc(extras.arquivoPedidoMedico, "pedido-medico"),
+        uploadDoc(extras.arquivoRgFrente, "rg-frente"),
+        uploadDoc(extras.arquivoRgVerso, "rg-verso"),
+        uploadDoc(extras.arquivoCertidao, "certidao"),
+        uploadDoc(extras.arquivoRelatorioMedico, "relatorio-medico"),
+      ]);
 
       const ehConvenio = tipo === "convenio";
 
@@ -83,6 +104,12 @@ const EnviarPedido = () => {
         plano_descricao: ehConvenio ? extras.planoDescricao : null,
         numero_carteirinha: ehConvenio ? extras.numeroCarteirinha : null,
         url_carteirinha: urlCarteirinha,
+        url_pedido_medico: urlPedidoMedico,
+        url_rg_frente: urlRgFrente,
+        url_rg_verso: urlRgVerso,
+        url_certidao_nascimento: urlCertidao,
+        url_relatorio_medico: urlRelatorioMedico,
+        tipo_documento_identidade: extras.tipoDocumentoIdentidade,
         valor_total_centavos: ehConvenio ? 0 : total(),
         deficiencias: extras.deficiencias || null,
         termos_aceitos: true,

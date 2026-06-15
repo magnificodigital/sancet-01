@@ -62,6 +62,11 @@ export type Pedido = {
   url_pedido_medico: string | null;
   url_carteirinha: string | null;
   url_identidade: string | null;
+  url_rg_frente?: string | null;
+  url_rg_verso?: string | null;
+  url_certidao_nascimento?: string | null;
+  url_relatorio_medico?: string | null;
+  tipo_documento_identidade?: "rg" | "certidao" | null;
   observacoes: string | null;
   deficiencias?: string | null;
   status: string;
