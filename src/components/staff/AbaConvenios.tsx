@@ -34,6 +34,12 @@ export const AbaConvenios = () => {
   const [busca, setBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [importando, setImportando] = useState(false);
+  const [modalConvenio, setModalConvenio] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [salvandoConvenio, setSalvandoConvenio] = useState(false);
+  const [novoPlanoCodigo, setNovoPlanoCodigo] = useState("");
+  const [novoPlanoDesc, setNovoPlanoDesc] = useState("");
+  const [salvandoPlano, setSalvandoPlano] = useState(false);
 
   const carregar = async () => {
     setCarregando(true);
