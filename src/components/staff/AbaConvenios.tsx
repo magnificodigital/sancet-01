@@ -148,6 +148,17 @@ export const AbaConvenios = () => {
     setConvenios((prev) => prev.map((c) => (c.id === selecionado ? { ...c, qtd_planos: (c.qtd_planos ?? 0) + 1 } : c)));
   };
 
+  const removerConvenio = async (convenio: Convenio) => {
+    if (!confirm(`Remover o convênio "${convenio.nome}" e todos os seus ${convenio.qtd_planos ?? 0} planos?`)) return;
+    const { error } = await supabase.from("convenios_cache").delete().eq("id", convenio.id);
+    if (error) {
+      toast.error("Erro ao remover convênio", { description: error.message });
+      return;
+    }
+    if (selecionado === convenio.id) setSelecionado(null);
+    setConvenios((prev) => prev.filter((c) => c.id !== convenio.id));
+  };
+
   const removerPlano = async (plano: Plano) => {
     if (!confirm(`Remover plano ${plano.codigo_item}?`)) return;
     const { error } = await supabase.from("convenios_planos").delete().eq("id", plano.id);
