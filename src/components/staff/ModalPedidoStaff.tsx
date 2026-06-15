@@ -387,6 +387,15 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
               </div>
             )}
 
+            {pedido.deficiencias && (
+              <div className="rounded-lg border border-orange-300 bg-orange-50 p-3 text-sm">
+                <p className="mb-1 text-xs font-semibold uppercase text-orange-800">
+                  Necessidades especiais
+                </p>
+                <p className="text-orange-900 whitespace-pre-wrap">{pedido.deficiencias}</p>
+              </div>
+            )}
+
             {transicoes.length > 0 && (
               <div className="space-y-2 rounded-lg border bg-white p-3">
                 <p className="text-sm font-medium">Ações</p>

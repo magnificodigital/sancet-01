@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Mail, Copy, CheckCircle2, AlertCircle,
-  Printer, MessageCircle, ShieldCheck, CalendarCheck,
+  Printer, MessageCircle, ShieldCheck, CalendarCheck, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/PageShell";
@@ -160,6 +160,57 @@ const Pronto = () => {
                       {pedido.modalidade_coleta === "domicilio" ? "🏠 Coleta em domicílio" : "🏥 Na unidade"}
                     </p>
                   </div>
+
+                  {pedido.status === "confirmado" ? (
+                    <div className="rounded-lg border border-green-300 bg-green-50 p-3">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold text-green-800">Pedido confirmado!</p>
+                          <p className="text-xs text-green-900/80">
+                            Compareça à unidade{" "}
+                            <span className="font-medium">{pedido.unidade_nome ?? ""}</span>
+                            {(pedido as any).data_agendamento && (
+                              <>
+                                {" "}no dia{" "}
+                                <span className="font-medium">
+                                  {(() => {
+                                    const d = parseDateOnly((pedido as any).data_agendamento);
+                                    return d ? d.toLocaleDateString("pt-BR") : (pedido as any).data_agendamento;
+                                  })()}
+                                </span>
+                              </>
+                            )}
+                            {(pedido as any).periodo_agendamento && (
+                              <>
+                                {" "}no período{" "}
+                                <span className="font-medium">
+                                  {(pedido as any).periodo_agendamento === "manha" ? "da manhã" : "da tarde"}
+                                </span>
+                              </>
+                            )}
+                            {" "}com seus documentos. Apresente este voucher na recepção.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3">
+                      <div className="flex items-start gap-2">
+                        <Clock className="mt-0.5 h-5 w-5 shrink-0 text-yellow-700" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold text-yellow-900">
+                            Seu pedido foi recebido e está em análise.
+                          </p>
+                          <p className="text-xs text-yellow-900/80">
+                            É necessário aguardar a confirmação do nosso atendimento antes de comparecer
+                            à unidade. Você receberá um e-mail com a confirmação.{" "}
+                            <span className="font-semibold">Não dispense esta etapa.</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {(pedido as any).data_agendamento && (pedido as any).periodo_agendamento && (
                     <div className="rounded-lg border border-[#C8102E]/20 bg-[#C8102E]/5 p-3">
