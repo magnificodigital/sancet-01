@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Upload, Shield, Loader2 } from "lucide-react";
+import { Search, Upload, Shield, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { lerCsvComEncoding, csvParaObjetos } from "@/lib/csv-import";
 
@@ -32,6 +34,12 @@ export const AbaConvenios = () => {
   const [busca, setBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [importando, setImportando] = useState(false);
+  const [modalConvenio, setModalConvenio] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [salvandoConvenio, setSalvandoConvenio] = useState(false);
+  const [novoPlanoCodigo, setNovoPlanoCodigo] = useState("");
+  const [novoPlanoDesc, setNovoPlanoDesc] = useState("");
+  const [salvandoPlano, setSalvandoPlano] = useState(false);
 
   const carregar = async () => {
     setCarregando(true);
@@ -88,6 +96,67 @@ export const AbaConvenios = () => {
       toast.error("Erro ao atualizar");
       setPlanos((prev) => prev.map((p) => (p.id === plano.id ? { ...p, ativo: !novo } : p)));
     }
+  };
+
+  const criarConvenio = async () => {
+    const nome = novoNome.trim();
+    if (!nome) {
+      toast.error("Informe o nome do convênio");
+      return;
+    }
+    setSalvandoConvenio(true);
+    const codigo = `manual-${Date.now().toString(36)}`;
+    const { data, error } = await supabase
+      .from("convenios_cache")
+      .insert({ nome, codigo_shift: codigo, ativo: true })
+      .select("id")
+      .single();
+    setSalvandoConvenio(false);
+    if (error) {
+      toast.error("Erro ao criar convênio", { description: error.message });
+      return;
+    }
+    toast.success("Convênio criado");
+    setNovoNome("");
+    setModalConvenio(false);
+    await carregar();
+    if (data?.id) setSelecionado(data.id);
+  };
+
+  const adicionarPlano = async () => {
+    if (!selecionado) return;
+    const codigo = novoPlanoCodigo.trim();
+    const desc = novoPlanoDesc.trim();
+    if (!codigo || !desc) {
+      toast.error("Preencha código e descrição");
+      return;
+    }
+    setSalvandoPlano(true);
+    const { data, error } = await supabase
+      .from("convenios_planos")
+      .insert({ convenio_id: selecionado, codigo_item: codigo, descricao: desc, ativo: true })
+      .select("id, convenio_id, codigo_item, descricao, ativo")
+      .single();
+    setSalvandoPlano(false);
+    if (error) {
+      toast.error("Erro ao adicionar plano", { description: error.message });
+      return;
+    }
+    setPlanos((prev) => [...prev, data as Plano]);
+    setNovoPlanoCodigo("");
+    setNovoPlanoDesc("");
+    setConvenios((prev) => prev.map((c) => (c.id === selecionado ? { ...c, qtd_planos: (c.qtd_planos ?? 0) + 1 } : c)));
+  };
+
+  const removerPlano = async (plano: Plano) => {
+    if (!confirm(`Remover plano ${plano.codigo_item}?`)) return;
+    const { error } = await supabase.from("convenios_planos").delete().eq("id", plano.id);
+    if (error) {
+      toast.error("Erro ao remover plano", { description: error.message });
+      return;
+    }
+    setPlanos((prev) => prev.filter((p) => p.id !== plano.id));
+    setConvenios((prev) => prev.map((c) => (c.id === selecionado ? { ...c, qtd_planos: Math.max(0, (c.qtd_planos ?? 1) - 1) } : c)));
   };
 
   const importarPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,21 +312,30 @@ export const AbaConvenios = () => {
             Gerenciados via importação de planilha (não vem da sync da Shift).
           </p>
         </div>
-        <label>
-          <input
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={importarPlanilha}
-            disabled={importando}
-          />
-          <Button asChild disabled={importando} className="gap-2 text-white cursor-pointer" style={{ backgroundColor: "#C8102E" }}>
-            <span>
-              {importando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {importando ? "Importando..." : "Importar planilha de convênios"}
-            </span>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => setModalConvenio(true)}
+            variant="outline"
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" /> Novo convênio
           </Button>
-        </label>
+          <label>
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={importarPlanilha}
+              disabled={importando}
+            />
+            <Button asChild disabled={importando} className="gap-2 text-white cursor-pointer" style={{ backgroundColor: "#C8102E" }}>
+              <span>
+                {importando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {importando ? "Importando..." : "Importar planilha"}
+              </span>
+            </Button>
+          </label>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[340px,1fr]">
@@ -310,38 +388,106 @@ export const AbaConvenios = () => {
               {convenioAtual ? convenioAtual.nome : "Selecione um convênio"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {!convenioAtual ? (
               <p className="text-sm text-muted-foreground">Escolha um convênio à esquerda para ver seus planos.</p>
-            ) : planos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Este convênio ainda não tem planos.</p>
             ) : (
-              <div className="max-h-[calc(100vh-280px)] overflow-y-auto rounded-md border">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-muted/50">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium">Código</th>
-                      <th className="px-3 py-2 text-left font-medium">Descrição</th>
-                      <th className="px-3 py-2 text-right font-medium w-20">Ativo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {planos.map((p) => (
-                      <tr key={p.id} className="border-t">
-                        <td className="px-3 py-2 font-mono text-xs">{p.codigo_item}</td>
-                        <td className="px-3 py-2">{p.descricao}</td>
-                        <td className="px-3 py-2 text-right">
-                          <Switch checked={p.ativo} onCheckedChange={(v) => togglePlano(p, v)} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="rounded-md border bg-muted/30 p-3">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Adicionar plano manualmente</p>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      placeholder="Código"
+                      value={novoPlanoCodigo}
+                      onChange={(e) => setNovoPlanoCodigo(e.target.value)}
+                      className="sm:max-w-[140px]"
+                    />
+                    <Input
+                      placeholder="Descrição"
+                      value={novoPlanoDesc}
+                      onChange={(e) => setNovoPlanoDesc(e.target.value)}
+                    />
+                    <Button onClick={adicionarPlano} disabled={salvandoPlano} className="gap-2">
+                      {salvandoPlano ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      Adicionar
+                    </Button>
+                  </div>
+                </div>
+                {planos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Este convênio ainda não tem planos.</p>
+                ) : (
+                  <div className="max-h-[calc(100vh-380px)] overflow-y-auto rounded-md border">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-muted/50">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">Código</th>
+                          <th className="px-3 py-2 text-left font-medium">Descrição</th>
+                          <th className="px-3 py-2 text-right font-medium w-20">Ativo</th>
+                          <th className="px-3 py-2 text-right font-medium w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {planos.map((p) => (
+                          <tr key={p.id} className="border-t">
+                            <td className="px-3 py-2 font-mono text-xs">{p.codigo_item}</td>
+                            <td className="px-3 py-2">{p.descricao}</td>
+                            <td className="px-3 py-2 text-right">
+                              <Switch checked={p.ativo} onCheckedChange={(v) => togglePlano(p, v)} />
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removerPlano(p)}
+                                aria-label="Remover plano"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={modalConvenio} onOpenChange={setModalConvenio}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo convênio</DialogTitle>
+            <DialogDescription>
+              Cadastre um convênio manualmente. Você poderá adicionar os planos em seguida.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="novo-conv-nome">Nome do convênio</Label>
+            <Input
+              id="novo-conv-nome"
+              value={novoNome}
+              onChange={(e) => setNovoNome(e.target.value)}
+              placeholder="Ex: Unimed Regional"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") criarConvenio();
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalConvenio(false)} disabled={salvandoConvenio}>
+              Cancelar
+            </Button>
+            <Button onClick={criarConvenio} disabled={salvandoConvenio} className="gap-2">
+              {salvandoConvenio ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Criar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
