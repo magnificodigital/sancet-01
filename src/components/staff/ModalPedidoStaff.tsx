@@ -158,6 +158,24 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
       return;
     }
     toast.success("Status atualizado!");
+
+    if (alvo === "confirmado") {
+      supabase.functions
+        .invoke("enviar-email-pedido", {
+          body: { pedido_id: pedido.id, tipo: "confirmado" },
+        })
+        .then(({ data, error: e }) => {
+          if (e || (data as any)?.errors?.length) {
+            toast.message("Status salvo, mas falhou ao enviar email de confirmação.");
+          } else if ((data as any)?.skipped) {
+            // Resend não configurado — silencioso
+          } else if ((data as any)?.sent_paciente) {
+            toast.success("Email de confirmação enviado para o paciente.");
+          }
+        })
+        .catch(() => {});
+    }
+
     onSalvo?.();
     onClose();
   };
