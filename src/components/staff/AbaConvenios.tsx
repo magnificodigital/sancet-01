@@ -98,7 +98,68 @@ export const AbaConvenios = () => {
     }
   };
 
-  const importarPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const criarConvenio = async () => {
+    const nome = novoNome.trim();
+    if (!nome) {
+      toast.error("Informe o nome do convênio");
+      return;
+    }
+    setSalvandoConvenio(true);
+    const codigo = `manual-${Date.now().toString(36)}`;
+    const { data, error } = await supabase
+      .from("convenios_cache")
+      .insert({ nome, codigo_shift: codigo, ativo: true })
+      .select("id")
+      .single();
+    setSalvandoConvenio(false);
+    if (error) {
+      toast.error("Erro ao criar convênio", { description: error.message });
+      return;
+    }
+    toast.success("Convênio criado");
+    setNovoNome("");
+    setModalConvenio(false);
+    await carregar();
+    if (data?.id) setSelecionado(data.id);
+  };
+
+  const adicionarPlano = async () => {
+    if (!selecionado) return;
+    const codigo = novoPlanoCodigo.trim();
+    const desc = novoPlanoDesc.trim();
+    if (!codigo || !desc) {
+      toast.error("Preencha código e descrição");
+      return;
+    }
+    setSalvandoPlano(true);
+    const { data, error } = await supabase
+      .from("convenios_planos")
+      .insert({ convenio_id: selecionado, codigo_item: codigo, descricao: desc, ativo: true })
+      .select("id, convenio_id, codigo_item, descricao, ativo")
+      .single();
+    setSalvandoPlano(false);
+    if (error) {
+      toast.error("Erro ao adicionar plano", { description: error.message });
+      return;
+    }
+    setPlanos((prev) => [...prev, data as Plano]);
+    setNovoPlanoCodigo("");
+    setNovoPlanoDesc("");
+    setConvenios((prev) => prev.map((c) => (c.id === selecionado ? { ...c, qtd_planos: (c.qtd_planos ?? 0) + 1 } : c)));
+  };
+
+  const removerPlano = async (plano: Plano) => {
+    if (!confirm(`Remover plano ${plano.codigo_item}?`)) return;
+    const { error } = await supabase.from("convenios_planos").delete().eq("id", plano.id);
+    if (error) {
+      toast.error("Erro ao remover plano", { description: error.message });
+      return;
+    }
+    setPlanos((prev) => prev.filter((p) => p.id !== plano.id));
+    setConvenios((prev) => prev.map((c) => (c.id === selecionado ? { ...c, qtd_planos: Math.max(0, (c.qtd_planos ?? 1) - 1) } : c)));
+  };
+
+
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
