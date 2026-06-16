@@ -10,6 +10,7 @@ import { FiltrosSidebar } from "@/components/catalogo/FiltrosSidebar";
 import { ListaExames } from "@/components/catalogo/ListaExames";
 import { CATEGORIAS_EXAMES } from "@/components/catalogo/types";
 import { HeaderContexto } from "@/components/catalogo/HeaderContexto";
+import { BarraCheckoutFlutuante } from "@/components/catalogo/BarraCheckoutFlutuante";
 import { useSacola } from "@/stores/sacola";
 
 const ExamesParticular = () => {
@@ -124,6 +125,7 @@ const ExamesParticular = () => {
           </div>
         </div>
       </section>
+      <BarraCheckoutFlutuante />
     </PageShell>
   );
 };
