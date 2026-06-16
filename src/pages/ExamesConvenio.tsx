@@ -125,7 +125,6 @@ const ExamesConvenio = () => {
           </div>
         </div>
       </section>
-      <BarraCheckoutFlutuante />
     </PageShell>
   );
 };
