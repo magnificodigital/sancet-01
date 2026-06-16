@@ -36,7 +36,10 @@ import {
   ShieldCheck,
   Upload,
   X,
+  User,
+  Phone,
 } from "lucide-react";
+import { usePaciente } from "@/hooks/usePaciente";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -202,6 +205,7 @@ export const EtapaConfirmacao = ({
   convenioPreset,
 }: Props) => {
   const { itens } = useSacola();
+  const { paciente } = usePaciente();
   const [numeroCarteirinha, setNumeroCarteirinha] = useState(
     convenioPreset?.numeroCarteirinha ?? "",
   );
@@ -268,10 +272,18 @@ export const EtapaConfirmacao = ({
       .eq("ativo", true)
       .order("codigo_item")
       .then(({ data }) => {
-        setPlanos((data as Plano[]) ?? []);
+        const lista = (data as Plano[]) ?? [];
+        setPlanos(lista);
+        // Restaura plano do preset (paciente já escolheu antes).
+        if (convenioPreset?.planoCodigo) {
+          const match = lista.find(
+            (p) => p.codigo_item === convenioPreset.planoCodigo,
+          );
+          if (match) setPlanoSel(match);
+        }
         setPlanosCarregando(false);
       });
-  }, [convSel]);
+  }, [convSel, convenioPreset]);
 
   const conveniosFiltrados = useMemo(() => {
     const q = convQuery.trim().toLowerCase();
@@ -704,14 +716,38 @@ export const EtapaConfirmacao = ({
         )}
       </div>
 
-      <div className="rounded-xl border bg-card p-5 space-y-3">
+      <div className="rounded-xl border bg-card p-5 space-y-4">
         <div>
           <h3 className="font-semibold text-secondary">Dados Pessoais</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Preencha o formulário abaixo com os dados da pessoa que irá realizar o(s) exame(s).
-            Não use seus dados se você está preenchendo para outra pessoa.
+            Confirme se os dados abaixo são da pessoa que irá realizar o(s) exame(s).
           </p>
         </div>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs text-muted-foreground">Nome</Label>
+            <div className="mt-1 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+              <User className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="truncate">{paciente?.nome ?? "—"}</span>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Telefone</Label>
+            <div className="mt-1 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="truncate">
+                {paciente?.telefone ?? (
+                  <span className="text-muted-foreground italic">não informado</span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Para alterar nome ou telefone, edite seu cadastro.
+        </p>
 
         <div>
           <Label htmlFor="deficiencias">Necessidades especiais (opcional)</Label>
@@ -729,6 +765,7 @@ export const EtapaConfirmacao = ({
           </p>
         </div>
       </div>
+
 
       <label
         id="campo-termos"
