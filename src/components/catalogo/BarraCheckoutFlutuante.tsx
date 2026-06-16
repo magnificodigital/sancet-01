@@ -21,9 +21,11 @@ import { formatBRL } from "@/lib/preco";
  */
 export const BarraCheckoutFlutuante = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { itens, total, tipo } = useSacola();
 
   if (itens.length === 0) return null;
+  if (ROTAS_OCULTAS.some((r) => location.pathname.startsWith(r))) return null;
 
   const ehConvenio = tipo === "convenio";
   const valor = total() / 100;
