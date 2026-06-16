@@ -268,10 +268,18 @@ export const EtapaConfirmacao = ({
       .eq("ativo", true)
       .order("codigo_item")
       .then(({ data }) => {
-        setPlanos((data as Plano[]) ?? []);
+        const lista = (data as Plano[]) ?? [];
+        setPlanos(lista);
+        // Restaura plano do preset (paciente já escolheu antes).
+        if (convenioPreset?.planoCodigo) {
+          const match = lista.find(
+            (p) => p.codigo_item === convenioPreset.planoCodigo,
+          );
+          if (match) setPlanoSel(match);
+        }
         setPlanosCarregando(false);
       });
-  }, [convSel]);
+  }, [convSel, convenioPreset]);
 
   const conveniosFiltrados = useMemo(() => {
     const q = convQuery.trim().toLowerCase();
