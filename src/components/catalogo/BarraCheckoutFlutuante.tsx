@@ -1,5 +1,16 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ShoppingBag, ArrowRight, ShieldCheck } from "lucide-react";
+
+const ROTAS_OCULTAS = [
+  "/sacola",
+  "/enviar-pedido",
+  "/pagamento",
+  "/pronto",
+  "/cadastro",
+  "/entrar",
+  "/staff",
+  "/p/",
+];
 import { Button } from "@/components/ui/button";
 import { useSacola } from "@/stores/sacola";
 import { formatBRL } from "@/lib/preco";
