@@ -154,13 +154,17 @@ const EnviarPedido = () => {
       }
 
       localStorage.setItem("sancet-ultimo-protocolo", protocolo);
-      limpar();
-      limparContexto();
+      // Navega ANTES de limpar contexto pra evitar que o guard
+      // (if !tipo → /exames) intercepte o redirect.
       if (tipoEfetivo === "particular") {
-        navigate(`/pagamento/${protocolo}`);
+        navigate(`/pagamento/${protocolo}`, { replace: true });
       } else {
-        navigate(`/pronto/${protocolo}`);
+        navigate(`/pronto/${protocolo}`, { replace: true });
       }
+      setTimeout(() => {
+        limpar();
+        limparContexto();
+      }, 0);
     } catch (e: any) {
       toast.error(e?.message ?? "Não foi possível enviar o pedido.");
     } finally {
