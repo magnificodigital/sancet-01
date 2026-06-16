@@ -163,9 +163,8 @@ const Cadastro = () => {
     setCarregando(true);
     try {
       const nomeFinal = form.usarSocial && form.nomeSocial ? form.nomeSocial : form.nome;
-      const { data: inserido, error } = await supabase
-        .from("pacientes")
-        .insert({
+      const { data: inserido, error } = await supabase.rpc("cadastrar_paciente", {
+        p: {
           cpf: cpfLimpo,
           data_nascimento: dataISO,
           nome: nomeFinal,
@@ -179,16 +178,16 @@ const Cadastro = () => {
           bairro: form.bairro,
           cidade: form.cidade,
           uf: form.uf,
-        })
-        .select("id, nome, cpf")
-        .single();
+        },
+      });
 
       if (error) throw error;
+      const row = inserido as { id: string; nome: string; cpf: string };
 
       salvarPaciente({
-        id: inserido.id,
-        nome: inserido.nome ?? nomeFinal,
-        cpf: inserido.cpf,
+        id: row.id,
+        nome: row.nome ?? nomeFinal,
+        cpf: row.cpf,
         data_nascimento: dataISO,
         email: form.email,
         telefone: apenasDigitos(form.celular),
