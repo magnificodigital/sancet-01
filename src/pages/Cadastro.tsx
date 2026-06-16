@@ -185,9 +185,9 @@ const Cadastro = () => {
       const row = inserido as { id: string; nome: string; cpf: string };
 
       salvarPaciente({
-        id: inserido.id,
-        nome: inserido.nome ?? nomeFinal,
-        cpf: inserido.cpf,
+        id: row.id,
+        nome: row.nome ?? nomeFinal,
+        cpf: row.cpf,
         data_nascimento: dataISO,
         email: form.email,
         telefone: apenasDigitos(form.celular),
