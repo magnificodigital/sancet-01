@@ -205,6 +205,7 @@ export const EtapaConfirmacao = ({
   convenioPreset,
 }: Props) => {
   const { itens } = useSacola();
+  const { paciente } = usePaciente();
   const [numeroCarteirinha, setNumeroCarteirinha] = useState(
     convenioPreset?.numeroCarteirinha ?? "",
   );
