@@ -36,7 +36,10 @@ import {
   ShieldCheck,
   Upload,
   X,
+  User,
+  Phone,
 } from "lucide-react";
+import { usePaciente } from "@/hooks/usePaciente";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
