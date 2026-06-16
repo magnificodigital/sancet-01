@@ -675,6 +675,7 @@ export type Database = {
         Args: { p_cpf: string; p_data_nasc: string; p_patch: Json }
         Returns: Json
       }
+      cadastrar_paciente: { Args: { p: Json }; Returns: Json }
       cancelar_meu_pedido: {
         Args: { p_cpf: string; p_protocolo: string }
         Returns: boolean
