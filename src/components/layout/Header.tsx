@@ -194,8 +194,8 @@ export const Header = () => {
                 </Link>
                 {paginasMenu.map((p) => (
                   <Link
-                    key={p.slug}
-                    to={`/${p.slug}`}
+                    key={p.to}
+                    to={p.to}
                     className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
                   >
                     {p.titulo}
