@@ -126,8 +126,8 @@ const SECOES: Secao[] = [
   },
 ];
 
-const BRAND_LOGO: Record<string, { slug: string; color?: string }> = {
-  asaas: { slug: "asaas", color: "1481EE" },
+const BRAND_LOGO: Record<string, { slug: string; color?: string; imageUrl?: string }> = {
+  asaas: { slug: "asaas", color: "1481EE", imageUrl: asaasLogo.url },
   mercadopago: { slug: "mercadopago", color: "00B1EA" },
   paghiper: { slug: "stripe", color: "635BFF" }, // fallback (Paghiper sem slug oficial)
   openrouter: { slug: "openai", color: "412991" },
