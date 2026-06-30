@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
 
     const apiKey = cfg.RESEND_API_KEY?.trim();
     const from = cfg.RESEND_EMAIL_FROM?.trim() || "onboarding@resend.dev";
-    const adminTo = (cfg.RESEND_EMAILS_ADMIN ?? "")
+    const adminToGlobal = (cfg.RESEND_EMAILS_ADMIN ?? "")
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
@@ -253,25 +253,51 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Email admin: apenas no "novo"
-    if (tipo === "novo" && adminTo.length > 0) {
-      const tpl = templateAdmin(pedido);
-      const r = await enviarResend({
-        apiKey,
-        from,
-        to: adminTo,
-        subject: tpl.subject,
-        html: tpl.html,
-      });
-      sent_admin = r.ok;
-      if (!r.ok) errors.push(`admin: ${JSON.stringify(r.response)}`);
-      logs.push({
-        timestamp: new Date().toISOString(),
-        tipo: `admin_${tipo}`,
-        destinatarios: adminTo,
-        status: r.ok ? "ok" : "erro",
-        resend_response: r.response,
-      });
+    // Email admin: apenas no "novo". Junta admins globais + staff atribuídos à unidade do pedido.
+    if (tipo === "novo") {
+      const staffEmails: string[] = [];
+      if (pedido.unidade_codigo_shift) {
+        const { data: unidade } = await supabase
+          .from("unidades_cache")
+          .select("id")
+          .eq("codigo_shift", pedido.unidade_codigo_shift)
+          .maybeSingle();
+        if (unidade?.id) {
+          const { data: vincs } = await supabase
+            .from("user_unidades")
+            .select("user_id")
+            .eq("unidade_id", unidade.id);
+          const userIds = ((vincs as any[]) ?? []).map((v) => v.user_id);
+          for (const uid of userIds) {
+            const { data: u } = await supabase.auth.admin.getUserById(uid);
+            const e = u?.user?.email;
+            if (e) staffEmails.push(e);
+          }
+        }
+      }
+      const adminTo = Array.from(
+        new Set([...adminToGlobal, ...staffEmails].map((s) => s.toLowerCase())),
+      );
+
+      if (adminTo.length > 0) {
+        const tpl = templateAdmin(pedido);
+        const r = await enviarResend({
+          apiKey,
+          from,
+          to: adminTo,
+          subject: tpl.subject,
+          html: tpl.html,
+        });
+        sent_admin = r.ok;
+        if (!r.ok) errors.push(`admin: ${JSON.stringify(r.response)}`);
+        logs.push({
+          timestamp: new Date().toISOString(),
+          tipo: `admin_${tipo}`,
+          destinatarios: adminTo,
+          status: r.ok ? "ok" : "erro",
+          resend_response: r.response,
+        });
+      }
     }
 
     await supabase

@@ -609,6 +609,32 @@ export type Database = {
         }
         Relationships: []
       }
+      user_unidades: {
+        Row: {
+          criado_em: string
+          unidade_id: string
+          user_id: string
+        }
+        Insert: {
+          criado_em?: string
+          unidade_id: string
+          user_id: string
+        }
+        Update: {
+          criado_em?: string
+          unidade_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_unidades_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidades_cache"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vacinas_cache: {
         Row: {
           ativo: boolean
@@ -711,6 +737,10 @@ export type Database = {
       pedidos_do_paciente: {
         Args: { p_cpf: string; p_data_nasc: string }
         Returns: Json
+      }
+      pode_ver_pedido_unidade: {
+        Args: { p_codigo_shift: string }
+        Returns: boolean
       }
       resultados_do_paciente: {
         Args: { p_cpf: string; p_data_nasc: string }

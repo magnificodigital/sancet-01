@@ -22,7 +22,8 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Shield } from "lucide-react";
+import { Plus, Pencil, Shield, Building2 } from "lucide-react";
+import { GerenciarUnidadesUsuario } from "./GerenciarUnidadesUsuario";
 
 type StaffUsuario = {
   id: string;
@@ -54,6 +55,7 @@ const SECOES_CRUD: Array<{ key: keyof typeof PERMISSOES_PADRAO; label: string }>
 
 export const AbaEquipe = () => {
   const [usuarios, setUsuarios] = useState<StaffUsuario[]>([]);
+  const [contadores, setContadores] = useState<Record<string, number>>({});
   const [sheetAberto, setSheetAberto] = useState(false);
   const [editando, setEditando] = useState<StaffUsuario | null>(null);
   const [formNovo, setFormNovo] = useState<FormNovoUsuario>({ nome: "", email: "", senha: "" });
@@ -62,6 +64,7 @@ export const AbaEquipe = () => {
   const [nomeEdit, setNomeEdit] = useState("");
   const [ativoEdit, setAtivoEdit] = useState(true);
   const [permEdit, setPermEdit] = useState<any>(PERMISSOES_PADRAO);
+  const [gerenciando, setGerenciando] = useState<StaffUsuario | null>(null);
 
   const carregar = async () => {
     const { data } = await supabase
@@ -69,7 +72,17 @@ export const AbaEquipe = () => {
       .select("id, user_id, email, nome, role, ativo, permissoes")
       .order("role", { ascending: false })
       .order("nome", { ascending: true });
-    setUsuarios((data as any) ?? []);
+    const lista = (data as any) ?? [];
+    setUsuarios(lista);
+    // contagem de unidades por usuário (RLS de user_unidades permite admin ver tudo)
+    const { data: vincs } = await supabase
+      .from("user_unidades")
+      .select("user_id");
+    const map: Record<string, number> = {};
+    ((vincs as any[]) ?? []).forEach((r) => {
+      map[r.user_id] = (map[r.user_id] ?? 0) + 1;
+    });
+    setContadores(map);
   };
 
   useEffect(() => {
@@ -109,9 +122,16 @@ export const AbaEquipe = () => {
         toast.error(msg);
         return;
       }
-      toast.success("Usuário criado!");
+      toast.success("Usuário criado! Atribua ao menos 1 unidade para que o staff veja pedidos.");
       setSheetAberto(false);
       await carregar();
+      // abre o drawer de gerenciar unidades para o usuário recém-criado
+      const { data: novo } = await supabase
+        .from("user_roles")
+        .select("id, user_id, email, nome, role, ativo, permissoes")
+        .eq("email", formNovo.email)
+        .maybeSingle();
+      if (novo) setGerenciando(novo as any);
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao criar usuário");
     } finally {
@@ -168,41 +188,61 @@ export const AbaEquipe = () => {
               <TableHead>Nome</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead>Perfil</TableHead>
+              <TableHead>Unidades</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-24">Ações</TableHead>
+              <TableHead className="w-44">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {usuarios.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell>{u.nome ?? "—"}</TableCell>
-                <TableCell>{u.email}</TableCell>
-                <TableCell>
-                  {u.role === "admin" ? (
-                    <Badge className="bg-[#1B3A6B] hover:bg-[#1B3A6B] text-white">Admin</Badge>
-                  ) : (
-                    <Badge variant="secondary">Staff</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Switch
-                    checked={u.ativo}
-                    onCheckedChange={async (v) => {
-                      await supabase.from("user_roles").update({ ativo: v }).eq("id", u.id);
-                      carregar();
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Button size="sm" variant="outline" onClick={() => abrirEditar(u)} className="gap-1.5">
-                    <Pencil className="h-3.5 w-3.5" /> Editar
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {usuarios.map((u) => {
+              const n = contadores[u.user_id] ?? 0;
+              return (
+                <TableRow key={u.id}>
+                  <TableCell>{u.nome ?? "—"}</TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell>
+                    {u.role === "admin" ? (
+                      <Badge className="bg-[#1B3A6B] hover:bg-[#1B3A6B] text-white">Admin</Badge>
+                    ) : (
+                      <Badge variant="secondary">Staff</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {u.role === "admin" ? (
+                      <span className="text-xs font-medium text-muted-foreground">Todas</span>
+                    ) : n === 0 ? (
+                      <span className="text-xs font-semibold text-red-600">Nenhuma</span>
+                    ) : (
+                      <span className="text-xs font-medium text-secondary">
+                        {n} {n === 1 ? "unidade" : "unidades"}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={u.ativo}
+                      onCheckedChange={async (v) => {
+                        await supabase.from("user_roles").update({ ativo: v }).eq("id", u.id);
+                        carregar();
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1.5">
+                      <Button size="sm" variant="outline" onClick={() => abrirEditar(u)} className="gap-1.5">
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setGerenciando(u)} className="gap-1.5">
+                        <Building2 className="h-3.5 w-3.5" /> Gerenciar
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {usuarios.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   Nenhum usuário cadastrado.
                 </TableCell>
               </TableRow>
@@ -210,6 +250,16 @@ export const AbaEquipe = () => {
           </TableBody>
         </Table>
       </div>
+
+      <GerenciarUnidadesUsuario
+        userId={gerenciando?.user_id ?? null}
+        userEmail={gerenciando?.email ?? ""}
+        role={(gerenciando?.role as "admin" | "staff") ?? "staff"}
+        aberto={!!gerenciando}
+        onFechar={() => setGerenciando(null)}
+        onMudou={carregar}
+      />
+
 
       <Sheet open={sheetAberto} onOpenChange={setSheetAberto}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
