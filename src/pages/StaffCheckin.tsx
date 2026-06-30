@@ -72,7 +72,7 @@ const StaffCheckin = () => {
       .maybeSingle();
     setBuscando(false);
     if (error || !data) {
-      toast.error("Protocolo não encontrado");
+      toast.error("Pedido não encontrado ou você não tem permissão para esta unidade.");
       focar();
       return;
     }
