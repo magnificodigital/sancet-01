@@ -1,7 +1,10 @@
 import { Home } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+
 
 type Props = {
   emCasa: boolean;
