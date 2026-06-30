@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -50,6 +51,8 @@ type LandingPage = {
   titulo: string;
   meta_descricao: string | null;
   publicado: boolean;
+  no_menu: boolean;
+  ordem_menu: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -81,7 +84,7 @@ export const AbaPaginas = () => {
     setCarregando(true);
     const { data, error } = await supabase
       .from("landing_pages")
-      .select("id, slug, titulo, meta_descricao, publicado, created_at, updated_at")
+      .select("id, slug, titulo, meta_descricao, publicado, no_menu, ordem_menu, created_at, updated_at")
       .order("updated_at", { ascending: false });
     if (error) toast.error(error.message);
     setPaginas((data as any) ?? []);
@@ -244,6 +247,7 @@ export const AbaPaginas = () => {
               <TableHead>Título</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>No menu</TableHead>
               <TableHead>Atualizada</TableHead>
               <TableHead className="w-64">Ações</TableHead>
             </TableRow>
@@ -281,6 +285,49 @@ export const AbaPaginas = () => {
                     >
                       <Link2 className="h-3.5 w-3.5" />
                     </Button>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={p.no_menu}
+                      disabled={!p.publicado}
+                      onCheckedChange={async (v) => {
+                        const { error } = await supabase
+                          .from("landing_pages")
+                          .update({ no_menu: v })
+                          .eq("id", p.id);
+                        if (error) {
+                          toast.error(error.message);
+                          return;
+                        }
+                        setPaginas((prev) =>
+                          prev.map((x) => (x.id === p.id ? { ...x, no_menu: v } : x)),
+                        );
+                        toast.success(v ? "Adicionada ao menu" : "Removida do menu");
+                      }}
+                    />
+                    {p.no_menu && (
+                      <Input
+                        type="number"
+                        value={p.ordem_menu ?? 0}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value) || 0;
+                          setPaginas((prev) =>
+                            prev.map((x) => (x.id === p.id ? { ...x, ordem_menu: v } : x)),
+                          );
+                        }}
+                        onBlur={async (e) => {
+                          const v = parseInt(e.target.value) || 0;
+                          await supabase
+                            .from("landing_pages")
+                            .update({ ordem_menu: v })
+                            .eq("id", p.id);
+                        }}
+                        className="h-7 w-16"
+                        title="Ordem no menu"
+                      />
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">

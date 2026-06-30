@@ -202,6 +202,8 @@ export type Database = {
           created_at: string
           id: string
           meta_descricao: string | null
+          no_menu: boolean
+          ordem_menu: number | null
           publicado: boolean
           slug: string
           titulo: string
@@ -212,6 +214,8 @@ export type Database = {
           created_at?: string
           id?: string
           meta_descricao?: string | null
+          no_menu?: boolean
+          ordem_menu?: number | null
           publicado?: boolean
           slug: string
           titulo: string
@@ -222,6 +226,8 @@ export type Database = {
           created_at?: string
           id?: string
           meta_descricao?: string | null
+          no_menu?: boolean
+          ordem_menu?: number | null
           publicado?: boolean
           slug?: string
           titulo?: string

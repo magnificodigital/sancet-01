@@ -103,6 +103,12 @@ export const ExameDrawer = ({ item, tipo, onClose }: Props) => {
                   <p className="text-sm text-muted-foreground whitespace-pre-line">
                     {item.preparo}
                   </p>
+                  <a
+                    href={`/preparos#exame-${item.codigo_shift}`}
+                    className="inline-block text-xs font-semibold text-primary hover:underline mt-2"
+                  >
+                    Ver todos os preparos →
+                  </a>
                 </div>
               )}
 
