@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
 
     const apiKey = cfg.RESEND_API_KEY?.trim();
     const from = cfg.RESEND_EMAIL_FROM?.trim() || "onboarding@resend.dev";
-    const adminTo = (cfg.RESEND_EMAILS_ADMIN ?? "")
+    const adminToGlobal = (cfg.RESEND_EMAILS_ADMIN ?? "")
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
