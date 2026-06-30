@@ -77,11 +77,9 @@ export const Header = () => {
             Exames
           </NavLink>
 
-          <NavLink to="/vacinas" className={navLinkClass}>
-            Vacinas
-          </NavLink>
-
           <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
+            Como se preparar
+          </NavLink>
             Como se preparar
           </NavLink>
 
