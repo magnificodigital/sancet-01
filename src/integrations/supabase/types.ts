@@ -286,6 +286,51 @@ export type Database = {
         }
         Relationships: []
       }
+      paginas: {
+        Row: {
+          ativa: boolean
+          atualizado_em: string
+          conteudo_html: string
+          criado_em: string
+          criado_por: string | null
+          id: string
+          meta_description: string | null
+          meta_title: string | null
+          no_menu: boolean
+          ordem_menu: number | null
+          slug: string
+          titulo: string
+        }
+        Insert: {
+          ativa?: boolean
+          atualizado_em?: string
+          conteudo_html?: string
+          criado_em?: string
+          criado_por?: string | null
+          id?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          no_menu?: boolean
+          ordem_menu?: number | null
+          slug: string
+          titulo: string
+        }
+        Update: {
+          ativa?: boolean
+          atualizado_em?: string
+          conteudo_html?: string
+          criado_em?: string
+          criado_por?: string | null
+          id?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          no_menu?: boolean
+          ordem_menu?: number | null
+          slug?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       pedidos: {
         Row: {
           convenio_codigo_shift: string | null
