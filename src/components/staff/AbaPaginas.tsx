@@ -246,6 +246,7 @@ export const AbaPaginas = () => {
               <TableHead>Título</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>No menu</TableHead>
               <TableHead>Atualizada</TableHead>
               <TableHead className="w-64">Ações</TableHead>
             </TableRow>
