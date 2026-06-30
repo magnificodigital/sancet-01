@@ -138,6 +138,16 @@ const BRAND_LOGO: Record<string, { slug: string; color?: string; imageUrl?: stri
 const BrandIcon = ({ name, className }: { name: string; className?: string }) => {
   const b = BRAND_LOGO[name];
   if (!b) return null;
+  if (b.imageUrl) {
+    return (
+      <img
+        src={b.imageUrl}
+        alt=""
+        className={cn("h-6 w-auto object-contain", className)}
+        loading="lazy"
+      />
+    );
+  }
   const color = b.color ?? "000000";
   return (
     <img
