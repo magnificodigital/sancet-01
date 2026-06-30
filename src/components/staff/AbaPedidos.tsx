@@ -42,7 +42,7 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     );
   }
   const podeEditar = permissoes?.pedidos?.editar !== false;
-  const { nome: nomeStaff } = useStaffPerfil();
+  const { nome: nomeStaff, isAdmin } = useStaffPerfil();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [unidades, setUnidades] = useState<UnidadeOpt[]>([]);
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
