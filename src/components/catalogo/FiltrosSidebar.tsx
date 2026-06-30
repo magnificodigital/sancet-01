@@ -1,7 +1,10 @@
 import { Home } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+
 
 type Props = {
   emCasa: boolean;
@@ -26,6 +29,19 @@ export const FiltrosSidebar = ({
   onAplicar,
   mobile,
 }: Props) => {
+  const { data: temEmCasa } = useQuery({
+    queryKey: ["exames_cache_em_casa_existe"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("exames_cache")
+        .select("codigo_shift", { count: "exact", head: true })
+        .eq("ativo", true)
+        .eq("disponivel_em_casa", true);
+      return (count ?? 0) > 0;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   return (
     <div className={cn("flex flex-col h-full", mobile ? "" : "rounded-2xl border bg-card p-5 shadow-sm")}>
       <div className="flex items-center justify-between mb-5">
@@ -39,17 +55,20 @@ export const FiltrosSidebar = ({
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-6">
-        <div>
-          <h4 className="font-semibold text-sm mb-3">Tipo de atendimento</h4>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <Checkbox
-              checked={emCasa}
-              onCheckedChange={(v) => setEmCasa(Boolean(v))}
-            />
-            <Home className="h-4 w-4 text-secondary" />
-            <span className="text-sm">Sancet em Casa</span>
-          </label>
-        </div>
+        {temEmCasa && (
+          <div>
+            <h4 className="font-semibold text-sm mb-3">Tipo de atendimento</h4>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <Checkbox
+                checked={emCasa}
+                onCheckedChange={(v) => setEmCasa(Boolean(v))}
+              />
+              <Home className="h-4 w-4 text-secondary" />
+              <span className="text-sm">Sancet em Casa</span>
+            </label>
+          </div>
+        )}
+
 
         <div>
           <h4 className="font-semibold text-sm mb-3">Categorias</h4>
