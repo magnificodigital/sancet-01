@@ -122,9 +122,16 @@ export const AbaEquipe = () => {
         toast.error(msg);
         return;
       }
-      toast.success("Usuário criado!");
+      toast.success("Usuário criado! Atribua ao menos 1 unidade para que o staff veja pedidos.");
       setSheetAberto(false);
       await carregar();
+      // abre o drawer de gerenciar unidades para o usuário recém-criado
+      const { data: novo } = await supabase
+        .from("user_roles")
+        .select("id, user_id, email, nome, role, ativo, permissoes")
+        .eq("email", formNovo.email)
+        .maybeSingle();
+      if (novo) setGerenciando(novo as any);
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao criar usuário");
     } finally {
