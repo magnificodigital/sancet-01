@@ -225,7 +225,7 @@ const Index = () => {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Card 1 — destaque */}
             <div className="bg-background rounded-xl shadow-card p-8 flex flex-col border-2 border-primary relative">
               <span className="absolute -top-3 left-8 px-3 py-1 rounded-pill bg-primary text-primary-foreground text-xs font-bold">
