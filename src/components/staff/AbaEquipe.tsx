@@ -55,6 +55,7 @@ const SECOES_CRUD: Array<{ key: keyof typeof PERMISSOES_PADRAO; label: string }>
 
 export const AbaEquipe = () => {
   const [usuarios, setUsuarios] = useState<StaffUsuario[]>([]);
+  const [contadores, setContadores] = useState<Record<string, number>>({});
   const [sheetAberto, setSheetAberto] = useState(false);
   const [editando, setEditando] = useState<StaffUsuario | null>(null);
   const [formNovo, setFormNovo] = useState<FormNovoUsuario>({ nome: "", email: "", senha: "" });
@@ -63,6 +64,7 @@ export const AbaEquipe = () => {
   const [nomeEdit, setNomeEdit] = useState("");
   const [ativoEdit, setAtivoEdit] = useState(true);
   const [permEdit, setPermEdit] = useState<any>(PERMISSOES_PADRAO);
+  const [gerenciando, setGerenciando] = useState<StaffUsuario | null>(null);
 
   const carregar = async () => {
     const { data } = await supabase
@@ -70,7 +72,17 @@ export const AbaEquipe = () => {
       .select("id, user_id, email, nome, role, ativo, permissoes")
       .order("role", { ascending: false })
       .order("nome", { ascending: true });
-    setUsuarios((data as any) ?? []);
+    const lista = (data as any) ?? [];
+    setUsuarios(lista);
+    // contagem de unidades por usuário (RLS de user_unidades permite admin ver tudo)
+    const { data: vincs } = await supabase
+      .from("user_unidades")
+      .select("user_id");
+    const map: Record<string, number> = {};
+    ((vincs as any[]) ?? []).forEach((r) => {
+      map[r.user_id] = (map[r.user_id] ?? 0) + 1;
+    });
+    setContadores(map);
   };
 
   useEffect(() => {
