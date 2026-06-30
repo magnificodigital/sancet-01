@@ -53,6 +53,7 @@ const CHAVES = [
   "OPENROUTER_MODELO",
   "GATEWAY_ATIVO",
   "ASAAS_API_KEY",
+  "ASAAS_WEBHOOK_TOKEN",
   "MERCADOPAGO_ACCESS_TOKEN",
   "PAGHIPER_API_KEY",
   "PAGHIPER_TOKEN",
@@ -477,7 +478,40 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                     <span className="text-sm font-semibold">Asaas</span>
                   </div>
                   {campo("ASAAS_API_KEY", "API Key", "$aact_...")}
+
+                  <div className="space-y-2 rounded-md border border-dashed bg-background p-3">
+                    <div className="text-xs font-semibold text-muted-foreground">
+                      Webhook (notificações de pagamento)
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      No painel Asaas → Integrações → Webhooks, cadastre a URL abaixo (API v3, evento "Pagamentos").
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 break-all rounded bg-muted px-2 py-1 text-xs">
+                        {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/sancet-webhook-asaas`}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/sancet-webhook-asaas`
+                          );
+                          toast.success("URL copiada");
+                        }}
+                        className="rounded border px-2 py-1 text-xs hover:bg-muted"
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                    {campo(
+                      "ASAAS_WEBHOOK_TOKEN",
+                      "Token do Webhook (opcional)",
+                      "definido por você",
+                      "Se preencher, deve ser o mesmo valor configurado no painel do Asaas."
+                    )}
+                  </div>
                 </div>
+
 
                 <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
                   <div className="flex items-center gap-2">
