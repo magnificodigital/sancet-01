@@ -166,7 +166,8 @@ const EscolherConvenio = () => {
                     value={convQuery}
                     onValueChange={setConvQuery}
                   />
-                  <CommandList>
+                  <CommandList className="max-h-[360px]">
+
                     <CommandEmpty>Nenhum convênio encontrado.</CommandEmpty>
                     <CommandGroup>
                       {conveniosFiltrados.map((c) => (
@@ -229,7 +230,7 @@ const EscolherConvenio = () => {
                         value={planoQuery}
                         onValueChange={setPlanoQuery}
                       />
-                      <CommandList>
+                      <CommandList className="max-h-[360px]">
                         <CommandEmpty>Nenhum plano encontrado.</CommandEmpty>
                         <CommandGroup>
                           {planosFiltrados.map((p) => (
