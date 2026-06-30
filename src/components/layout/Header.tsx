@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePaciente } from "@/hooks/usePaciente";
+import { usePaginasMenu } from "@/hooks/usePaginasMenu";
 import logoDark from "@/assets/logo-sancet-dark.png";
 import logoLight from "@/assets/logo-sancet-light.png";
 import {
@@ -54,6 +55,7 @@ const agendamentosItens = [
 export const Header = () => {
   const quantidade = useSacola((s) => s.quantidade());
   const { paciente, logado, logout } = usePaciente();
+  const paginasMenu = usePaginasMenu();
   const { pathname } = useLocation();
   // Páginas com hero/fundo escuro usam tema claro no header.
   const dark = pathname === "/";
@@ -77,13 +79,15 @@ export const Header = () => {
             Exames
           </NavLink>
 
-          <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
-            Como se preparar
-          </NavLink>
-
           <NavLink to="/agendamentos?aba=resultados" className={navLinkClass}>
             Resultados
           </NavLink>
+
+          {paginasMenu.map((p) => (
+            <NavLink key={p.slug} to={`/${p.slug}`} className={navLinkClass}>
+              {p.titulo}
+            </NavLink>
+          ))}
 
         </nav>
 
@@ -183,17 +187,20 @@ export const Header = () => {
                   Exames
                 </Link>
                 <Link
-                  to="/agendamentos?aba=preparo"
-                  className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
-                >
-                  Como se preparar
-                </Link>
-                <Link
                   to="/agendamentos?aba=resultados"
                   className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
                 >
                   Resultados
                 </Link>
+                {paginasMenu.map((p) => (
+                  <Link
+                    key={p.slug}
+                    to={`/${p.slug}`}
+                    className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
+                  >
+                    {p.titulo}
+                  </Link>
+                ))}
                 {logado && (
                   <>
                     <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">

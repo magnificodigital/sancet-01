@@ -25,6 +25,7 @@ import StaffCheckin from "./pages/StaffCheckin.tsx";
 import StaffAlterarSenha from "./pages/StaffAlterarSenha.tsx";
 import StaffPaginaEditor from "./pages/StaffPaginaEditor.tsx";
 import LandingPublica from "./pages/LandingPublica.tsx";
+import PaginaPublica from "./pages/PaginaPublica.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { BarraCheckoutFlutuante } from "./components/catalogo/BarraCheckoutFlutuante";
 
@@ -59,7 +60,8 @@ const App = () => (
           <Route path="/staff/alterar-senha" element={<StaffAlterarSenha />} />
           <Route path="/staff/paginas/:id" element={<StaffPaginaEditor />} />
           <Route path="/p/:slug" element={<LandingPublica />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          {/* Catch-all dinâmico para páginas do CMS (deve ser o último antes do 404) */}
+          <Route path="/:slug" element={<PaginaPublica />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <BarraCheckoutFlutuante />
