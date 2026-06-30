@@ -77,10 +77,6 @@ export const Header = () => {
             Exames
           </NavLink>
 
-          <NavLink to="/vacinas" className={navLinkClass}>
-            Vacinas
-          </NavLink>
-
           <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
             Como se preparar
           </NavLink>
@@ -185,12 +181,6 @@ export const Header = () => {
                   className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
                 >
                   Exames
-                </Link>
-                <Link
-                  to="/vacinas"
-                  className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
-                >
-                  Vacinas
                 </Link>
                 <Link
                   to="/agendamentos?aba=preparo"

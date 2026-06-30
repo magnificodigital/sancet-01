@@ -80,7 +80,7 @@ const Agendamentos = () => {
       <CalendarX className="h-12 w-12 text-muted-foreground mx-auto" />
       <p className="font-semibold text-secondary">Você ainda não tem agendamentos</p>
       <Button asChild className="bg-[#C8102E] hover:bg-[#a80d26] text-white">
-        <Link to="/exames">Buscar exames e vacinas</Link>
+        <Link to="/exames">Buscar exames</Link>
       </Button>
     </div>
   );

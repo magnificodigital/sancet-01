@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Building2,
   FlaskConical,
-  Syringe,
   ShieldCheck,
   Clock,
   Home,
@@ -226,7 +225,7 @@ const Index = () => {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Card 1 — destaque */}
             <div className="bg-background rounded-xl shadow-card p-8 flex flex-col border-2 border-primary relative">
               <span className="absolute -top-3 left-8 px-3 py-1 rounded-pill bg-primary text-primary-foreground text-xs font-bold">
@@ -245,23 +244,6 @@ const Index = () => {
                 className="rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground self-start"
               >
                 <Link to="/exames">Ver exames</Link>
-              </Button>
-            </div>
-
-            {/* Card 2 */}
-            <div className="bg-background rounded-xl shadow-card p-8 flex flex-col">
-              <Syringe className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-xl font-bold text-secondary mb-2">Vacinas</h3>
-              <p className="text-muted-foreground mb-6 flex-1">
-                Vacinas para todas as idades: bebês, crianças, adultos, idosos
-                e viajantes.
-              </p>
-              <Button
-                asChild
-                variant="outline"
-                className="rounded-pill border-primary text-primary hover:bg-primary hover:text-primary-foreground self-start"
-              >
-                <Link to="/vacinas">Ver vacinas</Link>
               </Button>
             </div>
 
