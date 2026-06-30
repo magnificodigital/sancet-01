@@ -238,10 +238,11 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostr
                       </Badge>
                     )}
                     {item.disponivel_em_casa && (
-                      <Badge variant="secondary" className="gap-1.5 font-normal">
-                        <Home className="h-3 w-3" /> Em casa
+                      <Badge className="gap-1.5 font-normal bg-green-100 text-green-800 hover:bg-green-100 border border-green-200">
+                        <Home className="h-3 w-3" /> Coleta em casa disponível
                       </Badge>
                     )}
+
                     {mostrarPreco && tipo === "exame" && item.preco_particular != null && (
                       <span className="ml-auto text-sm font-bold text-[#C8102E]">
                         {formatBRL(Number(item.preco_particular))}
