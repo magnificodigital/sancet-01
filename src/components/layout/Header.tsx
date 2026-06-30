@@ -84,7 +84,7 @@ export const Header = () => {
           </NavLink>
 
           {paginasMenu.map((p) => (
-            <NavLink key={p.slug} to={`/${p.slug}`} className={navLinkClass}>
+            <NavLink key={p.to} to={p.to} className={navLinkClass}>
               {p.titulo}
             </NavLink>
           ))}
