@@ -121,7 +121,7 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
           cards: [
             { icone: "FlaskConical", titulo: "Exames laboratoriais", descricao: "Mais de 2.000 exames disponíveis." },
             { icone: "Home", titulo: "Coleta em casa", descricao: "Comodidade e segurança." },
-            { icone: "Syringe", titulo: "Vacinas", descricao: "Calendário completo de vacinação." },
+            { icone: "ShieldCheck", titulo: "Convênios", descricao: "Cobertura com os principais planos." },
           ],
         },
       };
