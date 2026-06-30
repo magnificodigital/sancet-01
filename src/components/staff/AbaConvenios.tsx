@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Upload, Shield, Loader2, Plus, Trash2 } from "lucide-react";
+import { Search, Upload, Shield, Loader2, Plus, Trash2, Pencil, MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { lerCsvComEncoding, csvParaObjetos } from "@/lib/csv-import";
@@ -14,6 +30,7 @@ import { lerCsvComEncoding, csvParaObjetos } from "@/lib/csv-import";
 type Convenio = {
   id: string;
   nome: string;
+  codigo_shift: string | null;
   arquivo_cruzado_id: number | null;
   ativo: boolean;
   qtd_planos?: number;
@@ -41,11 +58,29 @@ export const AbaConvenios = () => {
   const [novoPlanoDesc, setNovoPlanoDesc] = useState("");
   const [salvandoPlano, setSalvandoPlano] = useState(false);
 
+  // Edit/Delete convênio
+  const [editarConv, setEditarConv] = useState<Convenio | null>(null);
+  const [editConvNome, setEditConvNome] = useState("");
+  const [editConvAtivo, setEditConvAtivo] = useState(true);
+  const [salvandoEditConv, setSalvandoEditConv] = useState(false);
+  const [excluirConv, setExcluirConv] = useState<Convenio | null>(null);
+  const [confirmacaoNome, setConfirmacaoNome] = useState("");
+  const [excluindoConv, setExcluindoConv] = useState(false);
+
+  // Edit/Delete plano
+  const [editarPlano, setEditarPlano] = useState<Plano | null>(null);
+  const [editPlanoCodigo, setEditPlanoCodigo] = useState("");
+  const [editPlanoDesc, setEditPlanoDesc] = useState("");
+  const [editPlanoAtivo, setEditPlanoAtivo] = useState(true);
+  const [salvandoEditPlano, setSalvandoEditPlano] = useState(false);
+  const [excluirPlano, setExcluirPlano] = useState<Plano | null>(null);
+  const [excluindoPlano, setExcluindoPlano] = useState(false);
+
   const carregar = async () => {
     setCarregando(true);
     const { data, error } = await supabase
       .from("convenios_cache")
-      .select("id, nome, arquivo_cruzado_id, ativo, convenios_planos(count)")
+      .select("id, nome, codigo_shift, arquivo_cruzado_id, ativo, convenios_planos(count)")
       .order("nome");
     if (error) {
       console.error("[convenios carregar]", error);
@@ -55,6 +90,7 @@ export const AbaConvenios = () => {
     const lista = ((data as any[]) ?? []).map((c) => ({
       id: c.id,
       nome: c.nome,
+      codigo_shift: c.codigo_shift,
       arquivo_cruzado_id: c.arquivo_cruzado_id,
       ativo: c.ativo,
       qtd_planos: c.convenios_planos?.[0]?.count ?? 0,
@@ -148,26 +184,120 @@ export const AbaConvenios = () => {
     setConvenios((prev) => prev.map((c) => (c.id === selecionado ? { ...c, qtd_planos: (c.qtd_planos ?? 0) + 1 } : c)));
   };
 
-  const removerConvenio = async (convenio: Convenio) => {
-    if (!confirm(`Remover o convênio "${convenio.nome}" e todos os seus ${convenio.qtd_planos ?? 0} planos?`)) return;
-    const { error } = await supabase.from("convenios_cache").delete().eq("id", convenio.id);
-    if (error) {
-      toast.error("Erro ao remover convênio", { description: error.message });
-      return;
-    }
-    if (selecionado === convenio.id) setSelecionado(null);
-    setConvenios((prev) => prev.filter((c) => c.id !== convenio.id));
+  // ---- Editar convênio ----
+  const abrirEditarConv = (c: Convenio) => {
+    setEditarConv(c);
+    setEditConvNome(c.nome);
+    setEditConvAtivo(c.ativo);
   };
 
-  const removerPlano = async (plano: Plano) => {
-    if (!confirm(`Remover plano ${plano.codigo_item}?`)) return;
-    const { error } = await supabase.from("convenios_planos").delete().eq("id", plano.id);
-    if (error) {
-      toast.error("Erro ao remover plano", { description: error.message });
+  const salvarEditarConv = async () => {
+    if (!editarConv) return;
+    const nome = editConvNome.trim();
+    if (!nome) {
+      toast.error("Nome obrigatório");
       return;
     }
-    setPlanos((prev) => prev.filter((p) => p.id !== plano.id));
-    setConvenios((prev) => prev.map((c) => (c.id === selecionado ? { ...c, qtd_planos: Math.max(0, (c.qtd_planos ?? 1) - 1) } : c)));
+    setSalvandoEditConv(true);
+    const { error } = await supabase
+      .from("convenios_cache")
+      .update({ nome, ativo: editConvAtivo, atualizado_em: new Date().toISOString() })
+      .eq("id", editarConv.id);
+    setSalvandoEditConv(false);
+    if (error) {
+      toast.error("Erro ao salvar", { description: error.message });
+      return;
+    }
+    toast.success("Convênio atualizado");
+    setConvenios((prev) =>
+      prev.map((c) => (c.id === editarConv.id ? { ...c, nome, ativo: editConvAtivo } : c)),
+    );
+    setEditarConv(null);
+  };
+
+  // ---- Excluir convênio ----
+  const abrirExcluirConv = (c: Convenio) => {
+    setExcluirConv(c);
+    setConfirmacaoNome("");
+  };
+
+  const confirmarExcluirConv = async () => {
+    if (!excluirConv) return;
+    if (confirmacaoNome.trim() !== excluirConv.nome) return;
+    setExcluindoConv(true);
+    const { error } = await supabase.from("convenios_cache").delete().eq("id", excluirConv.id);
+    setExcluindoConv(false);
+    if (error) {
+      toast.error("Erro ao excluir", { description: error.message });
+      return;
+    }
+    toast.success("Convênio excluído");
+    if (selecionado === excluirConv.id) setSelecionado(null);
+    setConvenios((prev) => prev.filter((c) => c.id !== excluirConv.id));
+    setExcluirConv(null);
+    setConfirmacaoNome("");
+  };
+
+  // ---- Editar plano ----
+  const abrirEditarPlano = (p: Plano) => {
+    setEditarPlano(p);
+    setEditPlanoCodigo(p.codigo_item);
+    setEditPlanoDesc(p.descricao);
+    setEditPlanoAtivo(p.ativo);
+  };
+
+  const salvarEditarPlano = async () => {
+    if (!editarPlano) return;
+    const codigo = editPlanoCodigo.trim();
+    const desc = editPlanoDesc.trim();
+    if (!codigo || !desc) {
+      toast.error("Código e descrição obrigatórios");
+      return;
+    }
+    setSalvandoEditPlano(true);
+    const { error } = await supabase
+      .from("convenios_planos")
+      .update({
+        codigo_item: codigo,
+        descricao: desc,
+        ativo: editPlanoAtivo,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq("id", editarPlano.id);
+    setSalvandoEditPlano(false);
+    if (error) {
+      toast.error("Erro ao salvar plano", { description: error.message });
+      return;
+    }
+    toast.success("Plano atualizado");
+    setPlanos((prev) =>
+      prev.map((p) =>
+        p.id === editarPlano.id
+          ? { ...p, codigo_item: codigo, descricao: desc, ativo: editPlanoAtivo }
+          : p,
+      ),
+    );
+    setEditarPlano(null);
+  };
+
+  // ---- Excluir plano ----
+  const confirmarExcluirPlano = async () => {
+    if (!excluirPlano) return;
+    setExcluindoPlano(true);
+    const { error } = await supabase.from("convenios_planos").delete().eq("id", excluirPlano.id);
+    setExcluindoPlano(false);
+    if (error) {
+      toast.error("Erro ao excluir plano", { description: error.message });
+      return;
+    }
+    toast.success("Plano excluído");
+    setPlanos((prev) => prev.filter((p) => p.id !== excluirPlano.id));
+    setConvenios((prev) =>
+      prev.map((c) =>
+        c.id === selecionado ? { ...c, qtd_planos: Math.max(0, (c.qtd_planos ?? 1) - 1) } : c,
+      ),
+    );
+    setExcluirPlano(null);
   };
 
   const importarPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,7 +313,6 @@ export const AbaConvenios = () => {
         return;
       }
 
-      // Agrupar por ArquivoCruzado.Id
       const grupos = new Map<number, { descricao: string; itens: { codigo: string; descricao: string }[] }>();
       let linhasInvalidas = 0;
       let planosLidos = 0;
@@ -203,7 +332,6 @@ export const AbaConvenios = () => {
         planosLidos++;
       }
 
-      // Upsert convênios
       const conveniosUpsert = Array.from(grupos.entries()).map(([id, g]) => ({
         arquivo_cruzado_id: id,
         nome: g.descricao,
@@ -227,7 +355,6 @@ export const AbaConvenios = () => {
         if (c.arquivo_cruzado_id != null) idMap.set(c.arquivo_cruzado_id, c.id);
       });
 
-      // Dedup planos por (convenio_id, codigo_item) — mantém descricao mais longa
       const planosDedup = new Map<string, { convenio_id: string; codigo_item: string; descricao: string; ativo: boolean; atualizado_em: string }>();
       let semMatch = 0;
       let dedupCount = 0;
@@ -237,7 +364,6 @@ export const AbaConvenios = () => {
         const convId = idMap.get(acId);
         if (!convId) {
           semMatch += grupo.itens.length;
-          console.warn(`[planos] arquivo_cruzado_id=${acId} sem match em convenios_cache (${grupo.itens.length} planos)`);
           continue;
         }
         for (const item of grupo.itens) {
@@ -263,7 +389,6 @@ export const AbaConvenios = () => {
 
       const planosUpsert = Array.from(planosDedup.values());
 
-      // Upsert em batches de 500
       let planosInseridos = 0;
       const batchesComErro: any[] = [];
       const lote = 500;
@@ -273,31 +398,11 @@ export const AbaConvenios = () => {
           .from("convenios_planos")
           .upsert(batch, { onConflict: "convenio_id,codigo_item", ignoreDuplicates: false });
         if (error) {
-          console.error("[planos batch fail]", {
-            batch_index: i,
-            batch_size: batch.length,
-            error_code: (error as any).code,
-            error_message: error.message,
-            error_details: (error as any).details,
-            first_row: batch[0],
-            last_row: batch[batch.length - 1],
-          });
-          batchesComErro.push({ batch_index: i, error_code: (error as any).code, error_message: error.message });
+          batchesComErro.push({ batch_index: i, error_message: error.message });
         } else {
           planosInseridos += batch.length;
         }
       }
-
-      const resumo = {
-        convenios_criados: grupos.size,
-        planos_processados: planosLidos,
-        planos_inseridos: planosInseridos,
-        planos_duplicados_na_planilha: dedupCount,
-        linhas_invalidas: linhasInvalidas,
-        planos_sem_convenio_match: semMatch,
-        batches_com_erro: batchesComErro,
-      };
-      console.log("[import convenios] resumo:", resumo);
 
       toast.success("Importação concluída", {
         description: `${grupos.size} convênios · ${planosInseridos}/${planosLidos} planos · ${dedupCount} dups · ${batchesComErro.length} batches c/ erro`,
@@ -311,6 +416,8 @@ export const AbaConvenios = () => {
   };
 
   const convenioAtual = convenios.find((c) => c.id === selecionado);
+  const editConvTemShift =
+    !!editarConv?.codigo_shift && !editarConv.codigo_shift.startsWith("manual-");
 
   return (
     <div className="space-y-5">
@@ -320,15 +427,11 @@ export const AbaConvenios = () => {
             <Shield className="h-6 w-6" /> Convênios
           </h1>
           <p className="text-sm text-muted-foreground">
-            Gerenciados via importação de planilha (não vem da sync da Shift).
+            Gerenciados via importação de planilha ou manualmente.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => setModalConvenio(true)}
-            variant="outline"
-            className="gap-2"
-          >
+          <Button onClick={() => setModalConvenio(true)} variant="outline" className="gap-2">
             <Plus className="h-4 w-4" /> Novo convênio
           </Button>
           <label>
@@ -368,7 +471,7 @@ export const AbaConvenios = () => {
               {carregando ? (
                 <p className="p-4 text-sm text-muted-foreground">Carregando...</p>
               ) : filtrados.length === 0 ? (
-                <p className="p-4 text-sm text-muted-foreground">Nenhum convênio. Importe a planilha.</p>
+                <p className="p-4 text-sm text-muted-foreground">Nenhum convênio.</p>
               ) : (
                 <ul>
                   {filtrados.map((c) => (
@@ -378,6 +481,7 @@ export const AbaConvenios = () => {
                         className={cn(
                           "flex flex-1 items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-muted/50",
                           selecionado === c.id && "bg-muted",
+                          !c.ativo && "opacity-60",
                         )}
                       >
                         <span className="truncate pr-2">{c.nome}</span>
@@ -385,17 +489,28 @@ export const AbaConvenios = () => {
                           {c.qtd_planos}
                         </span>
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removerConvenio(c);
-                        }}
-                        className="px-3 py-2.5 text-muted-foreground transition hover:text-destructive"
-                        aria-label={`Remover convênio ${c.nome}`}
-                        title="Remover convênio"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="px-3 py-2.5 text-muted-foreground transition hover:text-foreground"
+                            aria-label={`Ações para ${c.nome}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => abrirEditarConv(c)}>
+                            <Pencil className="mr-2 h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => abrirExcluirConv(c)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </li>
                   ))}
                 </ul>
@@ -445,7 +560,7 @@ export const AbaConvenios = () => {
                           <th className="px-3 py-2 text-left font-medium">Código</th>
                           <th className="px-3 py-2 text-left font-medium">Descrição</th>
                           <th className="px-3 py-2 text-right font-medium w-20">Ativo</th>
-                          <th className="px-3 py-2 text-right font-medium w-12"></th>
+                          <th className="px-3 py-2 text-right font-medium w-24">Ações</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -457,14 +572,24 @@ export const AbaConvenios = () => {
                               <Switch checked={p.ativo} onCheckedChange={(v) => togglePlano(p, v)} />
                             </td>
                             <td className="px-3 py-2 text-right">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removerPlano(p)}
-                                aria-label="Remover plano"
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => abrirEditarPlano(p)}
+                                  aria-label="Editar plano"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setExcluirPlano(p)}
+                                  aria-label="Excluir plano"
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -478,6 +603,7 @@ export const AbaConvenios = () => {
         </Card>
       </div>
 
+      {/* Novo convênio */}
       <Dialog open={modalConvenio} onOpenChange={setModalConvenio}>
         <DialogContent>
           <DialogHeader>
@@ -510,6 +636,181 @@ export const AbaConvenios = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Editar convênio */}
+      <Dialog open={!!editarConv} onOpenChange={(o) => !o && setEditarConv(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar convênio</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-conv-nome">Nome</Label>
+              <Input
+                id="edit-conv-nome"
+                value={editConvNome}
+                onChange={(e) => setEditConvNome(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-conv-shift">Código Shift</Label>
+              <Input
+                id="edit-conv-shift"
+                value={editarConv?.codigo_shift ?? ""}
+                readOnly
+                disabled
+                className="font-mono text-xs"
+              />
+              {editConvTemShift && (
+                <p className="text-xs text-amber-700">
+                  Código vem da Shift. Alterar pode quebrar o vínculo na próxima sync.
+                </p>
+              )}
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <Label htmlFor="edit-conv-ativo" className="cursor-pointer">Ativo</Label>
+                <p className="text-xs text-muted-foreground">
+                  Convênios inativos não aparecem para o paciente.
+                </p>
+              </div>
+              <Switch
+                id="edit-conv-ativo"
+                checked={editConvAtivo}
+                onCheckedChange={setEditConvAtivo}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditarConv(null)} disabled={salvandoEditConv}>
+              Cancelar
+            </Button>
+            <Button onClick={salvarEditarConv} disabled={salvandoEditConv} className="gap-2">
+              {salvandoEditConv && <Loader2 className="h-4 w-4 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Excluir convênio */}
+      <AlertDialog open={!!excluirConv} onOpenChange={(o) => !o && setExcluirConv(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir convênio?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  Esta ação é <strong>IRREVERSÍVEL</strong>. Esta operação vai EXCLUIR também todos
+                  os <strong>{excluirConv?.qtd_planos ?? 0} planos</strong> vinculados a este convênio.
+                </p>
+                {excluirConv?.codigo_shift && !excluirConv.codigo_shift.startsWith("manual-") && (
+                  <p className="rounded border border-amber-300 bg-amber-50 p-2 text-amber-900">
+                    ⚠️ Este convênio tem <code>codigo_shift</code>. Será recriado vazio (sem planos)
+                    na próxima Sync Shift.
+                  </p>
+                )}
+                <p>
+                  Para confirmar, digite o nome do convênio:{" "}
+                  <strong className="font-mono">{excluirConv?.nome}</strong>
+                </p>
+                <Input
+                  value={confirmacaoNome}
+                  onChange={(e) => setConfirmacaoNome(e.target.value)}
+                  placeholder="Digite o nome exato"
+                  autoFocus
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindoConv}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={confirmacaoNome.trim() !== excluirConv?.nome || excluindoConv}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmarExcluirConv();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {excluindoConv ? <Loader2 className="h-4 w-4 animate-spin" /> : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Editar plano */}
+      <Dialog open={!!editarPlano} onOpenChange={(o) => !o && setEditarPlano(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar plano</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-plano-codigo">Código</Label>
+              <Input
+                id="edit-plano-codigo"
+                value={editPlanoCodigo}
+                onChange={(e) => setEditPlanoCodigo(e.target.value)}
+                className="font-mono"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-plano-desc">Descrição</Label>
+              <Input
+                id="edit-plano-desc"
+                value={editPlanoDesc}
+                onChange={(e) => setEditPlanoDesc(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <Label htmlFor="edit-plano-ativo" className="cursor-pointer">Ativo</Label>
+              <Switch
+                id="edit-plano-ativo"
+                checked={editPlanoAtivo}
+                onCheckedChange={setEditPlanoAtivo}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditarPlano(null)} disabled={salvandoEditPlano}>
+              Cancelar
+            </Button>
+            <Button onClick={salvarEditarPlano} disabled={salvandoEditPlano} className="gap-2">
+              {salvandoEditPlano && <Loader2 className="h-4 w-4 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Excluir plano */}
+      <AlertDialog open={!!excluirPlano} onOpenChange={(o) => !o && setExcluirPlano(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir plano?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Excluir o plano <strong className="font-mono">{excluirPlano?.codigo_item}</strong> —{" "}
+              {excluirPlano?.descricao}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindoPlano}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmarExcluirPlano();
+              }}
+              disabled={excluindoPlano}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {excluindoPlano ? <Loader2 className="h-4 w-4 animate-spin" /> : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
