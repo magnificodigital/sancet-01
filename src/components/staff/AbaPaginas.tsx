@@ -287,6 +287,49 @@ export const AbaPaginas = () => {
                     </Button>
                   </div>
                 </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={p.no_menu}
+                      disabled={!p.publicado}
+                      onCheckedChange={async (v) => {
+                        const { error } = await supabase
+                          .from("landing_pages")
+                          .update({ no_menu: v })
+                          .eq("id", p.id);
+                        if (error) {
+                          toast.error(error.message);
+                          return;
+                        }
+                        setPaginas((prev) =>
+                          prev.map((x) => (x.id === p.id ? { ...x, no_menu: v } : x)),
+                        );
+                        toast.success(v ? "Adicionada ao menu" : "Removida do menu");
+                      }}
+                    />
+                    {p.no_menu && (
+                      <Input
+                        type="number"
+                        value={p.ordem_menu ?? 0}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value) || 0;
+                          setPaginas((prev) =>
+                            prev.map((x) => (x.id === p.id ? { ...x, ordem_menu: v } : x)),
+                          );
+                        }}
+                        onBlur={async (e) => {
+                          const v = parseInt(e.target.value) || 0;
+                          await supabase
+                            .from("landing_pages")
+                            .update({ ordem_menu: v })
+                            .eq("id", p.id);
+                        }}
+                        className="h-7 w-16"
+                        title="Ordem no menu"
+                      />
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {formatDistanceToNow(new Date(p.updated_at), { addSuffix: true, locale: ptBR })}
                 </TableCell>
