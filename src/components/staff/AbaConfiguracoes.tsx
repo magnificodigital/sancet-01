@@ -457,7 +457,9 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                             : "border-border bg-background hover:border-secondary/40",
                         )}
                       >
-                        <BrandIcon name={g.id} className={cn("h-14 w-14", g.id === "paghiper" && "h-10 w-10")} />
+                        <div className="flex h-14 w-14 items-center justify-center">
+                          <BrandIcon name={g.id} className={cn("h-14 w-14", g.id === "paghiper" && "h-10 w-10")} />
+                        </div>
                         <span className="text-xs font-medium">{g.label}</span>
                         {ativo && (
                           <Badge variant="secondary" className="text-[10px]">
