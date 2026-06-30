@@ -1,3 +1,4 @@
+import asaasLogo from "@/assets/asaas-logo.png.asset.json";
 import { useEffect, useMemo, useState } from "react";
 import {
   Eye,
