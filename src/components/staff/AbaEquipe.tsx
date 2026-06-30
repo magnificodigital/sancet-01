@@ -22,7 +22,8 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Shield } from "lucide-react";
+import { Plus, Pencil, Shield, Building2 } from "lucide-react";
+import { GerenciarUnidadesUsuario } from "./GerenciarUnidadesUsuario";
 
 type StaffUsuario = {
   id: string;
