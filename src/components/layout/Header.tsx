@@ -80,8 +80,6 @@ export const Header = () => {
           <NavLink to="/agendamentos?aba=preparo" className={navLinkClass}>
             Como se preparar
           </NavLink>
-            Como se preparar
-          </NavLink>
 
           <NavLink to="/agendamentos?aba=resultados" className={navLinkClass}>
             Resultados
