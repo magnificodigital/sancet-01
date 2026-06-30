@@ -83,7 +83,7 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     setPedidos((data as Pedido[]) ?? []);
   };
 
-  const { isAdmin } = useStaffPerfil();
+  // isAdmin já vem do hook acima
   const [semUnidades, setSemUnidades] = useState(false);
 
   const carregarUnidades = async () => {
