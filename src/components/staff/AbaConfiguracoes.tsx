@@ -1,4 +1,5 @@
 import asaasLogo from "@/assets/asaas-logo.png.asset.json";
+import openrouterLogo from "@/assets/openrouter-logo.png.asset.json";
 import { useEffect, useMemo, useState } from "react";
 import {
   Eye,
@@ -98,7 +99,7 @@ const SECOES: Secao[] = [
     id: "ia",
     titulo: "OpenRouter",
     descricao: "Modelos de IA para leitura de receitas",
-    brand: "openai",
+    brand: "openrouter",
     icone: Sparkles,
     chavesRequeridas: ["OPENROUTER_API_KEY"],
   },
@@ -130,7 +131,7 @@ const BRAND_LOGO: Record<string, { slug: string; color?: string; imageUrl?: stri
   asaas: { slug: "asaas", color: "1481EE", imageUrl: asaasLogo.url },
   mercadopago: { slug: "mercadopago", color: "00B1EA" },
   paghiper: { slug: "stripe", color: "635BFF" }, // fallback (Paghiper sem slug oficial)
-  openrouter: { slug: "openai", color: "412991" },
+  openrouter: { slug: "openai", color: "412991", imageUrl: openrouterLogo.url },
   resend: { slug: "resend", color: "000000" },
   openai: { slug: "openai", color: "412991" },
 };
