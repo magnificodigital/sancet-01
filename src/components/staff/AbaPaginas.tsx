@@ -50,6 +50,8 @@ type LandingPage = {
   titulo: string;
   meta_descricao: string | null;
   publicado: boolean;
+  no_menu: boolean;
+  ordem_menu: number | null;
   created_at: string;
   updated_at: string;
 };
