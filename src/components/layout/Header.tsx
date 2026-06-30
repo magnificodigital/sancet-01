@@ -187,17 +187,20 @@ export const Header = () => {
                   Exames
                 </Link>
                 <Link
-                  to="/agendamentos?aba=preparo"
-                  className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
-                >
-                  Como se preparar
-                </Link>
-                <Link
                   to="/agendamentos?aba=resultados"
                   className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
                 >
                   Resultados
                 </Link>
+                {paginasMenu.map((p) => (
+                  <Link
+                    key={p.slug}
+                    to={`/${p.slug}`}
+                    className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
+                  >
+                    {p.titulo}
+                  </Link>
+                ))}
                 {logado && (
                   <>
                     <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">

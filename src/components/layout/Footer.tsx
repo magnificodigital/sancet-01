@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import logoLight from "@/assets/logo-sancet-light.png";
 
 export const Footer = () => {
@@ -21,9 +22,19 @@ export const Footer = () => {
           </a>{" "}
           — Todos os Direitos Reservados
           {" | "}
-          <a href="#" className="hover:text-primary-foreground underline-offset-2 hover:underline">
-            Portal de Privacidade
-          </a>
+          <Link
+            to="/politica-de-privacidade"
+            className="hover:text-primary-foreground underline-offset-2 hover:underline"
+          >
+            Política de Privacidade
+          </Link>
+          {" | "}
+          <Link
+            to="/termos-de-uso"
+            className="hover:text-primary-foreground underline-offset-2 hover:underline"
+          >
+            Termos de Uso
+          </Link>
           {" | "}© 2026
         </p>
       </div>
