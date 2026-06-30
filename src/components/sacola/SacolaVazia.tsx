@@ -7,14 +7,14 @@ export const SacolaVazia = () => (
     <ShoppingBag size={64} className="text-[#C8102E] mb-6" />
     <h2 className="text-2xl font-bold text-secondary mb-2">A sacola está vazia</h2>
     <p className="text-muted-foreground mb-8">
-      Os exames e vacinas que você adicionar vão aparecer aqui. Envie o pedido médico ou busque manualmente.
+      Os exames que você adicionar vão aparecer aqui. Envie o pedido médico ou busque manualmente.
     </p>
     <div className="flex flex-col gap-3 w-full">
       <Button asChild className="bg-[#C8102E] hover:bg-[#a80d26] text-white">
         <Link to="/receita">Enviar pedido médico</Link>
       </Button>
       <Button asChild variant="outline">
-        <Link to="/exames">Buscar exames e vacinas</Link>
+        <Link to="/exames">Buscar exames</Link>
       </Button>
     </div>
   </div>
