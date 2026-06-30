@@ -26,6 +26,7 @@ import StaffAlterarSenha from "./pages/StaffAlterarSenha.tsx";
 import StaffPaginaEditor from "./pages/StaffPaginaEditor.tsx";
 import LandingPublica from "./pages/LandingPublica.tsx";
 import PaginaPublica from "./pages/PaginaPublica.tsx";
+import Preparos from "./pages/Preparos.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { BarraCheckoutFlutuante } from "./components/catalogo/BarraCheckoutFlutuante";
 
