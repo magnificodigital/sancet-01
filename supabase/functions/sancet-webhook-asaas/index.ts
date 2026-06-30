@@ -68,9 +68,7 @@ serve(async (req) => {
       status_pagamento: novoStatus,
       updated_at: new Date().toISOString(),
     };
-    if (novoStatus === "pago") {
-      update.pago_em = new Date().toISOString();
-    }
+
 
     const { error } = await supabase
       .from("pedidos")
