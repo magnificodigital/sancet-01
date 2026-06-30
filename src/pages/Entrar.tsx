@@ -86,7 +86,7 @@ const Entrar = () => {
         <div className="flex flex-col">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/")}
             className="inline-flex items-center gap-1 text-sm font-semibold text-[#C8102E] hover:underline mb-6 self-start"
           >
             <ArrowLeft className="h-4 w-4" />
