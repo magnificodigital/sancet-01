@@ -256,8 +256,13 @@ export const EtapaConfirmacao = ({
       .from("convenios_cache")
       .select("id,nome,codigo_shift")
       .eq("ativo", true)
-      .order("nome")
-      .then(({ data }) => setConvenios((data as Convenio[]) ?? []));
+      .limit(1000)
+      .then(({ data }) => {
+        const lista = ((data as Convenio[]) ?? []).slice().sort((a, b) =>
+          a.nome.toLowerCase().localeCompare(b.nome.toLowerCase(), "pt-BR"),
+        );
+        setConvenios(lista);
+      });
   }, [tipo]);
 
   useEffect(() => {
@@ -271,10 +276,10 @@ export const EtapaConfirmacao = ({
       .eq("convenio_id", convSel.id)
       .eq("ativo", true)
       .order("codigo_item")
+      .limit(1000)
       .then(({ data }) => {
         const lista = (data as Plano[]) ?? [];
         setPlanos(lista);
-        // Restaura plano do preset (paciente já escolheu antes).
         if (convenioPreset?.planoCodigo) {
           const match = lista.find(
             (p) => p.codigo_item === convenioPreset.planoCodigo,
@@ -287,22 +292,17 @@ export const EtapaConfirmacao = ({
 
   const conveniosFiltrados = useMemo(() => {
     const q = convQuery.trim().toLowerCase();
-    const base = q
-      ? convenios.filter((c) => c.nome.toLowerCase().includes(q))
-      : convenios;
-    return base.slice(0, 8);
+    return q ? convenios.filter((c) => c.nome.toLowerCase().includes(q)) : convenios;
   }, [convenios, convQuery]);
 
   const planosFiltrados = useMemo(() => {
     const q = planoQuery.trim().toLowerCase();
-    if (!q) return planos.slice(0, 8);
-    return planos
-      .filter(
-        (p) =>
-          p.codigo_item.toLowerCase().includes(q) ||
-          p.descricao.toLowerCase().includes(q),
-      )
-      .slice(0, 8);
+    if (!q) return planos;
+    return planos.filter(
+      (p) =>
+        p.codigo_item.toLowerCase().includes(q) ||
+        p.descricao.toLowerCase().includes(q),
+    );
   }, [planos, planoQuery]);
 
   const exigePlano = planos.length > 0;
