@@ -248,23 +248,6 @@ const Index = () => {
               </Button>
             </div>
 
-            {/* Card 2 */}
-            <div className="bg-background rounded-xl shadow-card p-8 flex flex-col">
-              <Syringe className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-xl font-bold text-secondary mb-2">Vacinas</h3>
-              <p className="text-muted-foreground mb-6 flex-1">
-                Vacinas para todas as idades: bebês, crianças, adultos, idosos
-                e viajantes.
-              </p>
-              <Button
-                asChild
-                variant="outline"
-                className="rounded-pill border-primary text-primary hover:bg-primary hover:text-primary-foreground self-start"
-              >
-                <Link to="/vacinas">Ver vacinas</Link>
-              </Button>
-            </div>
-
             {/* Card 3 */}
             <div className="bg-background rounded-xl shadow-card p-8 flex flex-col">
               <Home className="h-12 w-12 text-secondary mb-4" />

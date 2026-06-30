@@ -183,12 +183,6 @@ export const Header = () => {
                   Exames
                 </Link>
                 <Link
-                  to="/vacinas"
-                  className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
-                >
-                  Vacinas
-                </Link>
-                <Link
                   to="/agendamentos?aba=preparo"
                   className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
                 >
