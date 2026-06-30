@@ -186,7 +186,7 @@ const EnviarPedido = () => {
         <div className="mx-auto max-w-2xl">
           <div>
             {etapa === 1 && (
-              <EtapaTipoAtendimento onEscolher={handleEscolherModalidade} />
+              <EtapaTipoAtendimento onEscolher={handleEscolherModalidade} itens={itens} />
             )}
             {etapa === 2 && modalidade === "unidade" && (
               <EtapaUnidade
