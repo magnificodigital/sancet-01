@@ -206,6 +206,14 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
         )}
       </div>
 
+      {semUnidades && !isAdmin && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Você não tem unidades atribuídas.</p>
+          <p>Solicite ao administrador para receber acesso aos pedidos.</p>
+        </div>
+      )}
+
+
       <div className="flex flex-wrap gap-2">
         {[
           { label: "Total", value: contadores.total, onClick: limpar, cls: "border-border bg-white text-foreground hover:bg-muted" },
