@@ -59,6 +59,7 @@ const App = () => (
           <Route path="/staff/checkin" element={<StaffCheckin />} />
           <Route path="/staff/alterar-senha" element={<StaffAlterarSenha />} />
           <Route path="/staff/paginas/:id" element={<StaffPaginaEditor />} />
+          <Route path="/preparos" element={<Preparos />} />
           <Route path="/p/:slug" element={<LandingPublica />} />
           {/* Catch-all dinâmico para páginas do CMS (deve ser o último antes do 404) */}
           <Route path="/:slug" element={<PaginaPublica />} />
