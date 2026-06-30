@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Building2,
   FlaskConical,
-  Syringe,
   ShieldCheck,
   Clock,
   Home,
