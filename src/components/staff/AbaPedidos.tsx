@@ -83,18 +83,36 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     setPedidos((data as Pedido[]) ?? []);
   };
 
+  const { isAdmin } = useStaffPerfil();
+  const [semUnidades, setSemUnidades] = useState(false);
+
   const carregarUnidades = async () => {
+    if (isAdmin) {
+      const { data } = await supabase
+        .from("unidades_cache")
+        .select("codigo_shift, nome")
+        .order("nome");
+      setUnidades((data as UnidadeOpt[]) ?? []);
+      setSemUnidades(false);
+      return;
+    }
+    // staff: só as unidades atribuídas
     const { data } = await supabase
-      .from("unidades_cache")
-      .select("codigo_shift, nome")
-      .order("nome");
-    setUnidades((data as UnidadeOpt[]) ?? []);
+      .from("user_unidades")
+      .select("unidades_cache(codigo_shift, nome)");
+    const lista = ((data as any[]) ?? [])
+      .map((r) => r.unidades_cache)
+      .filter(Boolean) as UnidadeOpt[];
+    lista.sort((a, b) => a.nome.localeCompare(b.nome));
+    setUnidades(lista);
+    setSemUnidades(lista.length === 0);
   };
 
   useEffect(() => {
     carregar();
     carregarUnidades();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
