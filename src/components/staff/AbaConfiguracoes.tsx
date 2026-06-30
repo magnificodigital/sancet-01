@@ -1,3 +1,4 @@
+import asaasLogo from "@/assets/asaas-logo.png.asset.json";
 import { useEffect, useMemo, useState } from "react";
 import {
   Eye,
@@ -125,8 +126,8 @@ const SECOES: Secao[] = [
   },
 ];
 
-const BRAND_LOGO: Record<string, { slug: string; color?: string }> = {
-  asaas: { slug: "asaas", color: "1481EE" },
+const BRAND_LOGO: Record<string, { slug: string; color?: string; imageUrl?: string }> = {
+  asaas: { slug: "asaas", color: "1481EE", imageUrl: asaasLogo.url },
   mercadopago: { slug: "mercadopago", color: "00B1EA" },
   paghiper: { slug: "stripe", color: "635BFF" }, // fallback (Paghiper sem slug oficial)
   openrouter: { slug: "openai", color: "412991" },
@@ -137,6 +138,16 @@ const BRAND_LOGO: Record<string, { slug: string; color?: string }> = {
 const BrandIcon = ({ name, className }: { name: string; className?: string }) => {
   const b = BRAND_LOGO[name];
   if (!b) return null;
+  if (b.imageUrl) {
+    return (
+      <img
+        src={b.imageUrl}
+        alt=""
+        className={cn("h-6 w-auto object-contain", className)}
+        loading="lazy"
+      />
+    );
+  }
   const color = b.color ?? "000000";
   return (
     <img
