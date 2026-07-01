@@ -400,6 +400,35 @@ const Cadastro = () => {
                       onChange={(e) => set("celular", mascaraCelular(e.target.value))}
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="c-senha">Senha</Label>
+                      <Input
+                        id="c-senha"
+                        type="password"
+                        autoComplete="new-password"
+                        value={form.senha}
+                        onChange={(e) => set("senha", e.target.value)}
+                        placeholder="Mín. 8 caracteres"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="c-conf">Confirmar senha</Label>
+                      <Input
+                        id="c-conf"
+                        type="password"
+                        autoComplete="new-password"
+                        value={form.confSenha}
+                        onChange={(e) => set("confSenha", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  {form.senha && form.senha.length < 8 && (
+                    <p className="text-xs text-destructive">A senha precisa ter pelo menos 8 caracteres.</p>
+                  )}
+                  {form.confSenha && form.senha !== form.confSenha && (
+                    <p className="text-xs text-destructive">As senhas não conferem.</p>
+                  )}
                 </div>
               )}
 
