@@ -22,7 +22,7 @@ import { AbaDadosPessoais } from "@/components/agendamentos/AbaDadosPessoais";
 const STATUS_AGENDADOS = ["novo", "em_analise", "aguardando_pagamento", "confirmado"];
 
 const Agendamentos = () => {
-  const { paciente, logado } = usePaciente();
+  const { paciente, logado, carregando } = usePaciente();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [aba, setAba] = useState<AbaKey>(() => {
@@ -33,10 +33,11 @@ const Agendamentos = () => {
   const [detalhe, setDetalhe] = useState<Pedido | null>(null);
 
   useEffect(() => {
-    if (!logado) {
+    if (!carregando && !logado) {
       navigate("/entrar?redirect=/agendamentos");
     }
-  }, [logado, navigate]);
+  }, [logado, carregando, navigate]);
+  
 
   const { data: pedidos, isLoading } = useQuery({
     queryKey: ["pedidos", paciente?.id],
