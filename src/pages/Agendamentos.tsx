@@ -39,26 +39,20 @@ const Agendamentos = () => {
   }, [logado, navigate]);
 
   const { data: pedidos, isLoading } = useQuery({
-    queryKey: ["pedidos", paciente?.cpf],
-    enabled: !!paciente?.cpf && !!paciente?.data_nascimento,
+    queryKey: ["pedidos", paciente?.id],
+    enabled: !!paciente?.id,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("pedidos_do_paciente", {
-        p_cpf: paciente!.cpf,
-        p_data_nasc: paciente!.data_nascimento,
-      });
+      const { data, error } = await supabase.rpc("pedidos_do_paciente_auth");
       if (error) throw error;
       return ((data as any) ?? []) as Pedido[];
     },
   });
 
   const { data: resultados } = useQuery({
-    queryKey: ["resultados", paciente?.cpf],
-    enabled: !!paciente?.cpf && !!paciente?.data_nascimento,
+    queryKey: ["resultados", paciente?.id],
+    enabled: !!paciente?.id,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("resultados_do_paciente", {
-        p_cpf: paciente!.cpf,
-        p_data_nasc: paciente!.data_nascimento,
-      });
+      const { data, error } = await supabase.rpc("resultados_do_paciente_auth");
       if (error) throw error;
       return ((data as any) ?? []) as Array<{
         id: string;
