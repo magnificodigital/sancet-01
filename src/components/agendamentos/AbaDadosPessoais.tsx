@@ -5,12 +5,21 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaciente } from "@/hooks/usePaciente";
-import { mascaraCelular, mascaraCEP } from "@/lib/mascaras";
+import { mascaraCelular, mascaraCEP, mascaraCPF } from "@/lib/mascaras";
 
 type Dados = {
+  cpf: string;
   nome: string;
   email: string;
   celular: string;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+};
   cep: string;
   logradouro: string;
   numero: string;
