@@ -34,11 +34,8 @@ export const EtapaEndereco = ({ onConfirmar }: Props) => {
 
   useEffect(() => {
     (async () => {
-      if (!paciente?.cpf || !paciente?.data_nascimento) return;
-      const { data } = await supabase.rpc("meu_perfil", {
-        p_cpf: paciente.cpf,
-        p_data_nasc: paciente.data_nascimento,
-      });
+      if (!paciente?.id) return;
+      const { data } = await supabase.rpc("meu_perfil_auth");
       const row = data as any;
       if (row) {
         setEnd({
@@ -52,7 +49,7 @@ export const EtapaEndereco = ({ onConfirmar }: Props) => {
         });
       }
     })();
-  }, [paciente?.cpf, paciente?.data_nascimento]);
+  }, [paciente?.id]);
 
 
   const set = (k: keyof EnderecoColeta, v: string) =>
