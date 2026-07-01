@@ -260,8 +260,9 @@ serve(async (req) => {
 
   } catch (err: any) {
     console.error("sancet-criar-pagamento error:", err);
+    const raw = err?.message ?? "Erro interno";
     return new Response(
-      JSON.stringify({ error: err.message ?? "Erro interno" }),
+      JSON.stringify({ error: friendlyError(raw), detalhe: raw }),
       { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
