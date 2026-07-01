@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Search, Trash2, UserPlus, Loader2 } from "lucide-react";
+import { KeyRound, Pencil, Search, Trash2, UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,8 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
   const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [novaSenha, setNovaSenha] = useState("");
+  const [alterandoSenha, setAlterandoSenha] = useState(false);
 
   const carregar = async () => {
     const { data } = await supabase
@@ -120,11 +122,13 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
   const abrirNovo = () => {
     setPacienteEditando(null);
     setForm(FORM_VAZIO);
+    setNovaSenha("");
     setSheetAberto(true);
   };
 
   const abrirEditar = (p: Pac) => {
     setPacienteEditando(p);
+    setNovaSenha("");
     setForm({
       nome:            p.nome ?? "",
       cpf:             mascararCPF(p.cpf),
@@ -519,6 +523,59 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
                 Cancelar
               </Button>
             </div>
+            {pacienteEditando && isAdmin && (
+              <div className="rounded-md border p-3 space-y-2 bg-muted/30">
+                <div className="flex items-center gap-1.5 text-sm font-medium">
+                  <KeyRound className="h-4 w-4" /> Definir/alterar senha
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Define uma nova senha para o paciente acessar o portal com o e-mail cadastrado.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={novaSenha}
+                    onChange={(e) => setNovaSenha(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    autoComplete="new-password"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={alterandoSenha || novaSenha.length < 6}
+                    onClick={async () => {
+                      if (!pacienteEditando) return;
+                      if (!pacienteEditando.email) {
+                        toast.error("Cadastre um e-mail antes de definir a senha.");
+                        return;
+                      }
+                      setAlterandoSenha(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke(
+                          "sancet-admin-resetar-senha",
+                          { body: { paciente_id: pacienteEditando.id, nova_senha: novaSenha } },
+                        );
+                        if (error) {
+                          let msg = "Falha ao alterar senha";
+                          try {
+                            const b = await (error as any).context?.json?.();
+                            if (b?.error) msg = b.error;
+                          } catch {}
+                          toast.error(msg);
+                          return;
+                        }
+                        toast.success((data as any)?.criado ? "Login criado e senha definida" : "Senha atualizada");
+                        setNovaSenha("");
+                      } finally {
+                        setAlterandoSenha(false);
+                      }
+                    }}
+                  >
+                    {alterandoSenha ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                  </Button>
+                </div>
+              </div>
+            )}
             {pacienteEditando && (
               <Button
                 variant="destructive"
