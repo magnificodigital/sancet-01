@@ -310,7 +310,7 @@ const Pagamento = () => {
                       {dados.invoice_url ? (
                         <>
                           <p className="mb-4 text-sm text-muted-foreground">
-                            O pagamento com cartão é feito no ambiente seguro do Asaas.
+                            O pagamento com cartão é feito em ambiente seguro do processador de pagamentos.
                           </p>
                           <a href={dados.invoice_url} target="_blank" rel="noopener noreferrer">
                             <Button className="w-full gap-2 bg-[#C8102E] text-white hover:bg-[#a80d26]">
