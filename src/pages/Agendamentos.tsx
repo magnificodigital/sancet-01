@@ -37,7 +37,7 @@ const Agendamentos = () => {
       navigate("/entrar?redirect=/agendamentos");
     }
   }, [logado, carregando, navigate]);
-  }, [logado, navigate]);
+  
 
   const { data: pedidos, isLoading } = useQuery({
     queryKey: ["pedidos", paciente?.id],
