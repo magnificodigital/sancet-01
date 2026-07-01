@@ -15,6 +15,9 @@ import EnviarPedido from "./pages/EnviarPedido.tsx";
 import EnviarReceita from "./pages/EnviarReceita.tsx";
 import Cadastro from "./pages/Cadastro.tsx";
 import Entrar from "./pages/Entrar.tsx";
+import EsqueciSenha from "./pages/EsqueciSenha.tsx";
+import RedefinirSenha from "./pages/RedefinirSenha.tsx";
+import PrimeiroAcesso from "./pages/PrimeiroAcesso.tsx";
 import Agendamentos from "./pages/Agendamentos.tsx";
 import Unidades from "./pages/Unidades.tsx";
 import Pronto from "./pages/Pronto.tsx";
@@ -51,6 +54,9 @@ const App = () => (
           <Route path="/receita" element={<EnviarReceita />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/entrar" element={<Entrar />} />
+          <Route path="/esqueci-senha" element={<EsqueciSenha />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+          <Route path="/primeiro-acesso" element={<PrimeiroAcesso />} />
           <Route path="/agendamentos" element={<Agendamentos />} />
           <Route path="/unidades" element={<Unidades />} />
           <Route path="/pronto/:protocolo" element={<Pronto />} />

@@ -135,9 +135,7 @@ const EnviarPedido = () => {
         payload.periodo_agendamento = agendamento.periodo;
       }
 
-      const { data, error } = await supabase.rpc("criar_pedido_paciente", {
-        p_cpf: paciente.cpf,
-        p_data_nasc: paciente.data_nascimento,
+      const { data, error } = await supabase.rpc("criar_pedido_paciente_auth", {
         p_pedido: payload,
       });
       if (error) throw error;

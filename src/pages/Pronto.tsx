@@ -21,12 +21,11 @@ const Pronto = () => {
   const voucherRef = useRef<HTMLDivElement>(null);
 
   const { data: pedido, isLoading, isError } = useQuery({
-    queryKey: ["pedido", protocolo, paciente?.cpf],
-    enabled: !!protocolo && !!paciente?.cpf,
+    queryKey: ["pedido", protocolo, paciente?.id],
+    enabled: !!protocolo && !!paciente?.id,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("pedido_por_protocolo", {
+      const { data, error } = await supabase.rpc("pedido_por_protocolo_auth", {
         p_protocolo: protocolo!,
-        p_cpf: paciente!.cpf,
       });
       if (error) throw error;
       return data as any;

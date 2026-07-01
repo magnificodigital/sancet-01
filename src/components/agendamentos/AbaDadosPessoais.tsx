@@ -5,9 +5,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaciente } from "@/hooks/usePaciente";
-import { mascaraCelular, mascaraCEP } from "@/lib/mascaras";
+import { mascaraCelular, mascaraCEP, mascaraCPF } from "@/lib/mascaras";
 
 type Dados = {
+  cpf: string;
   nome: string;
   email: string;
   celular: string;
@@ -21,6 +22,7 @@ type Dados = {
 };
 
 const VAZIO: Dados = {
+  cpf: "",
   nome: "",
   email: "",
   celular: "",
@@ -40,14 +42,12 @@ export const AbaDadosPessoais = () => {
 
   useEffect(() => {
     (async () => {
-      if (!paciente?.cpf || !paciente?.data_nascimento) return;
-      const { data } = await supabase.rpc("meu_perfil", {
-        p_cpf: paciente.cpf,
-        p_data_nasc: paciente.data_nascimento,
-      });
+      if (!paciente?.id) return;
+      const { data } = await supabase.rpc("meu_perfil_auth");
       const row = data as any;
       if (row) {
         setDados({
+          cpf: row.cpf ?? "",
           nome: row.nome ?? "",
           email: row.email ?? "",
           celular: row.celular ?? "",
@@ -61,17 +61,16 @@ export const AbaDadosPessoais = () => {
         });
       }
     })();
-  }, [paciente?.cpf, paciente?.data_nascimento]);
+  }, [paciente?.id]);
 
   const set = (k: keyof Dados, v: string) => setDados((s) => ({ ...s, [k]: v }));
 
   const salvar = async () => {
-    if (!paciente?.cpf || !paciente?.data_nascimento) return;
+    if (!paciente?.id) return;
     setSalvando(true);
-    const { error } = await supabase.rpc("atualizar_meu_perfil", {
-      p_cpf: paciente.cpf,
-      p_data_nasc: paciente.data_nascimento,
-      p_patch: dados as any,
+    const { cpf: _cpf, ...patch } = dados;
+    const { error } = await supabase.rpc("atualizar_meu_perfil_auth", {
+      p_patch: patch as any,
     });
     setSalvando(false);
     if (error) {
@@ -87,7 +86,11 @@ export const AbaDadosPessoais = () => {
       <h2 className="text-xl font-bold text-secondary">Dados pessoais</h2>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
+        <div className="col-span-2 sm:col-span-1">
+          <Label>CPF</Label>
+          <Input value={mascaraCPF(dados.cpf)} readOnly disabled className="bg-muted" />
+        </div>
+        <div className="col-span-2 sm:col-span-1">
           <Label>Nome</Label>
           <Input value={dados.nome} onChange={(e) => set("nome", e.target.value)} />
         </div>

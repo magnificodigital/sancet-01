@@ -32,7 +32,7 @@ import {
   mascaraData,
   validarCPF,
 } from "@/lib/mascaras";
-import { salvarPaciente } from "@/hooks/usePaciente";
+
 
 const IMAGEM = bannerSancet;
 
@@ -50,6 +50,8 @@ type Form = {
   sexo: "feminino" | "masculino" | "";
   email: string;
   celular: string;
+  senha: string;
+  confSenha: string;
   cep: string;
   logradouro: string;
   numero: string;
@@ -68,6 +70,8 @@ const inicial: Form = {
   sexo: "",
   email: "",
   celular: "",
+  senha: "",
+  confSenha: "",
   cep: "",
   logradouro: "",
   numero: "",
@@ -98,7 +102,10 @@ const Cadastro = () => {
       return nomeOk && socialOk && !!form.sexo;
     }
     if (etapa === 3) {
-      return /\S+@\S+\.\S+/.test(form.email) && apenasDigitos(form.celular).length >= 10;
+      const emailOk = /\S+@\S+\.\S+/.test(form.email);
+      const celOk = apenasDigitos(form.celular).length >= 10;
+      const senhaOk = form.senha.length >= 8 && form.senha === form.confSenha;
+      return emailOk && celOk && senhaOk;
     }
     if (etapa === 4) {
       return (
@@ -150,7 +157,6 @@ const Cadastro = () => {
       toast.error("Data de nascimento inválida.");
       return false;
     }
-    // Sem pre-check: a constraint UNIQUE no CPF (erro 23505) cuida de duplicatas no INSERT.
     return true;
   };
 
@@ -163,45 +169,57 @@ const Cadastro = () => {
     setCarregando(true);
     try {
       const nomeFinal = form.usarSocial && form.nomeSocial ? form.nomeSocial : form.nome;
-      const { data: inserido, error } = await supabase.rpc("cadastrar_paciente", {
-        p: {
-          cpf: cpfLimpo,
-          data_nascimento: dataISO,
-          nome: nomeFinal,
-          sexo: form.sexo,
-          email: form.email,
-          celular: apenasDigitos(form.celular),
-          cep: apenasDigitos(form.cep),
-          logradouro: form.logradouro,
-          numero: form.numero,
-          complemento: form.complemento || null,
-          bairro: form.bairro,
-          cidade: form.cidade,
-          uf: form.uf,
+
+      // 1) Cria conta no Supabase Auth. O trigger no banco cria/vincula o paciente por CPF.
+      const { data: signUp, error: signErr } = await supabase.auth.signUp({
+        email: form.email.trim().toLowerCase(),
+        password: form.senha,
+        options: {
+          data: {
+            cpf: cpfLimpo,
+            nome: nomeFinal,
+            data_nascimento: dataISO,
+          },
+          emailRedirectTo: `${window.location.origin}/agendamentos`,
         },
       });
+      if (signErr) throw signErr;
 
-      if (error) throw error;
-      const row = inserido as { id: string; nome: string; cpf: string };
-
-      salvarPaciente({
-        id: row.id,
-        nome: row.nome ?? nomeFinal,
-        cpf: row.cpf,
-        data_nascimento: dataISO,
-        email: form.email,
-        telefone: apenasDigitos(form.celular),
-      });
-
-      toast.success("Cadastro realizado com sucesso!");
-      navigate("/agendamentos");
+      // 2) Se veio sessão, salva o restante do perfil via RPC autenticada.
+      if (signUp.session) {
+        await supabase.rpc("atualizar_meu_perfil_auth", {
+          p_patch: {
+            nome: nomeFinal,
+            email: form.email.trim().toLowerCase(),
+            celular: apenasDigitos(form.celular),
+            cep: apenasDigitos(form.cep),
+            logradouro: form.logradouro,
+            numero: form.numero,
+            complemento: form.complemento || null,
+            bairro: form.bairro,
+            cidade: form.cidade,
+            uf: form.uf,
+          },
+        });
+        toast.success("Cadastro realizado com sucesso!");
+        navigate("/agendamentos");
+      } else {
+        // Confirmação de e-mail ativada — pede login depois.
+        toast.success("Verifique seu e-mail para confirmar o cadastro.");
+        navigate("/entrar");
+      }
     } catch (err: any) {
-      if (err?.code === "23505") {
-        toast.error("Este CPF já possui cadastro. Faça login para continuar.", {
+      const msg = String(err?.message ?? "Erro ao cadastrar.");
+      if (/already registered|already exists/i.test(msg)) {
+        toast.error("Este e-mail já está em uso.", {
           action: { label: "Entrar", onClick: () => navigate("/entrar") },
         });
+      } else if (err?.code === "23505") {
+        toast.error("Este CPF já possui cadastro.", {
+          action: { label: "Primeiro acesso", onClick: () => navigate("/primeiro-acesso") },
+        });
       } else {
-        toast.error(err?.message ?? "Erro ao cadastrar.");
+        toast.error(msg);
       }
       console.error(err);
     } finally {
@@ -221,6 +239,7 @@ const Cadastro = () => {
     }
     await finalizar();
   };
+
 
   const onAnterior = () => setEtapa((e) => Math.max(1, e - 1));
 
@@ -381,6 +400,35 @@ const Cadastro = () => {
                       onChange={(e) => set("celular", mascaraCelular(e.target.value))}
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="c-senha">Senha</Label>
+                      <Input
+                        id="c-senha"
+                        type="password"
+                        autoComplete="new-password"
+                        value={form.senha}
+                        onChange={(e) => set("senha", e.target.value)}
+                        placeholder="Mín. 8 caracteres"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="c-conf">Confirmar senha</Label>
+                      <Input
+                        id="c-conf"
+                        type="password"
+                        autoComplete="new-password"
+                        value={form.confSenha}
+                        onChange={(e) => set("confSenha", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  {form.senha && form.senha.length < 8 && (
+                    <p className="text-xs text-destructive">A senha precisa ter pelo menos 8 caracteres.</p>
+                  )}
+                  {form.confSenha && form.senha !== form.confSenha && (
+                    <p className="text-xs text-destructive">As senhas não conferem.</p>
+                  )}
                 </div>
               )}
 

@@ -90,9 +90,9 @@ const Pagamento = () => {
   }, []);
 
   useEffect(() => {
-    if (!protocolo || !paciente?.cpf) return;
+    if (!protocolo || !paciente?.id) return;
     supabase
-      .rpc("pedido_por_protocolo", { p_protocolo: protocolo, p_cpf: paciente.cpf })
+      .rpc("pedido_por_protocolo_auth", { p_protocolo: protocolo })
       .then(({ data, error }) => {
         const row = data as any;
         if (error || !row) {
@@ -107,12 +107,12 @@ const Pagamento = () => {
         }
         gerar("pix", row as Pedido);
       });
-  }, [protocolo, navigate, paciente?.cpf, gerar]);
+  }, [protocolo, navigate, paciente?.id, gerar]);
 
   useEffect(() => {
-    if (etapa !== "pronto" || !protocolo || !paciente?.cpf) return;
+    if (etapa !== "pronto" || !protocolo || !paciente?.id) return;
     const timer = setInterval(async () => {
-      const { data } = await supabase.rpc("pedido_por_protocolo", { p_protocolo: protocolo, p_cpf: paciente.cpf });
+      const { data } = await supabase.rpc("pedido_por_protocolo_auth", { p_protocolo: protocolo });
       if ((data as any)?.status_pagamento === "pago") {
         clearInterval(timer);
         setEtapa("pago");
@@ -120,7 +120,7 @@ const Pagamento = () => {
       }
     }, 8000);
     return () => clearInterval(timer);
-  }, [etapa, protocolo, navigate, paciente?.cpf]);
+  }, [etapa, protocolo, navigate, paciente?.id]);
 
   const trocarMetodo = (m: string) => {
     const novo = m as Metodo;
@@ -136,9 +136,9 @@ const Pagamento = () => {
   };
 
   const confirmarManual = async () => {
-    if (!protocolo || !paciente?.cpf) return;
+    if (!protocolo || !paciente?.id) return;
     setConfirming(true);
-    await supabase.rpc("confirmar_pagamento_manual", { p_protocolo: protocolo, p_cpf: paciente.cpf });
+    await supabase.rpc("confirmar_pagamento_manual_auth", { p_protocolo: protocolo });
     navigate(`/pronto/${protocolo}`);
   };
 
