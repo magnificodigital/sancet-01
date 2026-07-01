@@ -1,3 +1,4 @@
+// sancet-login-etapa1: envia código 2FA por email
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
