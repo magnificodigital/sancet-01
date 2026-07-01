@@ -32,7 +32,7 @@ import {
   mascaraData,
   validarCPF,
 } from "@/lib/mascaras";
-import { salvarPaciente } from "@/hooks/usePaciente";
+
 
 const IMAGEM = bannerSancet;
 
