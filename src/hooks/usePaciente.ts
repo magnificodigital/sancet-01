@@ -68,6 +68,16 @@ function ensureAuthListener() {
   });
 }
 
+export async function sincronizarPacienteAuth() {
+  authReady = false;
+  notify();
+  const { data } = await supabase.auth.getSession();
+  cachedSession = data.session;
+  inflight = carregarPerfil();
+  await inflight;
+  return cachedSession;
+}
+
 export function usePaciente() {
   ensureAuthListener();
   const [paciente, setPaciente] = useState<PacienteSessao | null>(cachedPaciente);

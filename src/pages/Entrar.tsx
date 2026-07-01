@@ -28,6 +28,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import bannerSancet from "@/assets/banner-sancet.png";
+import { sincronizarPacienteAuth } from "@/hooks/usePaciente";
 
 const aguardarSessaoLocal = async () => {
   for (let tentativa = 0; tentativa < 20; tentativa += 1) {
@@ -121,8 +122,9 @@ const Entrar = () => {
       return;
     }
     const sessaoPronta = await aguardarSessaoLocal();
+    const sessaoSincronizada = sessaoPronta ? await sincronizarPacienteAuth() : null;
     setCarregando(false);
-    if (!sessaoPronta) {
+    if (!sessaoSincronizada?.user) {
       toast.error("Não foi possível iniciar sua sessão. Solicite um novo código e tente novamente.");
       return;
     }
