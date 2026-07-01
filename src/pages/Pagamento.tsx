@@ -32,6 +32,9 @@ const Pagamento = () => {
   const { paciente } = usePaciente();
   const [etapa, setEtapa] = useState<Etapa>("carregando");
   const [erroMsg, setErroMsg] = useState<string>("");
+  const [erroDetalhe, setErroDetalhe] = useState<string>("");
+  const [erroCampo, setErroCampo] = useState<string>("");
+  const [mostrarDetalhe, setMostrarDetalhe] = useState(false);
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [metodo, setMetodo] = useState<Metodo>("pix");
   const [dados, setDados] = useState<PagamentoData | null>(null);
@@ -39,9 +42,12 @@ const Pagamento = () => {
   const [copiado, setCopiado] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
+  const camposPaciente = new Set(["nome", "cpf", "email", "celular"]);
+
   const gerar = useCallback(async (metodoEscolhido: Metodo, ped: Pedido) => {
     setGerando(true);
     setDados(null);
+    setMostrarDetalhe(false);
     const { data, error } = await supabase.functions.invoke("sancet-criar-pagamento", {
       body: {
         protocolo: ped.protocolo,
@@ -52,29 +58,33 @@ const Pagamento = () => {
     });
     setGerando(false);
 
-    // Ao receber non-2xx, supabase-js coloca a Response em error.context.
     let errMsg = (data as any)?.error;
     let errDetail = (data as any)?.detalhe;
+    let errCampo = (data as any)?.campo;
     if (!errMsg && (error as any)?.context) {
       try {
         const body = await (error as any).context.clone().json();
         errMsg = body?.error;
         errDetail = body?.detalhe;
+        errCampo = body?.campo;
       } catch {
         try { errMsg = await (error as any).context.clone().text(); } catch {}
       }
     }
-    if (!errMsg && error) errMsg = error.message;
+    if (!errMsg && error) errMsg = "Não conseguimos gerar o pagamento agora. Tente novamente em instantes.";
 
     if (errMsg) {
-      const full = errDetail && errDetail !== errMsg ? `${errMsg}\n\nDetalhe técnico: ${errDetail}` : errMsg;
-      setErroMsg(full);
+      setErroMsg(errMsg);
+      setErroDetalhe(errDetail || "");
+      setErroCampo(errCampo || "");
       setDados(null);
       setEtapa("pronto");
-      toast.error("Falha ao gerar cobrança", { description: errMsg });
+      toast.error("Não foi possível gerar o pagamento", { description: errMsg });
       return;
     }
     setErroMsg("");
+    setErroDetalhe("");
+    setErroCampo("");
     setDados(data as PagamentoData);
     setEtapa("pronto");
   }, []);
