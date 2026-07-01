@@ -1,0 +1,1 @@
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS asaas_payment_id TEXT, ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT;

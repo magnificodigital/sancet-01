@@ -339,6 +339,8 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          asaas_customer_id: string | null
+          asaas_payment_id: string | null
           convenio_codigo_shift: string | null
           convenio_nome: string | null
           created_at: string | null
@@ -378,6 +380,8 @@ export type Database = {
           valor_total_centavos: number | null
         }
         Insert: {
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
           convenio_codigo_shift?: string | null
           convenio_nome?: string | null
           created_at?: string | null
@@ -417,6 +421,8 @@ export type Database = {
           valor_total_centavos?: number | null
         }
         Update: {
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
           convenio_codigo_shift?: string | null
           convenio_nome?: string | null
           created_at?: string | null
