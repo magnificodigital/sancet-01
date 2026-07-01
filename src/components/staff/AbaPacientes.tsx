@@ -105,6 +105,8 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
   const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [novaSenha, setNovaSenha] = useState("");
+  const [alterandoSenha, setAlterandoSenha] = useState(false);
 
   const carregar = async () => {
     const { data } = await supabase
