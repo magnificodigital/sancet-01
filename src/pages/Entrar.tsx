@@ -65,9 +65,11 @@ const Entrar = () => {
     const { data, error } = await supabase.functions.invoke("sancet-login-etapa1", {
       body: { email: email.trim().toLowerCase(), senha },
     });
-    setCarregando(false);
     if (error || (data as any)?.error) {
-      const msg = (data as any)?.error || error?.message || "Não foi possível enviar o código.";
+      const msg =
+        (data as any)?.error ||
+        (await extrairErro(error, "Não foi possível enviar o código."));
+      setCarregando(false);
       toast.error(msg, {
         action: /senha incorret/i.test(msg)
           ? { label: "Primeiro acesso", onClick: () => navigate("/primeiro-acesso") }
@@ -75,6 +77,7 @@ const Entrar = () => {
       });
       return;
     }
+    setCarregando(false);
     toast.success("Código enviado! Verifique seu e-mail.");
     setEtapa("codigo");
     iniciarCooldown();
@@ -90,8 +93,12 @@ const Entrar = () => {
       body: { email: email.trim().toLowerCase(), codigo },
     });
     if (error || (data as any)?.error) {
+      const msg =
+        (data as any)?.error || (await extrairErro(error, "Código incorreto."));
       setCarregando(false);
-      toast.error((data as any)?.error || error?.message || "Código incorreto.");
+      // Se o código já foi usado/expirou, limpa o campo e sugere reenviar
+      if (/pendente|expirad|incorret|tentativas/i.test(msg)) setCodigo("");
+      toast.error(msg);
       return;
     }
     const { email: em, token_hash } = data as { email: string; token_hash: string };
