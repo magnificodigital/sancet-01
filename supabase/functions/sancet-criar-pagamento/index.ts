@@ -264,8 +264,6 @@ serve(async (req) => {
           .eq("id", pedido.id)
           .in("status", ["novo", "em_analise"]);
       }
-      {
-      }
 
       payload = { metodo, invoice_url: charge.invoiceUrl ?? null };
 
