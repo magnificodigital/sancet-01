@@ -44,13 +44,10 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
   >([]);
 
   useEffect(() => {
-    if (!pedido || !paciente?.cpf || !paciente?.data_nascimento) return;
+    if (!pedido || !paciente?.id) return;
     setResultados([]);
     supabase
-      .rpc("resultados_do_paciente", {
-        p_cpf: paciente.cpf,
-        p_data_nasc: paciente.data_nascimento,
-      })
+      .rpc("resultados_do_paciente_auth")
       .then(({ data }) => {
         const todos = ((data as any) ?? []) as Array<{
           id: string;
@@ -61,13 +58,12 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
         }>;
         setResultados(todos.filter((r) => r.pedido_protocolo === pedido.protocolo));
       });
-  }, [pedido, paciente?.cpf, paciente?.data_nascimento]);
+  }, [pedido, paciente?.id]);
 
   const cancelar = async () => {
-    if (!pedido || !paciente?.cpf) return;
-    const { error } = await supabase.rpc("cancelar_meu_pedido", {
+    if (!pedido) return;
+    const { error } = await supabase.rpc("cancelar_meu_pedido_auth", {
       p_protocolo: pedido.protocolo,
-      p_cpf: paciente.cpf,
     });
     if (error) {
       toast.error(error.message);
