@@ -1,7 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
+
+async function extrairErro(error: unknown, fallback: string): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      if (body?.error) return String(body.error);
+    } catch {
+      try {
+        const txt = await error.context.text();
+        if (txt) return txt;
+      } catch {}
+    }
+  }
+  if (error && typeof error === "object" && "message" in error) {
+    const m = String((error as any).message ?? "");
+    if (m && !/non-2xx/i.test(m)) return m;
+  }
+  return fallback;
+}
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
