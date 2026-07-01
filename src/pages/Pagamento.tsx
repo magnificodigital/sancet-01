@@ -51,11 +51,15 @@ const Pagamento = () => {
       },
     });
     setGerando(false);
-    if (error || (data as any)?.error) {
-      setErroMsg((data as any)?.error || error?.message || "Não foi possível gerar o pagamento.");
-      setEtapa("erro");
+    const errMsg = (data as any)?.error || (error as any)?.context?.error || error?.message;
+    if (errMsg || (data as any)?.error) {
+      setErroMsg(errMsg || "Não foi possível gerar o pagamento.");
+      setDados(null);
+      setEtapa("pronto");
+      toast.error("Falha ao gerar cobrança", { description: errMsg });
       return;
     }
+    setErroMsg("");
     setDados(data as PagamentoData);
     setEtapa("pronto");
   }, []);
@@ -165,6 +169,29 @@ const Pagamento = () => {
                     <Loader2 className="mb-2 h-8 w-8 animate-spin text-[#C8102E]" />
                     <p className="text-sm text-muted-foreground">Gerando cobrança...</p>
                     <Skeleton className="mt-3 h-40 w-40" />
+                  </div>
+                )}
+
+                {!gerando && !dados && erroMsg && (
+                  <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#C8102E]" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#C8102E]">Não foi possível gerar a cobrança</p>
+                        <p className="mt-1 whitespace-pre-wrap break-words text-sm text-secondary">{erroMsg}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button size="sm" onClick={() => pedido && gerar(metodo, pedido)} className="bg-[#C8102E] text-white hover:bg-[#a80d26]">
+                            Tentar novamente
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => copiar(erroMsg, "Mensagem de erro copiada")}>
+                            <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar erro
+                          </Button>
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Se o problema persistir, entre em contato com a recepção informando o protocolo <strong>{pedido.protocolo}</strong> e a mensagem acima.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
