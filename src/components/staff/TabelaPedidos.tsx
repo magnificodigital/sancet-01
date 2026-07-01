@@ -126,7 +126,24 @@ export const TabelaPedidos = ({ pedidos, onAbrir, vazioMsg = "Nenhum pedido." }:
                 <AgendamentoCell p={p} />
               </TableCell>
               <TableCell>
-                <BadgeStatus status={p.status} />
+                <div className="flex flex-col items-start gap-1">
+                  <BadgeStatus status={p.status} />
+                  {p.status_pagamento === "pago" && (
+                    <span className="inline-flex rounded-full border border-green-300 bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-800">
+                      Pago
+                    </span>
+                  )}
+                  {p.status_pagamento === "pendente" && p.status === "aguardando_pagamento" && (
+                    <span className="inline-flex rounded-full border border-yellow-300 bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-800">
+                      Aguardando pgto
+                    </span>
+                  )}
+                  {(p.status_pagamento === "vencido" || p.status_pagamento === "falhou") && (
+                    <span className="inline-flex rounded-full border border-red-300 bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-800">
+                      {p.status_pagamento === "vencido" ? "Vencido" : "Falhou"}
+                    </span>
+                  )}
+                </div>
               </TableCell>
               <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                 {formatarData(p.created_at)}
