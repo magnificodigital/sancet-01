@@ -17,6 +17,7 @@ let cachedPaciente: PacienteSessao | null = null;
 let inflight: Promise<void> | null = null;
 const subscribers = new Set<() => void>();
 let authListenerBound = false;
+let authReady = false;
 
 function notify() {
   subscribers.forEach((cb) => cb());
@@ -25,24 +26,32 @@ function notify() {
 async function carregarPerfil() {
   if (!cachedSession) {
     cachedPaciente = null;
+    authReady = true;
     notify();
     return;
   }
-  const { data } = await supabase.rpc("meu_perfil_auth");
-  const row = data as any;
-  if (row) {
-    cachedPaciente = {
-      id: row.id,
-      nome: row.nome ?? "",
-      cpf: row.cpf ?? "",
-      data_nascimento: row.data_nascimento ?? "",
-      email: row.email ?? cachedSession.user.email ?? null,
-      telefone: row.celular ?? null,
-    };
-  } else {
+  try {
+    const session = cachedSession;
+    const { data } = await supabase.rpc("meu_perfil_auth");
+    const row = data as any;
+    if (row) {
+      cachedPaciente = {
+        id: row.id,
+        nome: row.nome ?? "",
+        cpf: row.cpf ?? "",
+        data_nascimento: row.data_nascimento ?? "",
+        email: row.email ?? session.user.email ?? null,
+        telefone: row.celular ?? null,
+      };
+    } else {
+      cachedPaciente = null;
+    }
+  } catch {
     cachedPaciente = null;
+  } finally {
+    authReady = true;
+    notify();
   }
-  notify();
 }
 
 function ensureAuthListener() {
@@ -53,6 +62,7 @@ function ensureAuthListener() {
     inflight = carregarPerfil();
   });
   supabase.auth.onAuthStateChange((_evt, session) => {
+    authReady = false;
     cachedSession = session;
     inflight = carregarPerfil();
   });
@@ -62,13 +72,13 @@ export function usePaciente() {
   ensureAuthListener();
   const [paciente, setPaciente] = useState<PacienteSessao | null>(cachedPaciente);
   const [session, setSession] = useState<Session | null>(cachedSession);
-  const [carregando, setCarregando] = useState<boolean>(cachedPaciente === null && cachedSession !== null);
+  const [carregando, setCarregando] = useState<boolean>(!authReady);
 
   useEffect(() => {
     const cb = () => {
       setPaciente(cachedPaciente);
       setSession(cachedSession);
-      setCarregando(false);
+      setCarregando(!authReady);
     };
     subscribers.add(cb);
     if (inflight) inflight.finally(cb);
@@ -82,6 +92,7 @@ export function usePaciente() {
     await supabase.auth.signOut();
     cachedSession = null;
     cachedPaciente = null;
+    authReady = true;
     notify();
     window.location.href = "/";
   };
