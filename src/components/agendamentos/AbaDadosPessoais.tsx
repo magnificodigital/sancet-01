@@ -86,7 +86,11 @@ export const AbaDadosPessoais = () => {
       <h2 className="text-xl font-bold text-secondary">Dados pessoais</h2>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
+        <div className="col-span-2 sm:col-span-1">
+          <Label>CPF</Label>
+          <Input value={mascaraCPF(dados.cpf)} readOnly disabled className="bg-muted" />
+        </div>
+        <div className="col-span-2 sm:col-span-1">
           <Label>Nome</Label>
           <Input value={dados.nome} onChange={(e) => set("nome", e.target.value)} />
         </div>
