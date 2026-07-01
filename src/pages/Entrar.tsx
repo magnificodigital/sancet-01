@@ -28,6 +28,16 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import bannerSancet from "@/assets/banner-sancet.png";
+import { sincronizarPacienteAuth } from "@/hooks/usePaciente";
+
+const aguardarSessaoLocal = async () => {
+  for (let tentativa = 0; tentativa < 20; tentativa += 1) {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user) return true;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  return false;
+};
 
 type Etapa = "senha" | "codigo";
 
@@ -106,13 +116,20 @@ const Entrar = () => {
       token_hash,
       type: "magiclink",
     });
-    setCarregando(false);
     if (verifyErr) {
+      setCarregando(false);
       toast.error(verifyErr.message);
       return;
     }
+    const sessaoPronta = await aguardarSessaoLocal();
+    const sessaoSincronizada = sessaoPronta ? await sincronizarPacienteAuth() : null;
+    setCarregando(false);
+    if (!sessaoSincronizada?.user) {
+      toast.error("Não foi possível iniciar sua sessão. Solicite um novo código e tente novamente.");
+      return;
+    }
     toast.success("Bem-vindo(a)!");
-    navigate(redirect);
+    navigate(redirect, { replace: true });
   };
 
   return (
