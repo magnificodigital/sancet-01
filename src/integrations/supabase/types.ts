@@ -235,6 +235,36 @@ export type Database = {
         }
         Relationships: []
       }
+      login_codigos_2fa: {
+        Row: {
+          codigo_hash: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          tentativas: number
+          usado_em: string | null
+        }
+        Insert: {
+          codigo_hash: string
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          tentativas?: number
+          usado_em?: string | null
+        }
+        Update: {
+          codigo_hash?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          tentativas?: number
+          usado_em?: string | null
+        }
+        Relationships: []
+      }
       pacientes: {
         Row: {
           auth_user_id: string | null
