@@ -1,52 +1,102 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Session } from "@supabase/supabase-js";
 
 export type PacienteSessao = {
   id: string;
   nome: string;
   cpf: string;
-  data_nascimento: string; // ISO yyyy-mm-dd
+  data_nascimento: string;
   email?: string | null;
   telefone?: string | null;
 };
 
-const STORAGE_KEY = "sancet-paciente";
+// Cache em memória compartilhado entre instâncias do hook.
+let cachedSession: Session | null = null;
+let cachedPaciente: PacienteSessao | null = null;
+let inflight: Promise<void> | null = null;
+const subscribers = new Set<() => void>();
+let authListenerBound = false;
 
-function ler(): PacienteSessao | null {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  try {
-    const p = JSON.parse(raw) as Partial<PacienteSessao>;
-    if (!p?.id || !p?.cpf || !p?.data_nascimento) return null;
-    return p as PacienteSessao;
-  } catch {
-    return null;
-  }
+function notify() {
+  subscribers.forEach((cb) => cb());
 }
 
-export function salvarPaciente(p: PacienteSessao) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
-  window.dispatchEvent(new Event("sancet-paciente-changed"));
+async function carregarPerfil() {
+  if (!cachedSession) {
+    cachedPaciente = null;
+    notify();
+    return;
+  }
+  const { data } = await supabase.rpc("meu_perfil_auth");
+  const row = data as any;
+  if (row) {
+    cachedPaciente = {
+      id: row.id,
+      nome: row.nome ?? "",
+      cpf: row.cpf ?? "",
+      data_nascimento: row.data_nascimento ?? "",
+      email: row.email ?? cachedSession.user.email ?? null,
+      telefone: row.celular ?? null,
+    };
+  } else {
+    cachedPaciente = null;
+  }
+  notify();
+}
+
+function ensureAuthListener() {
+  if (authListenerBound) return;
+  authListenerBound = true;
+  supabase.auth.getSession().then(({ data }) => {
+    cachedSession = data.session;
+    inflight = carregarPerfil();
+  });
+  supabase.auth.onAuthStateChange((_evt, session) => {
+    cachedSession = session;
+    inflight = carregarPerfil();
+  });
 }
 
 export function usePaciente() {
-  const [paciente, setPaciente] = useState<PacienteSessao | null>(() => ler());
+  ensureAuthListener();
+  const [paciente, setPaciente] = useState<PacienteSessao | null>(cachedPaciente);
+  const [session, setSession] = useState<Session | null>(cachedSession);
+  const [carregando, setCarregando] = useState<boolean>(cachedPaciente === null && cachedSession !== null);
 
   useEffect(() => {
-    const sync = () => setPaciente(ler());
-    window.addEventListener("storage", sync);
-    window.addEventListener("sancet-paciente-changed", sync);
+    const cb = () => {
+      setPaciente(cachedPaciente);
+      setSession(cachedSession);
+      setCarregando(false);
+    };
+    subscribers.add(cb);
+    if (inflight) inflight.finally(cb);
+    else cb();
     return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("sancet-paciente-changed", sync);
+      subscribers.delete(cb);
     };
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    window.dispatchEvent(new Event("sancet-paciente-changed"));
+  const logout = async () => {
+    await supabase.auth.signOut();
+    cachedSession = null;
+    cachedPaciente = null;
+    notify();
     window.location.href = "/";
   };
 
-  return { paciente, logout, logado: !!paciente };
+  const recarregar = async () => {
+    inflight = carregarPerfil();
+    await inflight;
+  };
+
+  return {
+    paciente,
+    session,
+    logado: !!session,
+    logout,
+    carregando,
+    recarregar,
+  };
 }
