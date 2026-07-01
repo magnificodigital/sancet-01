@@ -51,11 +51,15 @@ const Pagamento = () => {
       },
     });
     setGerando(false);
-    if (error || (data as any)?.error) {
-      setErroMsg((data as any)?.error || error?.message || "Não foi possível gerar o pagamento.");
-      setEtapa("erro");
+    const errMsg = (data as any)?.error || (error as any)?.context?.error || error?.message;
+    if (errMsg || (data as any)?.error) {
+      setErroMsg(errMsg || "Não foi possível gerar o pagamento.");
+      setDados(null);
+      setEtapa("pronto");
+      toast.error("Falha ao gerar cobrança", { description: errMsg });
       return;
     }
+    setErroMsg("");
     setDados(data as PagamentoData);
     setEtapa("pronto");
   }, []);
