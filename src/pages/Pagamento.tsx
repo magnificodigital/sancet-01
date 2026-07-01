@@ -313,9 +313,9 @@ const Pagamento = () => {
                             O pagamento com cartão é feito em ambiente seguro do processador de pagamentos.
                           </p>
                           <a href={dados.invoice_url} target="_blank" rel="noopener noreferrer">
-                            <Button className="w-full gap-2 bg-[#C8102E] text-white hover:bg-[#a80d26]">
-                              <CreditCard className="h-4 w-4" /> Pagar com cartão
-                            </Button>
+                          <Button className="w-full gap-2 bg-green-600 text-white hover:bg-green-700">
+                            <CreditCard className="h-4 w-4" /> Pagar com cartão
+                          </Button>
                           </a>
                         </>
                       ) : (
