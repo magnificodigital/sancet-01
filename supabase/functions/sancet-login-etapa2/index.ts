@@ -1,3 +1,4 @@
+// sancet-login-etapa2: valida código 2FA e gera token
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
