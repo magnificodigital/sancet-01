@@ -122,11 +122,13 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
   const abrirNovo = () => {
     setPacienteEditando(null);
     setForm(FORM_VAZIO);
+    setNovaSenha("");
     setSheetAberto(true);
   };
 
   const abrirEditar = (p: Pac) => {
     setPacienteEditando(p);
+    setNovaSenha("");
     setForm({
       nome:            p.nome ?? "",
       cpf:             mascararCPF(p.cpf),
