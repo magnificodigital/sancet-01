@@ -152,7 +152,10 @@ serve(async (req) => {
             method: "POST", headers, body: JSON.stringify(custBody),
           });
           const nc = await safeJson(newCust);
-          if (!newCust.ok || !nc.id) throw new Error("Asaas (customer): " + asaasError(nc, "falha ao criar cliente"));
+          if (!newCust.ok || !nc.id) {
+            console.error("Asaas customer body:", JSON.stringify(custBody), "response:", JSON.stringify(nc));
+            throw new Error("Asaas (cliente) [" + newCust.status + "]: " + asaasError(nc, `resposta inesperada do Asaas (payload: ${JSON.stringify(custBody)})`));
+          }
           customerId = nc.id;
         }
 
