@@ -21,7 +21,30 @@ function asaasError(data: any, fallback: string) {
   if (Array.isArray(errs) && errs.length) {
     return errs.map((e: any) => e?.description || e?.code).filter(Boolean).join("; ");
   }
-  return data?.message || fallback;
+  return data?.message || data?.raw || fallback;
+}
+
+function friendlyError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes("api_key") || m.includes("access_token") || m.includes("unauthorized") || m.includes("401")) {
+    return "Gateway de pagamento não configurado corretamente (chave inválida ou ausente). Contate a recepção.";
+  }
+  if (m.includes("cpf") && (m.includes("inválido") || m.includes("invalid"))) {
+    return "O CPF informado no pedido é inválido. Corrija o cadastro do paciente e tente novamente.";
+  }
+  if (m.includes("email") && m.includes("invalid")) {
+    return "E-mail do paciente inválido. Atualize o cadastro para prosseguir.";
+  }
+  if (m.includes("mobilephone") || m.includes("telefone")) {
+    return "Telefone celular do paciente inválido. Atualize o cadastro para prosseguir.";
+  }
+  if (m.includes("value") && m.includes("mín")) {
+    return "Valor abaixo do mínimo aceito pelo gateway (R$ 5,00 para boleto, R$ 3,00 para PIX).";
+  }
+  if (m.includes("customer")) {
+    return "Falha ao registrar o pagador no gateway. Verifique nome, CPF, e-mail e celular do paciente.";
+  }
+  return raw;
 }
 
 type Metodo = "pix" | "boleto" | "cartao";
