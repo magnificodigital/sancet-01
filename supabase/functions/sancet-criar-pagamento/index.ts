@@ -256,6 +256,17 @@ serve(async (req) => {
         }
       }
 
+      // Sinaliza para o staff que o paciente iniciou o pagamento
+      if (pedido?.id) {
+        await supabase
+          .from("pedidos")
+          .update({ status: "aguardando_pagamento", status_pagamento: "pendente", updated_at: new Date().toISOString() })
+          .eq("id", pedido.id)
+          .in("status", ["novo", "em_analise"]);
+      }
+      {
+      }
+
       payload = { metodo, invoice_url: charge.invoiceUrl ?? null };
 
       if (metodo === "pix") {
