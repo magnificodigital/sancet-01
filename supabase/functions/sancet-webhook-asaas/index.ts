@@ -69,6 +69,15 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
+    // Progressão automática do status do pedido conforme o pagamento
+    if (novoStatus === "pago") {
+      update.status = "confirmado";
+    } else if (novoStatus === "vencido" || novoStatus === "falhou") {
+      update.status = "aguardando_pagamento";
+    } else if (novoStatus === "cancelado") {
+      update.status = "cancelado";
+    }
+
 
     const { error } = await supabase
       .from("pedidos")
