@@ -101,9 +101,8 @@ const Entrar = () => {
       toast.error(msg);
       return;
     }
-    const { email: em, token_hash } = data as { email: string; token_hash: string };
+    const { token_hash } = data as { email: string; token_hash: string };
     const { error: verifyErr } = await supabase.auth.verifyOtp({
-      email: em,
       token_hash,
       type: "magiclink",
     });
