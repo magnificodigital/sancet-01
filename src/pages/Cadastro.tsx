@@ -50,6 +50,8 @@ type Form = {
   sexo: "feminino" | "masculino" | "";
   email: string;
   celular: string;
+  senha: string;
+  confSenha: string;
   cep: string;
   logradouro: string;
   numero: string;
@@ -68,6 +70,8 @@ const inicial: Form = {
   sexo: "",
   email: "",
   celular: "",
+  senha: "",
+  confSenha: "",
   cep: "",
   logradouro: "",
   numero: "",
