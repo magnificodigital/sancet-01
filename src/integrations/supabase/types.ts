@@ -237,6 +237,7 @@ export type Database = {
       }
       pacientes: {
         Row: {
+          auth_user_id: string | null
           bairro: string | null
           celular: string | null
           cep: string | null
@@ -255,6 +256,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          auth_user_id?: string | null
           bairro?: string | null
           celular?: string | null
           cep?: string | null
@@ -273,6 +275,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          auth_user_id?: string | null
           bairro?: string | null
           celular?: string | null
           cep?: string | null
@@ -758,19 +761,29 @@ export type Database = {
         Args: { p_cpf: string; p_data_nasc: string; p_patch: Json }
         Returns: Json
       }
+      atualizar_meu_perfil_auth: { Args: { p_patch: Json }; Returns: Json }
       cadastrar_paciente: { Args: { p: Json }; Returns: Json }
       cancelar_meu_pedido: {
         Args: { p_cpf: string; p_protocolo: string }
+        Returns: boolean
+      }
+      cancelar_meu_pedido_auth: {
+        Args: { p_protocolo: string }
         Returns: boolean
       }
       confirmar_pagamento_manual: {
         Args: { p_cpf: string; p_protocolo: string }
         Returns: boolean
       }
+      confirmar_pagamento_manual_auth: {
+        Args: { p_protocolo: string }
+        Returns: boolean
+      }
       criar_pedido_paciente: {
         Args: { p_cpf: string; p_data_nasc: string; p_pedido: Json }
         Returns: Json
       }
+      criar_pedido_paciente_auth: { Args: { p_pedido: Json }; Returns: Json }
       gerar_protocolo_sancet: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -787,14 +800,20 @@ export type Database = {
         Args: { p_cpf: string; p_data_nasc: string }
         Returns: Json
       }
+      meu_perfil_auth: { Args: never; Returns: Json }
       pedido_por_protocolo: {
         Args: { p_cpf: string; p_protocolo: string }
+        Returns: Json
+      }
+      pedido_por_protocolo_auth: {
+        Args: { p_protocolo: string }
         Returns: Json
       }
       pedidos_do_paciente: {
         Args: { p_cpf: string; p_data_nasc: string }
         Returns: Json
       }
+      pedidos_do_paciente_auth: { Args: never; Returns: Json }
       pode_ver_pedido_unidade: {
         Args: { p_codigo_shift: string }
         Returns: boolean
@@ -803,6 +822,7 @@ export type Database = {
         Args: { p_cpf: string; p_data_nasc: string }
         Returns: Json
       }
+      resultados_do_paciente_auth: { Args: never; Returns: Json }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
