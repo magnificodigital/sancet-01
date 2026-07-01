@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Copy, Loader2, QrCode, AlertCircle, CreditCard, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Copy, Loader2, QrCode, AlertCircle, CreditCard, FileText, ExternalLink, UserCog, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageShell } from "@/components/layout/PageShell";
@@ -32,6 +32,9 @@ const Pagamento = () => {
   const { paciente } = usePaciente();
   const [etapa, setEtapa] = useState<Etapa>("carregando");
   const [erroMsg, setErroMsg] = useState<string>("");
+  const [erroDetalhe, setErroDetalhe] = useState<string>("");
+  const [erroCampo, setErroCampo] = useState<string>("");
+  const [mostrarDetalhe, setMostrarDetalhe] = useState(false);
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [metodo, setMetodo] = useState<Metodo>("pix");
   const [dados, setDados] = useState<PagamentoData | null>(null);
@@ -39,9 +42,12 @@ const Pagamento = () => {
   const [copiado, setCopiado] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
+  const camposPaciente = new Set(["nome", "cpf", "email", "celular"]);
+
   const gerar = useCallback(async (metodoEscolhido: Metodo, ped: Pedido) => {
     setGerando(true);
     setDados(null);
+    setMostrarDetalhe(false);
     const { data, error } = await supabase.functions.invoke("sancet-criar-pagamento", {
       body: {
         protocolo: ped.protocolo,
@@ -52,29 +58,33 @@ const Pagamento = () => {
     });
     setGerando(false);
 
-    // Ao receber non-2xx, supabase-js coloca a Response em error.context.
     let errMsg = (data as any)?.error;
     let errDetail = (data as any)?.detalhe;
+    let errCampo = (data as any)?.campo;
     if (!errMsg && (error as any)?.context) {
       try {
         const body = await (error as any).context.clone().json();
         errMsg = body?.error;
         errDetail = body?.detalhe;
+        errCampo = body?.campo;
       } catch {
         try { errMsg = await (error as any).context.clone().text(); } catch {}
       }
     }
-    if (!errMsg && error) errMsg = error.message;
+    if (!errMsg && error) errMsg = "Não conseguimos gerar o pagamento agora. Tente novamente em instantes.";
 
     if (errMsg) {
-      const full = errDetail && errDetail !== errMsg ? `${errMsg}\n\nDetalhe técnico: ${errDetail}` : errMsg;
-      setErroMsg(full);
+      setErroMsg(errMsg);
+      setErroDetalhe(errDetail || "");
+      setErroCampo(errCampo || "");
       setDados(null);
       setEtapa("pronto");
-      toast.error("Falha ao gerar cobrança", { description: errMsg });
+      toast.error("Não foi possível gerar o pagamento", { description: errMsg });
       return;
     }
     setErroMsg("");
+    setErroDetalhe("");
+    setErroCampo("");
     setDados(data as PagamentoData);
     setEtapa("pronto");
   }, []);
@@ -192,18 +202,47 @@ const Pagamento = () => {
                     <div className="flex items-start gap-3">
                       <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#C8102E]" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#C8102E]">Não foi possível gerar a cobrança</p>
+                        <p className="text-sm font-semibold text-[#C8102E]">Não foi possível gerar o pagamento</p>
                         <p className="mt-1 whitespace-pre-wrap break-words text-sm text-secondary">{erroMsg}</p>
+
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <Button size="sm" onClick={() => pedido && gerar(metodo, pedido)} className="bg-[#C8102E] text-white hover:bg-[#a80d26]">
+                          {camposPaciente.has(erroCampo) && (
+                            <Link to="/agendamentos?aba=perfil">
+                              <Button size="sm" className="bg-[#C8102E] text-white hover:bg-[#a80d26]">
+                                <UserCog className="mr-1.5 h-3.5 w-3.5" /> Atualizar cadastro
+                              </Button>
+                            </Link>
+                          )}
+                          <Button size="sm" variant={camposPaciente.has(erroCampo) ? "outline" : "default"} onClick={() => pedido && gerar(metodo, pedido)} className={camposPaciente.has(erroCampo) ? "" : "bg-[#C8102E] text-white hover:bg-[#a80d26]"}>
                             Tentar novamente
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => copiar(erroMsg, "Mensagem de erro copiada")}>
-                            <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar erro
-                          </Button>
                         </div>
+
+                        {erroDetalhe && (
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() => setMostrarDetalhe(v => !v)}
+                              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-secondary"
+                            >
+                              <ChevronDown className={`h-3 w-3 transition-transform ${mostrarDetalhe ? "rotate-180" : ""}`} />
+                              {mostrarDetalhe ? "Ocultar detalhes técnicos" : "Ver detalhes técnicos"}
+                            </button>
+                            {mostrarDetalhe && (
+                              <div className="mt-2 flex items-start gap-2">
+                                <code className="flex-1 whitespace-pre-wrap break-words rounded border border-red-100 bg-white px-2 py-1.5 text-[11px] text-muted-foreground">
+                                  {erroDetalhe}
+                                </code>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => copiar(erroDetalhe, "Detalhe técnico copiado")}>
+                                  <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <p className="mt-3 text-xs text-muted-foreground">
-                          Se o problema persistir, entre em contato com a recepção informando o protocolo <strong>{pedido.protocolo}</strong> e a mensagem acima.
+                          Precisa de ajuda? Entre em contato com a recepção informando o protocolo <strong>{pedido.protocolo}</strong>.
                         </p>
                       </div>
                     </div>
@@ -271,7 +310,7 @@ const Pagamento = () => {
                       {dados.invoice_url ? (
                         <>
                           <p className="mb-4 text-sm text-muted-foreground">
-                            O pagamento com cartão é feito no ambiente seguro do Asaas.
+                            O pagamento com cartão é feito em ambiente seguro do processador de pagamentos.
                           </p>
                           <a href={dados.invoice_url} target="_blank" rel="noopener noreferrer">
                             <Button className="w-full gap-2 bg-[#C8102E] text-white hover:bg-[#a80d26]">
