@@ -51,9 +51,24 @@ const Pagamento = () => {
       },
     });
     setGerando(false);
-    const errMsg = (data as any)?.error || (error as any)?.context?.error || error?.message;
-    if (errMsg || (data as any)?.error) {
-      setErroMsg(errMsg || "Não foi possível gerar o pagamento.");
+
+    // Ao receber non-2xx, supabase-js coloca a Response em error.context.
+    let errMsg = (data as any)?.error;
+    let errDetail = (data as any)?.detalhe;
+    if (!errMsg && (error as any)?.context) {
+      try {
+        const body = await (error as any).context.clone().json();
+        errMsg = body?.error;
+        errDetail = body?.detalhe;
+      } catch {
+        try { errMsg = await (error as any).context.clone().text(); } catch {}
+      }
+    }
+    if (!errMsg && error) errMsg = error.message;
+
+    if (errMsg) {
+      const full = errDetail && errDetail !== errMsg ? `${errMsg}\n\nDetalhe técnico: ${errDetail}` : errMsg;
+      setErroMsg(full);
       setDados(null);
       setEtapa("pronto");
       toast.error("Falha ao gerar cobrança", { description: errMsg });
