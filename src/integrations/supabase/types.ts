@@ -856,6 +856,10 @@ export type Database = {
         Returns: Json
       }
       resultados_do_paciente_auth: { Args: never; Returns: Json }
+      staff_pode_ver_paciente: {
+        Args: { p_paciente_id: string }
+        Returns: boolean
+      }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
