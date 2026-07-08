@@ -327,6 +327,28 @@ export const AbaEquipe = () => {
         onMudou={carregar}
       />
 
+      <AlertDialog open={!!excluindo} onOpenChange={(o) => !o && setExcluindo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação removerá <strong>{excluindo?.nome ?? excluindo?.email}</strong> da equipe
+              permanentemente, incluindo suas unidades vinculadas. Não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); excluir(); }}
+              disabled={deletando}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deletando ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <Sheet open={sheetAberto} onOpenChange={setSheetAberto}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
