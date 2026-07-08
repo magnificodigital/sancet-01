@@ -306,6 +306,22 @@ export const AbaEquipe = () => {
                   onChange={(e) => setFormNovo({ ...formNovo, senha: e.target.value })}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Perfil</Label>
+                <select
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={roleNovo}
+                  onChange={(e) => setRoleNovo(e.target.value as "admin" | "staff")}
+                >
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+                {roleNovo === "admin" && (
+                  <p className="text-xs text-amber-600">
+                    Admin tem acesso total (todas as unidades e permissões).
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-4 py-4">
