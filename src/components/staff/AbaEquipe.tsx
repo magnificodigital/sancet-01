@@ -78,6 +78,9 @@ export const AbaEquipe = () => {
   const [permEdit, setPermEdit] = useState<any>(PERMISSOES_PADRAO);
   const [gerenciando, setGerenciando] = useState<StaffUsuario | null>(null);
   const [meuUserId, setMeuUserId] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState<StaffUsuario | null>(null);
+  const [deletando, setDeletando] = useState(false);
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setMeuUserId(data.session?.user.id ?? null));
