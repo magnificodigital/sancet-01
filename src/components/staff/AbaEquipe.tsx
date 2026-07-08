@@ -120,7 +120,7 @@ export const AbaEquipe = () => {
     setCriando(true);
     try {
       const { error } = await supabase.functions.invoke("sancet-criar-staff", {
-        body: formNovo,
+        body: { ...formNovo, role: roleNovo },
       });
       if (error) {
         let msg = "Erro ao criar usuário";
