@@ -12,8 +12,7 @@ import { AbaCatalogoShift } from "@/components/staff/AbaCatalogoShift";
 import { AbaConvenios } from "@/components/staff/AbaConvenios";
 import { AbaConfiguracoes } from "@/components/staff/AbaConfiguracoes";
 import { AbaEquipe } from "@/components/staff/AbaEquipe";
-import { AbaPaginas } from "@/components/staff/AbaPaginas";
-import { AbaPaginasCMS } from "@/components/staff/AbaPaginasCMS";
+import { AbaSites } from "@/components/staff/AbaSites";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 const StaffDashboard = () => {
@@ -73,8 +72,7 @@ const StaffDashboard = () => {
       {aba === "convenios" && <AbaConvenios />}
       {aba === "shift" && <AbaCatalogoShift />}
       {aba === "config" && <AbaConfiguracoes permissoes={staffPerfil.permissoes} isAdmin={staffPerfil.isAdmin} />}
-      {aba === "paginas" && <AbaPaginas />}
-      {aba === "cms" && <AbaPaginasCMS />}
+      {aba === "sites" && <AbaSites />}
       {aba === "equipe" && <AbaEquipe />}
     </StaffShell>
   );

@@ -41,8 +41,7 @@ export type StaffTab =
   | "convenios"
   | "shift"
   | "config"
-  | "paginas"
-  | "cms"
+  | "sites"
   | "equipe";
 
 const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
@@ -54,8 +53,7 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "convenios", label: "Convênios", icon: Shield },
   { id: "shift", label: "Sync Shift", icon: RefreshCw },
   { id: "config", label: "Configurações", icon: Settings2 },
-  { id: "paginas", label: "Landing Pages", icon: FileText },
-  { id: "cms", label: "Páginas do Site", icon: FileText },
+  { id: "sites", label: "Sites", icon: FileText },
   { id: "equipe", label: "Equipe", icon: UserCog },
 ];
 
@@ -71,7 +69,7 @@ type Props = {
 
 export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAdmin }: Props) => {
   const itensVisiveis = ITENS.filter(
-    (i) => (i.id !== "equipe" && i.id !== "paginas" && i.id !== "cms") || isAdmin,
+    (i) => (i.id !== "equipe" && i.id !== "sites") || isAdmin,
   );
   const navigate = useNavigate();
   const location = useLocation();
