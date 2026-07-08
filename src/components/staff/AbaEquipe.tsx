@@ -319,13 +319,25 @@ export const AbaEquipe = () => {
               </div>
               <div className="space-y-2">
                 <Label>Perfil</Label>
-                <div>
-                  {editando.role === "admin" ? (
-                    <Badge className="bg-[#1B3A6B] hover:bg-[#1B3A6B] text-white">Admin</Badge>
-                  ) : (
-                    <Badge variant="secondary">Staff</Badge>
-                  )}
-                </div>
+                <select
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={roleEdit}
+                  onChange={(e) => setRoleEdit(e.target.value as "admin" | "staff")}
+                  disabled={editando.user_id === meuUserId}
+                >
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+                {editando.user_id === meuUserId && (
+                  <p className="text-xs text-muted-foreground">
+                    Você não pode alterar o próprio perfil.
+                  </p>
+                )}
+                {roleEdit === "admin" && (
+                  <p className="text-xs text-amber-600">
+                    Admin tem acesso total (todas as unidades e permissões).
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">
