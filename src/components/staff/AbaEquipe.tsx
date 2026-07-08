@@ -185,6 +185,36 @@ export const AbaEquipe = () => {
     }
   };
 
+  const excluir = async () => {
+    if (!excluindo) return;
+    if (excluindo.user_id === meuUserId) {
+      toast.error("Você não pode excluir a si mesmo.");
+      return;
+    }
+    setDeletando(true);
+    try {
+      const { error } = await supabase.functions.invoke("sancet-deletar-staff", {
+        body: { user_id: excluindo.user_id },
+      });
+      if (error) {
+        let msg = "Erro ao excluir usuário";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      toast.success("Usuário excluído.");
+      setExcluindo(null);
+      await carregar();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao excluir");
+    } finally {
+      setDeletando(false);
+    }
+  };
+
   const togglePerm = (secao: string, acao: string, valor: boolean) => {
     setPermEdit((prev: any) => ({
       ...prev,
