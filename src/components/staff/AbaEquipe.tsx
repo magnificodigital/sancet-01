@@ -99,6 +99,7 @@ export const AbaEquipe = () => {
   const abrirNovo = () => {
     setEditando(null);
     setFormNovo({ nome: "", email: "", senha: "" });
+    setRoleNovo("staff");
     setSheetAberto(true);
   };
 
@@ -106,6 +107,7 @@ export const AbaEquipe = () => {
     setEditando(u);
     setNomeEdit(u.nome ?? "");
     setAtivoEdit(u.ativo);
+    setRoleEdit(u.role);
     setPermEdit(u.permissoes ?? PERMISSOES_PADRAO);
     setSheetAberto(true);
   };
