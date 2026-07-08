@@ -63,8 +63,15 @@ export const AbaEquipe = () => {
   const [criando, setCriando] = useState(false);
   const [nomeEdit, setNomeEdit] = useState("");
   const [ativoEdit, setAtivoEdit] = useState(true);
+  const [roleEdit, setRoleEdit] = useState<"admin" | "staff">("staff");
+  const [roleNovo, setRoleNovo] = useState<"admin" | "staff">("staff");
   const [permEdit, setPermEdit] = useState<any>(PERMISSOES_PADRAO);
   const [gerenciando, setGerenciando] = useState<StaffUsuario | null>(null);
+  const [meuUserId, setMeuUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setMeuUserId(data.session?.user.id ?? null));
+  }, []);
 
   const carregar = async () => {
     const { data } = await supabase
