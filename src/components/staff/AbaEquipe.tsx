@@ -152,9 +152,14 @@ export const AbaEquipe = () => {
     if (!editando) return;
     setSalvando(true);
     try {
+      if (editando.user_id === meuUserId && roleEdit !== editando.role) {
+        toast.error("Você não pode alterar o próprio perfil.");
+        setSalvando(false);
+        return;
+      }
       const { error } = await supabase
         .from("user_roles")
-        .update({ nome: nomeEdit, ativo: ativoEdit, permissoes: permEdit })
+        .update({ nome: nomeEdit, ativo: ativoEdit, permissoes: permEdit, role: roleEdit })
         .eq("id", editando.id);
       if (error) throw error;
       toast.success("Usuário atualizado!");
