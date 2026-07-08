@@ -11,7 +11,8 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization') ?? ''
-    if (!authHeader) {
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+    if (!token) {
       return new Response(JSON.stringify({ error: 'Não autorizado (sem token)' }), { status: 401, headers: corsHeaders })
     }
 
@@ -20,10 +21,8 @@ Deno.serve(async (req) => {
     const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 
     // client com o token do usuário para identificá-lo
-    const supabaseUser = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    })
-    const { data: userData, error: userError } = await supabaseUser.auth.getUser()
+    const supabaseUser = createClient(SUPABASE_URL, ANON_KEY)
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser(token)
     if (userError || !userData?.user) {
       return new Response(JSON.stringify({ error: 'Não autorizado: ' + (userError?.message ?? 'sessão inválida') }), { status: 401, headers: corsHeaders })
     }

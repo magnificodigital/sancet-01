@@ -132,8 +132,15 @@ export const AbaEquipe = () => {
     }
     setCriando(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        toast.error("Sessão expirada. Entre novamente para criar usuários.");
+        return;
+      }
       const { error } = await supabase.functions.invoke("sancet-criar-staff", {
         body: { ...formNovo, role: roleNovo },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (error) {
         let msg = "Erro ao criar usuário";
@@ -193,8 +200,15 @@ export const AbaEquipe = () => {
     }
     setDeletando(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        toast.error("Sessão expirada. Entre novamente para excluir usuários.");
+        return;
+      }
       const { error } = await supabase.functions.invoke("sancet-deletar-staff", {
         body: { user_id: excluindo.user_id },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (error) {
         let msg = "Erro ao excluir usuário";
