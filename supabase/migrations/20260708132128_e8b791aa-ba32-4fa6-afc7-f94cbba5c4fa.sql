@@ -1,0 +1,1 @@
+ALTER TABLE public.paginas ADD COLUMN IF NOT EXISTS blocos jsonb NOT NULL DEFAULT '[]'::jsonb;

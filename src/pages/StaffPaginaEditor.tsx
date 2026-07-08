@@ -52,6 +52,22 @@ import { FormBloco } from "@/components/landing/FormBloco";
 import { cn } from "@/lib/utils";
 
 type EstadoSalvar = "ocioso" | "salvando" | "salvo";
+type Kind = "landing" | "cms";
+
+const CONFIG = {
+  landing: {
+    tabela: "landing_pages" as const,
+    campoPublicado: "publicado" as const,
+    urlPublica: (slug: string) => `/p/${slug}`,
+    labelAoVivo: "Ao vivo",
+  },
+  cms: {
+    tabela: "paginas" as const,
+    campoPublicado: "ativa" as const,
+    urlPublica: (slug: string) => `/${slug}`,
+    labelAoVivo: "Ativa",
+  },
+};
 
 const BlocoSortavel = ({
   bloco,
@@ -110,7 +126,10 @@ const BlocoSortavel = ({
   );
 };
 
-const StaffPaginaEditor = () => {
+type Props = { kind?: Kind };
+
+const StaffPaginaEditor = ({ kind = "landing" }: Props) => {
+  const cfg = CONFIG[kind];
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -124,7 +143,6 @@ const StaffPaginaEditor = () => {
   const [snapshot, setSnapshot] = useState<string>("");
   const [selecionado, setSelecionado] = useState<string | null>(null);
 
-  // modais de publicação
   const [modalPublicar, setModalPublicar] = useState(false);
   const [modalDespublicar, setModalDespublicar] = useState(false);
 
@@ -138,9 +156,9 @@ const StaffPaginaEditor = () => {
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const { data, error } = await supabase
-        .from("landing_pages")
-        .select("titulo, slug, publicado, blocos")
+      const { data, error } = await (supabase as any)
+        .from(cfg.tabela)
+        .select(`titulo, slug, ${cfg.campoPublicado}, blocos, conteudo_html`)
         .eq("id", id)
         .maybeSingle();
       if (error || !data) {
@@ -148,15 +166,30 @@ const StaffPaginaEditor = () => {
         navigate("/staff/dashboard");
         return;
       }
-      const bs = (data.blocos as any) ?? [];
+      let bs = (data.blocos as any) ?? [];
+      // Migração leve: se CMS ainda não tem blocos mas tem HTML antigo, cria um bloco texto
+      if (kind === "cms" && bs.length === 0 && data.conteudo_html) {
+        bs = [
+          {
+            id:
+              typeof crypto !== "undefined" && "randomUUID" in crypto
+                ? crypto.randomUUID()
+                : Math.random().toString(36).slice(2),
+            tipo: "texto",
+            config: { titulo: data.titulo, conteudo: data.conteudo_html },
+          },
+        ];
+      }
       setTitulo(data.titulo);
       setSlug(data.slug);
-      setPublicado(data.publicado);
+      setPublicado(!!(data as any)[cfg.campoPublicado]);
       setBlocos(bs);
-      setSnapshot(JSON.stringify({ titulo: data.titulo, publicado: data.publicado, blocos: bs }));
+      setSnapshot(
+        JSON.stringify({ titulo: data.titulo, publicado: !!(data as any)[cfg.campoPublicado], blocos: bs }),
+      );
       setCarregando(false);
     })();
-  }, [id, navigate]);
+  }, [id, navigate, kind, cfg.tabela, cfg.campoPublicado]);
 
   const estadoAtual = useMemo(
     () => JSON.stringify({ titulo, publicado, blocos }),
@@ -167,8 +200,9 @@ const StaffPaginaEditor = () => {
   const salvar = async (silencioso = false) => {
     if (!id) return;
     setEstadoSalvar("salvando");
-    const payload = { titulo, publicado, blocos: blocos as any };
-    const { error } = await supabase.from("landing_pages").update(payload).eq("id", id);
+    const payload: any = { titulo, blocos: blocos as any };
+    payload[cfg.campoPublicado] = publicado;
+    const { error } = await (supabase as any).from(cfg.tabela).update(payload).eq("id", id);
     if (error) {
       setEstadoSalvar("ocioso");
       toast.error(error.message);
@@ -183,7 +217,6 @@ const StaffPaginaEditor = () => {
     return true;
   };
 
-  // Auto-save com debounce de 3s
   useEffect(() => {
     if (carregando || !sujo) return;
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
@@ -225,7 +258,8 @@ const StaffPaginaEditor = () => {
   };
 
   const previsualizar = () => {
-    const url = publicado ? `/p/${slug}` : `/p/${slug}?preview=true`;
+    const base = cfg.urlPublica(slug);
+    const url = publicado ? base : `${base}?preview=true`;
     window.open(url, "_blank");
   };
 
@@ -237,7 +271,6 @@ const StaffPaginaEditor = () => {
   const confirmarPublicar = async () => {
     setPublicado(true);
     setModalPublicar(false);
-    // salvar imediatamente após mudança de estado
     setTimeout(() => salvar(false), 0);
   };
 
@@ -247,7 +280,7 @@ const StaffPaginaEditor = () => {
     setTimeout(() => salvar(false), 0);
   };
 
-  const urlPublica = `${typeof window !== "undefined" ? window.location.origin : ""}/p/${slug}`;
+  const urlPublica = `${typeof window !== "undefined" ? window.location.origin : ""}${cfg.urlPublica(slug)}`;
 
   const copiarLink = async () => {
     try {
@@ -275,11 +308,12 @@ const StaffPaginaEditor = () => {
     return null;
   };
 
+  const voltarPara = `/staff/dashboard?aba=sites`;
+
   return (
     <div className="flex h-screen flex-col bg-[#F5F5F5]">
-      {/* Header */}
       <header className="flex items-center gap-3 border-b bg-white px-4 py-2.5 shrink-0">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/staff/dashboard")} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={() => navigate(voltarPara)} className="gap-1.5">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
         <Input
@@ -287,10 +321,9 @@ const StaffPaginaEditor = () => {
           onChange={(e) => setTitulo(e.target.value)}
           className="max-w-md font-medium"
         />
-        <span className="text-xs text-muted-foreground">/{slug}</span>
+        <span className="text-xs text-muted-foreground">{cfg.urlPublica(slug)}</span>
         {indicadorSalvar()}
         <div className="ml-auto flex items-center gap-3">
-          {/* Toggle Rascunho/Publicado */}
           <button
             onClick={togglePublicado}
             className={cn(
@@ -306,7 +339,7 @@ const StaffPaginaEditor = () => {
                 publicado ? "bg-green-500 animate-pulse" : "bg-gray-400",
               )}
             />
-            {publicado ? "Ao vivo" : "Rascunho"}
+            {publicado ? cfg.labelAoVivo : "Rascunho"}
           </button>
 
           <Button variant="outline" size="sm" onClick={previsualizar} className="gap-1.5">
@@ -329,7 +362,6 @@ const StaffPaginaEditor = () => {
       </header>
 
       <div className="flex flex-1 min-h-0">
-        {/* Esquerda: Biblioteca */}
         <aside className="w-[260px] shrink-0 border-r bg-white overflow-y-auto p-3 space-y-2">
           <p className="text-xs font-semibold uppercase text-muted-foreground px-1 py-2">
             Adicionar bloco
@@ -346,7 +378,6 @@ const StaffPaginaEditor = () => {
           ))}
         </aside>
 
-        {/* Centro: Preview */}
         <main className="flex-1 overflow-y-auto">
           <div className="min-h-full bg-white" style={{ fontFamily: "Inter, sans-serif" }}>
             {blocos.length === 0 && (
@@ -370,7 +401,6 @@ const StaffPaginaEditor = () => {
           </div>
         </main>
 
-        {/* Direita: Config */}
         <aside className="w-[340px] shrink-0 border-l bg-white overflow-y-auto p-4">
           {blocoSelecionado ? (
             <div className="space-y-4">
@@ -391,7 +421,6 @@ const StaffPaginaEditor = () => {
         </aside>
       </div>
 
-      {/* Modal: Publicar */}
       <AlertDialog open={modalPublicar} onOpenChange={setModalPublicar}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -420,7 +449,6 @@ const StaffPaginaEditor = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal: Despublicar */}
       <AlertDialog open={modalDespublicar} onOpenChange={setModalDespublicar}>
         <AlertDialogContent>
           <AlertDialogHeader>

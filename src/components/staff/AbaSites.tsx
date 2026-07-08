@@ -1,0 +1,28 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AbaPaginasCMS } from "./AbaPaginasCMS";
+import { AbaPaginas } from "./AbaPaginas";
+
+export const AbaSites = () => {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-2xl font-bold">Sites</h2>
+        <p className="text-sm text-muted-foreground">
+          Escolha entre páginas fixas do site ou landing pages promocionais.
+        </p>
+      </div>
+      <Tabs defaultValue="site">
+        <TabsList>
+          <TabsTrigger value="site">Páginas do site</TabsTrigger>
+          <TabsTrigger value="landing">Landing pages</TabsTrigger>
+        </TabsList>
+        <TabsContent value="site" className="pt-4">
+          <AbaPaginasCMS />
+        </TabsContent>
+        <TabsContent value="landing" className="pt-4">
+          <AbaPaginas />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
