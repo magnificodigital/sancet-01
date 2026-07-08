@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
       email,
       password: senha,
       email_confirm: true,
+      user_metadata: { is_staff: true, nome },
     })
     if (erroCriar || !novoUser?.user) {
       return new Response(JSON.stringify({ error: erroCriar?.message ?? 'Erro ao criar usuário' }), { status: 400, headers: corsHeaders })
