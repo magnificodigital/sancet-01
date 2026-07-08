@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: corsHeaders })
     }
 
-    const { nome, email, senha, permissoes } = await req.json()
+    const { nome, email, senha, permissoes, role } = await req.json()
+    const roleFinal = role === 'admin' ? 'admin' : 'staff'
 
     const { data: novoUser, error: erroCriar } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
 
     const { error: erroRole } = await supabaseAdmin.from('user_roles').insert({
       user_id: novoUser.user.id,
-      role: 'staff',
+      role: roleFinal,
       nome,
       email,
       permissoes,

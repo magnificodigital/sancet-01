@@ -63,8 +63,15 @@ export const AbaEquipe = () => {
   const [criando, setCriando] = useState(false);
   const [nomeEdit, setNomeEdit] = useState("");
   const [ativoEdit, setAtivoEdit] = useState(true);
+  const [roleEdit, setRoleEdit] = useState<"admin" | "staff">("staff");
+  const [roleNovo, setRoleNovo] = useState<"admin" | "staff">("staff");
   const [permEdit, setPermEdit] = useState<any>(PERMISSOES_PADRAO);
   const [gerenciando, setGerenciando] = useState<StaffUsuario | null>(null);
+  const [meuUserId, setMeuUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setMeuUserId(data.session?.user.id ?? null));
+  }, []);
 
   const carregar = async () => {
     const { data } = await supabase
@@ -92,6 +99,7 @@ export const AbaEquipe = () => {
   const abrirNovo = () => {
     setEditando(null);
     setFormNovo({ nome: "", email: "", senha: "" });
+    setRoleNovo("staff");
     setSheetAberto(true);
   };
 
@@ -99,6 +107,7 @@ export const AbaEquipe = () => {
     setEditando(u);
     setNomeEdit(u.nome ?? "");
     setAtivoEdit(u.ativo);
+    setRoleEdit(u.role);
     setPermEdit(u.permissoes ?? PERMISSOES_PADRAO);
     setSheetAberto(true);
   };
@@ -111,7 +120,7 @@ export const AbaEquipe = () => {
     setCriando(true);
     try {
       const { error } = await supabase.functions.invoke("sancet-criar-staff", {
-        body: formNovo,
+        body: { ...formNovo, role: roleNovo },
       });
       if (error) {
         let msg = "Erro ao criar usuário";
@@ -143,9 +152,14 @@ export const AbaEquipe = () => {
     if (!editando) return;
     setSalvando(true);
     try {
+      if (editando.user_id === meuUserId && roleEdit !== editando.role) {
+        toast.error("Você não pode alterar o próprio perfil.");
+        setSalvando(false);
+        return;
+      }
       const { error } = await supabase
         .from("user_roles")
-        .update({ nome: nomeEdit, ativo: ativoEdit, permissoes: permEdit })
+        .update({ nome: nomeEdit, ativo: ativoEdit, permissoes: permEdit, role: roleEdit })
         .eq("id", editando.id);
       if (error) throw error;
       toast.success("Usuário atualizado!");
@@ -292,6 +306,22 @@ export const AbaEquipe = () => {
                   onChange={(e) => setFormNovo({ ...formNovo, senha: e.target.value })}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Perfil</Label>
+                <select
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={roleNovo}
+                  onChange={(e) => setRoleNovo(e.target.value as "admin" | "staff")}
+                >
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+                {roleNovo === "admin" && (
+                  <p className="text-xs text-amber-600">
+                    Admin tem acesso total (todas as unidades e permissões).
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-4 py-4">
@@ -305,13 +335,25 @@ export const AbaEquipe = () => {
               </div>
               <div className="space-y-2">
                 <Label>Perfil</Label>
-                <div>
-                  {editando.role === "admin" ? (
-                    <Badge className="bg-[#1B3A6B] hover:bg-[#1B3A6B] text-white">Admin</Badge>
-                  ) : (
-                    <Badge variant="secondary">Staff</Badge>
-                  )}
-                </div>
+                <select
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={roleEdit}
+                  onChange={(e) => setRoleEdit(e.target.value as "admin" | "staff")}
+                  disabled={editando.user_id === meuUserId}
+                >
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+                {editando.user_id === meuUserId && (
+                  <p className="text-xs text-muted-foreground">
+                    Você não pode alterar o próprio perfil.
+                  </p>
+                )}
+                {roleEdit === "admin" && (
+                  <p className="text-xs text-amber-600">
+                    Admin tem acesso total (todas as unidades e permissões).
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">
