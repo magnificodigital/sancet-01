@@ -329,6 +329,7 @@ export type Database = {
         Row: {
           ativa: boolean
           atualizado_em: string
+          blocos: Json
           conteudo_html: string
           criado_em: string
           criado_por: string | null
@@ -343,6 +344,7 @@ export type Database = {
         Insert: {
           ativa?: boolean
           atualizado_em?: string
+          blocos?: Json
           conteudo_html?: string
           criado_em?: string
           criado_por?: string | null
@@ -357,6 +359,7 @@ export type Database = {
         Update: {
           ativa?: boolean
           atualizado_em?: string
+          blocos?: Json
           conteudo_html?: string
           criado_em?: string
           criado_por?: string | null
