@@ -3,30 +3,34 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Content-Type': 'application/json',
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const authHeader = req.headers.get('Authorization')
+    const authHeader = req.headers.get('Authorization') ?? ''
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: 'Não autorizado (sem token)' }), { status: 401, headers: corsHeaders })
     }
 
-    const token = authHeader.replace('Bearer ', '')
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
-
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: corsHeaders })
+    // client com o token do usuário para identificá-lo
+    const supabaseUser = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    })
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser()
+    if (userError || !userData?.user) {
+      return new Response(JSON.stringify({ error: 'Não autorizado: ' + (userError?.message ?? 'sessão inválida') }), { status: 401, headers: corsHeaders })
     }
+    const user = userData.user
 
-    // Verifica se é admin via RPC (chama a função has_role do Postgres)
+    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE)
+
     const { data: isAdmin, error: rpcError } = await supabaseAdmin
       .rpc('has_role', { _user_id: user.id, _role: 'admin' })
 
@@ -35,7 +39,7 @@ Deno.serve(async (req) => {
     }
 
     if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: 'Acesso negado (apenas admin)' }), { status: 403, headers: corsHeaders })
     }
 
     const { nome, email, senha, permissoes, role } = await req.json()
