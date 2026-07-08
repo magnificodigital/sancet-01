@@ -22,7 +22,17 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Shield, Building2 } from "lucide-react";
+import { Plus, Pencil, Shield, Building2, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { GerenciarUnidadesUsuario } from "./GerenciarUnidadesUsuario";
 
 type StaffUsuario = {
@@ -68,6 +78,9 @@ export const AbaEquipe = () => {
   const [permEdit, setPermEdit] = useState<any>(PERMISSOES_PADRAO);
   const [gerenciando, setGerenciando] = useState<StaffUsuario | null>(null);
   const [meuUserId, setMeuUserId] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState<StaffUsuario | null>(null);
+  const [deletando, setDeletando] = useState(false);
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setMeuUserId(data.session?.user.id ?? null));
@@ -172,6 +185,36 @@ export const AbaEquipe = () => {
     }
   };
 
+  const excluir = async () => {
+    if (!excluindo) return;
+    if (excluindo.user_id === meuUserId) {
+      toast.error("Você não pode excluir a si mesmo.");
+      return;
+    }
+    setDeletando(true);
+    try {
+      const { error } = await supabase.functions.invoke("sancet-deletar-staff", {
+        body: { user_id: excluindo.user_id },
+      });
+      if (error) {
+        let msg = "Erro ao excluir usuário";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      toast.success("Usuário excluído.");
+      setExcluindo(null);
+      await carregar();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao excluir");
+    } finally {
+      setDeletando(false);
+    }
+  };
+
   const togglePerm = (secao: string, acao: string, valor: boolean) => {
     setPermEdit((prev: any) => ({
       ...prev,
@@ -249,6 +292,16 @@ export const AbaEquipe = () => {
                       <Button size="sm" variant="outline" onClick={() => setGerenciando(u)} className="gap-1.5">
                         <Building2 className="h-3.5 w-3.5" /> Gerenciar
                       </Button>
+                      {u.user_id !== meuUserId && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setExcluindo(u)}
+                          className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Excluir
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -273,6 +326,28 @@ export const AbaEquipe = () => {
         onFechar={() => setGerenciando(null)}
         onMudou={carregar}
       />
+
+      <AlertDialog open={!!excluindo} onOpenChange={(o) => !o && setExcluindo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação removerá <strong>{excluindo?.nome ?? excluindo?.email}</strong> da equipe
+              permanentemente, incluindo suas unidades vinculadas. Não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); excluir(); }}
+              disabled={deletando}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deletando ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
 
       <Sheet open={sheetAberto} onOpenChange={setSheetAberto}>
