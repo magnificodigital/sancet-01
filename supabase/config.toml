@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.sancet-webhook-asaas]
 verify_jwt = false
+
+[functions.sancet-cadastrar-paciente]
+verify_jwt = false
+
+[functions.sancet-primeiro-acesso]
+verify_jwt = false

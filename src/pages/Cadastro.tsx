@@ -170,42 +170,38 @@ const Cadastro = () => {
     try {
       const nomeFinal = form.usarSocial && form.nomeSocial ? form.nomeSocial : form.nome;
 
-      // 1) Cria conta no Supabase Auth. O trigger no banco cria/vincula o paciente por CPF.
-      const { data: signUp, error: signErr } = await supabase.auth.signUp({
-        email: form.email.trim().toLowerCase(),
-        password: form.senha,
-        options: {
-          data: {
-            cpf: cpfLimpo,
-            nome: nomeFinal,
-            data_nascimento: dataISO,
-          },
-          emailRedirectTo: `${window.location.origin}/agendamentos`,
+      // Cria conta via edge function (admin API), evitando rate limit de e-mail de confirmação.
+      const { data, error } = await supabase.functions.invoke("sancet-cadastrar-paciente", {
+        body: {
+          cpf: cpfLimpo,
+          data_nascimento: dataISO,
+          nome: nomeFinal,
+          sexo: form.sexo || null,
+          email: form.email.trim().toLowerCase(),
+          celular: apenasDigitos(form.celular),
+          senha: form.senha,
+          cep: apenasDigitos(form.cep),
+          logradouro: form.logradouro,
+          numero: form.numero,
+          complemento: form.complemento || null,
+          bairro: form.bairro,
+          cidade: form.cidade,
+          uf: form.uf,
         },
       });
-      if (signErr) throw signErr;
 
-      // 2) Se veio sessão, salva o restante do perfil via RPC autenticada.
-      if (signUp.session) {
-        await supabase.rpc("atualizar_meu_perfil_auth", {
-          p_patch: {
-            nome: nomeFinal,
-            email: form.email.trim().toLowerCase(),
-            celular: apenasDigitos(form.celular),
-            cep: apenasDigitos(form.cep),
-            logradouro: form.logradouro,
-            numero: form.numero,
-            complemento: form.complemento || null,
-            bairro: form.bairro,
-            cidade: form.cidade,
-            uf: form.uf,
-          },
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.session?.access_token && data?.session?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
         });
         toast.success("Cadastro realizado com sucesso!");
         navigate("/agendamentos");
       } else {
-        // Confirmação de e-mail ativada — pede login depois.
-        toast.success("Verifique seu e-mail para confirmar o cadastro.");
+        toast.success("Cadastro realizado. Faça login para continuar.");
         navigate("/entrar");
       }
     } catch (err: any) {
