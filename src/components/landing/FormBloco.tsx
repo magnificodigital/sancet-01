@@ -470,6 +470,93 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
     );
   }
 
+  if (bloco.tipo === "linha_tempo") {
+    const c = bloco.config;
+    const setM = (i: number, campo: string, valor: string) => {
+      const novos = c.marcos.map((m, idx) => (idx === i ? { ...m, [campo]: valor } : m));
+      set("marcos", novos);
+    };
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Título da seção</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <div className="space-y-3">
+          <Label>Marcos (por ano)</Label>
+          {c.marcos.map((m, i) => (
+            <div key={m.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Marco {i + 1}</span>
+                <Button size="sm" variant="ghost" onClick={() => set("marcos", c.marcos.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Input placeholder="Ano" value={m.ano} onChange={(e) => setM(i, "ano", e.target.value)} />
+                <Input className="col-span-2" placeholder="Título" value={m.titulo} onChange={(e) => setM(i, "titulo", e.target.value)} />
+              </div>
+              <Textarea placeholder="Descrição" rows={2} value={m.texto} onChange={(e) => setM(i, "texto", e.target.value)} />
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => set("marcos", [...c.marcos, { id: uid(), ano: "", titulo: "", texto: "" }])}
+          >
+            <Plus className="h-3.5 w-3.5" /> Adicionar marco
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (bloco.tipo === "equipe") {
+    const c = bloco.config;
+    const setMem = (i: number, campo: string, valor: string) => {
+      const novos = c.membros.map((m, idx) => (idx === i ? { ...m, [campo]: valor } : m));
+      set("membros", novos);
+    };
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Título da seção</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Subtítulo (opcional)</Label><Input value={c.subtitulo_secao} onChange={(e) => set("subtitulo_secao", e.target.value)} /></div>
+        <div className="space-y-2">
+          <Label>Nº de colunas (no computador)</Label>
+          <Select value={String(c.qtd_colunas)} onValueChange={(v) => set("qtd_colunas", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">3 colunas</SelectItem>
+              <SelectItem value="4">4 colunas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-3">
+          <Label>Membros</Label>
+          {c.membros.map((m, i) => (
+            <div key={m.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Membro {i + 1}</span>
+                <Button size="sm" variant="ghost" onClick={() => set("membros", c.membros.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <UploadImagem value={m.foto_url} onChange={(v) => setMem(i, "foto_url", v)} pasta="landing-pages/equipe" />
+              <Input placeholder="Nome" value={m.nome} onChange={(e) => setMem(i, "nome", e.target.value)} />
+              <Input placeholder="Cargo / função" value={m.cargo} onChange={(e) => setMem(i, "cargo", e.target.value)} />
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => set("membros", [...c.membros, { id: uid(), foto_url: "", nome: "Novo membro", cargo: "" }])}
+          >
+            <Plus className="h-3.5 w-3.5" /> Adicionar membro
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return null;
 };
 

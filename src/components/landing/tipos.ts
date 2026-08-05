@@ -12,7 +12,9 @@ export type TipoBloco =
   | "imagem"
   | "video"
   | "espacador"
-  | "colunas";
+  | "colunas"
+  | "linha_tempo"
+  | "equipe";
 
 export type CardServico = { icone: string; titulo: string; descricao: string };
 export type Pergunta = { pergunta: string; resposta: string };
@@ -81,6 +83,15 @@ export type ConfigColunas = {
   qtd_colunas: 2 | 3 | 4;
   colunas: ColunaItem[];
 };
+export type MarcoTempo = { id: string; ano: string; titulo: string; texto: string };
+export type ConfigLinhaTempo = { titulo_secao: string; marcos: MarcoTempo[] };
+export type MembroEquipe = { id: string; foto_url: string; nome: string; cargo: string };
+export type ConfigEquipe = {
+  titulo_secao: string;
+  subtitulo_secao: string;
+  qtd_colunas: 3 | 4;
+  membros: MembroEquipe[];
+};
 
 export type Bloco =
   | { id: string; tipo: "hero"; config: ConfigHero }
@@ -96,7 +107,9 @@ export type Bloco =
   | { id: string; tipo: "imagem"; config: ConfigImagem }
   | { id: string; tipo: "video"; config: ConfigVideo }
   | { id: string; tipo: "espacador"; config: ConfigEspacador }
-  | { id: string; tipo: "colunas"; config: ConfigColunas };
+  | { id: string; tipo: "colunas"; config: ConfigColunas }
+  | { id: string; tipo: "linha_tempo"; config: ConfigLinhaTempo }
+  | { id: string; tipo: "equipe"; config: ConfigEquipe };
 
 export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[] = [
   { tipo: "hero", label: "Hero", descricao: "Banner principal" },
@@ -112,6 +125,8 @@ export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[]
   { tipo: "imagem", label: "Imagem", descricao: "Foto avulsa com legenda" },
   { tipo: "video", label: "Vídeo", descricao: "YouTube, Vimeo ou MP4" },
   { tipo: "colunas", label: "Colunas", descricao: "2 a 4 colunas de conteúdo" },
+  { tipo: "linha_tempo", label: "Linha do tempo", descricao: "Nossa história por ano" },
+  { tipo: "equipe", label: "Equipe", descricao: "Cards com foto e cargo" },
   { tipo: "espacador", label: "Espaçador", descricao: "Espaço em branco" },
 ];
 
@@ -270,6 +285,35 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
             { id: uid(), imagem_url: "", titulo: "Coluna 1", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
             { id: uid(), imagem_url: "", titulo: "Coluna 2", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
             { id: uid(), imagem_url: "", titulo: "Coluna 3", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
+          ],
+        },
+      };
+    case "linha_tempo":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo_secao: "Nossa história",
+          marcos: [
+            { id: uid(), ano: "1980", titulo: "Fundação", texto: "Início das atividades da Sancet." },
+            { id: uid(), ano: "2005", titulo: "Acreditação", texto: "Conquista de certificações de qualidade." },
+            { id: uid(), ano: "2024", titulo: "Expansão", texto: "Novas unidades na região metropolitana." },
+          ],
+        },
+      };
+    case "equipe":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo_secao: "Nossa equipe",
+          subtitulo_secao: "Conheça nossos profissionais qualificados",
+          qtd_colunas: 4,
+          membros: [
+            { id: uid(), foto_url: "", nome: "Nome do profissional", cargo: "Cargo / função" },
+            { id: uid(), foto_url: "", nome: "Nome do profissional", cargo: "Cargo / função" },
+            { id: uid(), foto_url: "", nome: "Nome do profissional", cargo: "Cargo / função" },
+            { id: uid(), foto_url: "", nome: "Nome do profissional", cargo: "Cargo / função" },
           ],
         },
       };

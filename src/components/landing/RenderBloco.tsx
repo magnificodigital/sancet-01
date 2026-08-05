@@ -293,5 +293,87 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
         </section>
       );
     }
+    case "linha_tempo": {
+      const c = bloco.config;
+      return (
+        <section className="w-full py-16 px-6 bg-white">
+          <div className="max-w-[800px] mx-auto">
+            {c.titulo_secao && (
+              <h2 className="text-3xl font-bold text-center mb-10" style={{ color: AZUL }}>
+                {c.titulo_secao}
+              </h2>
+            )}
+            <ol className="relative border-l-2 pl-8 space-y-8" style={{ borderColor: VERMELHO }}>
+              {c.marcos.map((m) => (
+                <li key={m.id} className="relative">
+                  <span
+                    className="absolute -left-[41px] top-1 h-4 w-4 rounded-full ring-4 ring-white"
+                    style={{ backgroundColor: VERMELHO }}
+                  />
+                  <div
+                    className="text-sm font-bold uppercase tracking-wide"
+                    style={{ color: VERMELHO }}
+                  >
+                    {m.ano}
+                  </div>
+                  {m.titulo && (
+                    <h3 className="mt-0.5 text-lg font-semibold" style={{ color: AZUL }}>
+                      {m.titulo}
+                    </h3>
+                  )}
+                  {m.texto && (
+                    <p className="mt-1 text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                      {m.texto}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      );
+    }
+    case "equipe": {
+      const c = bloco.config;
+      const gridCols =
+        { 3: "md:grid-cols-3", 4: "md:grid-cols-4" }[c.qtd_colunas] ?? "md:grid-cols-4";
+      return (
+        <section className="w-full py-16 px-6" style={{ backgroundColor: "#F5F5F5" }}>
+          <div className="max-w-[1200px] mx-auto">
+            {c.titulo_secao && (
+              <h2 className="text-3xl font-bold text-center" style={{ color: AZUL }}>
+                {c.titulo_secao}
+              </h2>
+            )}
+            {c.subtitulo_secao && (
+              <p className="text-center text-gray-600 mt-2 mb-10">{c.subtitulo_secao}</p>
+            )}
+            <div className={`grid grid-cols-2 ${gridCols} gap-8 ${c.subtitulo_secao ? "" : "mt-10"}`}>
+              {c.membros.map((m) => (
+                <div key={m.id} className="flex flex-col items-center text-center">
+                  {m.foto_url ? (
+                    <img
+                      src={m.foto_url}
+                      alt={m.nome}
+                      className="h-32 w-32 rounded-full object-cover shadow-sm"
+                    />
+                  ) : (
+                    <div className="h-32 w-32 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                      Sem foto
+                    </div>
+                  )}
+                  <h3 className="mt-4 text-base font-semibold" style={{ color: AZUL }}>
+                    {m.nome}
+                  </h3>
+                  {m.cargo && (
+                    <p className="mt-0.5 text-sm text-gray-600 whitespace-pre-line">{m.cargo}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
   }
 };
