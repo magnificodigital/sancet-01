@@ -14,6 +14,17 @@ export function setLogos(next: Logos) {
   logoSubs.forEach((cb) => cb());
 }
 
+/** Atualiza o favicon da aba do navegador em runtime (vazio → volta ao padrão). */
+export function aplicarFavicon(url: string) {
+  let link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  link.href = url || "/favicon.ico";
+}
+
 /** Hook reativo: retorna as URLs de logo configuradas (ou null). */
 export function useLogos(): Logos {
   const [, force] = useState(0);
@@ -110,6 +121,7 @@ export async function carregarTema() {
       claro: cores.LOGO_CLARO || null,
       escuro: cores.LOGO_ESCURO || null,
     });
+    if (cores.FAVICON) aplicarFavicon(cores.FAVICON);
   } catch {
     /* silencioso — mantém as cores padrão do CSS */
   }

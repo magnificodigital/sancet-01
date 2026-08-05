@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AbaCatalogoShift } from "./AbaCatalogoShift";
-import { aplicarTema, setLogos, TEMA_PADRAO } from "@/lib/tema";
+import { aplicarTema, aplicarFavicon, setLogos, TEMA_PADRAO } from "@/lib/tema";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -68,6 +68,7 @@ const CHAVES = [
   "TEMA_SIDEBAR",
   "LOGO_CLARO",
   "LOGO_ESCURO",
+  "FAVICON",
 ];
 
 const SENSIVEIS = new Set([
@@ -406,6 +407,11 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
     setLogos({ claro: novos.LOGO_CLARO || null, escuro: novos.LOGO_ESCURO || null });
   };
 
+  const setFaviconConfig = (url: string) => {
+    setConfigs((prev) => ({ ...prev, FAVICON: url }));
+    aplicarFavicon(url);
+  };
+
   const corField = (chave: string, label: string, helper?: string) => {
     const valor = configs[chave] || TEMA_PADRAO[chave] || "#000000";
     return (
@@ -586,6 +592,15 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                     onChange={(u) => setLogoConfig("LOGO_ESCURO", u)}
                     disabled={!podeEditar}
                   />
+                  <LogoUpload
+                    label="Favicon (ícone da aba do navegador)"
+                    valor={configs.FAVICON || ""}
+                    onChange={setFaviconConfig}
+                    disabled={!podeEditar}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Favicon: imagem quadrada (ex.: 32×32 ou 64×64), PNG ou ICO.
+                  </p>
                 </div>
               </CardContent>
             </Card>
