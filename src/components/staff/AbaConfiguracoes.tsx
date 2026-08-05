@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AbaCatalogoShift } from "./AbaCatalogoShift";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -360,33 +361,38 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
         {/* Conteúdo */}
         <div className="space-y-5">
           {secaoAtiva === "shift" && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Database className="h-5 w-5 text-secondary" />
-                    Integração Shift LIS
-                  </CardTitle>
-                  {statusSecao(SECOES[0]) && <Badge variant="secondary">Conectado</Badge>}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {campo(
-                  "SHIFT_ENDPOINT",
-                  "Endpoint SOAP (consultas)",
-                  "https://sancet.shiftcloud.com.br/.../consultas.Webserver.cls",
-                )}
-                {campo(
-                  "SHIFT_ENDPOINT_MOBILE",
-                  "Endpoint SOAP Mobile (convênios)",
-                  "https://sancet.shiftcloud.com.br/.../integracaoMobile.Webserver.cls",
-                )}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {campo("SHIFT_USER_ID", "Usuário (pUserId)", "Fornecido pelo TI")}
-                  {campo("SHIFT_SENHA", "Senha", "••••••••")}
-                </div>
-              </CardContent>
-            </Card>
+            <>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Database className="h-5 w-5 text-secondary" />
+                      Integração Shift LIS
+                    </CardTitle>
+                    {statusSecao(SECOES[0]) && <Badge variant="secondary">Conectado</Badge>}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {campo(
+                    "SHIFT_ENDPOINT",
+                    "Endpoint SOAP (consultas)",
+                    "https://sancet.shiftcloud.com.br/.../consultas.Webserver.cls",
+                  )}
+                  {campo(
+                    "SHIFT_ENDPOINT_MOBILE",
+                    "Endpoint SOAP Mobile (convênios)",
+                    "https://sancet.shiftcloud.com.br/.../integracaoMobile.Webserver.cls",
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {campo("SHIFT_USER_ID", "Usuário (pUserId)", "Fornecido pelo TI")}
+                    {campo("SHIFT_SENHA", "Senha", "••••••••")}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Sincronização do Shift (antes em "Sync Shift" no menu) */}
+              <AbaCatalogoShift />
+            </>
           )}
 
           {secaoAtiva === "ia" && (

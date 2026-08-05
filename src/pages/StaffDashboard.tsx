@@ -8,7 +8,6 @@ import { AbaPedidos } from "@/components/staff/AbaPedidos";
 import { AbaPacientes } from "@/components/staff/AbaPacientes";
 import { AbaCatalogo } from "@/components/staff/AbaCatalogo";
 import { AbaUnidades } from "@/components/staff/AbaUnidades";
-import { AbaCatalogoShift } from "@/components/staff/AbaCatalogoShift";
 import { AbaConvenios } from "@/components/staff/AbaConvenios";
 import { AbaConfiguracoes } from "@/components/staff/AbaConfiguracoes";
 import { AbaEquipe } from "@/components/staff/AbaEquipe";
@@ -20,7 +19,9 @@ const StaffDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [carregando, setCarregando] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
-  const abaInicial = (searchParams.get("aba") as StaffTab) || "visao";
+  // "Sync Shift" saiu do menu e virou parte das Configurações; redireciona links antigos.
+  const abaParam = searchParams.get("aba");
+  const abaInicial: StaffTab = abaParam === "shift" ? "config" : (abaParam as StaffTab) || "visao";
   const [aba, setAba] = useState<StaffTab>(abaInicial);
   const staffPerfil = useStaffPerfil();
 
@@ -70,7 +71,6 @@ const StaffDashboard = () => {
       {aba === "catalogo" && <AbaCatalogo permissoes={staffPerfil.permissoes} />}
       {aba === "unidades" && <AbaUnidades permissoes={staffPerfil.permissoes} />}
       {aba === "convenios" && <AbaConvenios />}
-      {aba === "shift" && <AbaCatalogoShift />}
       {aba === "config" && <AbaConfiguracoes permissoes={staffPerfil.permissoes} isAdmin={staffPerfil.isAdmin} />}
       {aba === "sites" && <AbaSites />}
       {aba === "equipe" && <AbaEquipe />}
