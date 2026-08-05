@@ -6,7 +6,7 @@ import { RenderBloco } from "@/components/landing/RenderBloco";
 import type { Bloco } from "@/components/landing/tipos";
 import Index from "./Index";
 
-// Slug reservado da home institucional editável (Sites → criar página com este slug).
+// Slug da home institucional editável (Sites → Páginas do site → slug "home").
 const HOME_SLUG = "home";
 
 type Estado =
@@ -15,9 +15,10 @@ type Estado =
   | { tipo: "fallback" };
 
 /**
- * Rota "/". Se existir uma landing page publicada com slug "home", ela é a
- * home institucional (editável no painel). Caso contrário, cai no Index atual
- * (a home funcional que já existe) — assim o site nunca fica sem home.
+ * Rota "/". Se existir uma página do site ativa com slug "home", ela é a
+ * home institucional (editável no painel em Sites → Páginas do site).
+ * Caso contrário, cai no Index atual (a home funcional que já existe) —
+ * assim o site nunca fica sem home.
  */
 const Home = () => {
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
@@ -26,10 +27,10 @@ const Home = () => {
     let ativo = true;
     (async () => {
       const { data } = await supabase
-        .from("landing_pages")
-        .select("blocos, publicado")
+        .from("paginas")
+        .select("blocos, ativa")
         .eq("slug", HOME_SLUG)
-        .eq("publicado", true)
+        .eq("ativa", true)
         .maybeSingle();
       if (!ativo) return;
       const blocos = (data?.blocos as Bloco[] | undefined) ?? [];
