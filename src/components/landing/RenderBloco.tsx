@@ -14,6 +14,19 @@ import { BlocoExamesDestaque } from "./blocos/BlocoExamesDestaque";
 const VERMELHO = "#C8102E";
 const AZUL = "#1B3A6B";
 
+// Converte a URL do vídeo em um alvo embutível (YouTube/Vimeo → iframe; .mp4 → <video>).
+const resolverVideo = (url: string): { modo: "iframe" | "video" | "vazio"; src: string } => {
+  if (!url.trim()) return { modo: "vazio", src: "" };
+  const yt = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
+  );
+  if (yt) return { modo: "iframe", src: `https://www.youtube.com/embed/${yt[1]}` };
+  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vm) return { modo: "iframe", src: `https://player.vimeo.com/video/${vm[1]}` };
+  if (/\.(mp4|webm|ogg)(\?|#|$)/i.test(url)) return { modo: "video", src: url };
+  return { modo: "iframe", src: url };
+};
+
 export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
   switch (bloco.tipo) {
     case "hero": {
@@ -161,5 +174,124 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
       return <BlocoConvenios config={bloco.config} />;
     case "exames_destaque":
       return <BlocoExamesDestaque config={bloco.config} />;
+    case "imagem": {
+      const c = bloco.config;
+      const maxW = { pequena: "400px", media: "600px", grande: "900px", total: "1200px" }[
+        c.largura
+      ];
+      const img = c.imagem_url ? (
+        <img src={c.imagem_url} alt={c.legenda} className="w-full h-auto rounded-xl" />
+      ) : (
+        <div className="w-full aspect-video rounded-xl bg-gray-200 flex items-center justify-center text-gray-400">
+          Sem imagem
+        </div>
+      );
+      return (
+        <section className="w-full py-8 px-6 bg-white">
+          <figure className="mx-auto" style={{ maxWidth: maxW }}>
+            {c.link ? (
+              <a href={c.link} target="_blank" rel="noreferrer">
+                {img}
+              </a>
+            ) : (
+              img
+            )}
+            {c.legenda && (
+              <figcaption className="mt-2 text-center text-sm text-gray-500">
+                {c.legenda}
+              </figcaption>
+            )}
+          </figure>
+        </section>
+      );
+    }
+    case "video": {
+      const c = bloco.config;
+      const v = resolverVideo(c.url);
+      return (
+        <section className="w-full py-8 px-6 bg-white">
+          <div className="mx-auto max-w-[900px]">
+            <div
+              className="relative w-full overflow-hidden rounded-xl bg-black"
+              style={{ aspectRatio: "16 / 9" }}
+            >
+              {v.modo === "iframe" && (
+                <iframe
+                  src={v.src}
+                  title={c.legenda || "Vídeo"}
+                  className="absolute inset-0 h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
+              {v.modo === "video" && (
+                <video src={v.src} controls className="absolute inset-0 h-full w-full" />
+              )}
+              {v.modo === "vazio" && (
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-white/60">
+                  Adicione a URL do vídeo
+                </div>
+              )}
+            </div>
+            {c.legenda && (
+              <p className="mt-2 text-center text-sm text-gray-500">{c.legenda}</p>
+            )}
+          </div>
+        </section>
+      );
+    }
+    case "espacador": {
+      const c = bloco.config;
+      return <div aria-hidden style={{ height: `${c.altura}px` }} className="w-full" />;
+    }
+    case "colunas": {
+      const c = bloco.config;
+      const gridCols =
+        { 2: "md:grid-cols-2", 3: "md:grid-cols-3", 4: "md:grid-cols-4" }[c.qtd_colunas] ??
+        "md:grid-cols-3";
+      return (
+        <section className="w-full py-16 px-6 bg-white">
+          <div className="max-w-[1200px] mx-auto">
+            {c.titulo_secao && (
+              <h2 className="text-3xl font-bold text-center mb-10" style={{ color: AZUL }}>
+                {c.titulo_secao}
+              </h2>
+            )}
+            <div className={`grid grid-cols-1 ${gridCols} gap-8`}>
+              {c.colunas.map((col) => (
+                <div key={col.id} className="flex flex-col gap-3">
+                  {col.imagem_url && (
+                    <img
+                      src={col.imagem_url}
+                      alt={col.titulo}
+                      className="w-full h-auto rounded-xl object-cover"
+                    />
+                  )}
+                  {col.titulo && (
+                    <h3 className="text-lg font-semibold" style={{ color: AZUL }}>
+                      {col.titulo}
+                    </h3>
+                  )}
+                  {col.texto && (
+                    <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                      {col.texto}
+                    </p>
+                  )}
+                  {col.botao_texto && (
+                    <a
+                      href={col.botao_link || "#"}
+                      className="mt-1 inline-block w-fit px-4 py-2 rounded-lg text-sm font-medium text-white transition hover:opacity-90"
+                      style={{ backgroundColor: VERMELHO }}
+                    >
+                      {col.botao_texto}
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
   }
 };

@@ -368,6 +368,108 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
     return <FormExamesDestaque config={bloco.config} onChange={onChange} />;
   }
 
+  if (bloco.tipo === "imagem") {
+    const c = bloco.config;
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Imagem</Label><UploadImagem value={c.imagem_url} onChange={(v) => set("imagem_url", v)} /></div>
+        <div className="space-y-2"><Label>Legenda (opcional)</Label><Input value={c.legenda} onChange={(e) => set("legenda", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Link ao clicar (opcional)</Label><Input value={c.link} onChange={(e) => set("link", e.target.value)} placeholder="https://..." /></div>
+        <div className="space-y-2">
+          <Label>Largura</Label>
+          <Select value={c.largura} onValueChange={(v) => set("largura", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pequena">Pequena</SelectItem>
+              <SelectItem value="media">Média</SelectItem>
+              <SelectItem value="grande">Grande</SelectItem>
+              <SelectItem value="total">Largura total</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
+  }
+
+  if (bloco.tipo === "video") {
+    const c = bloco.config;
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>URL do vídeo</Label>
+          <Input value={c.url} onChange={(e) => set("url", e.target.value)} placeholder="YouTube, Vimeo ou .mp4" />
+          <p className="text-xs text-muted-foreground">
+            Cole o link do YouTube/Vimeo ou a URL de um arquivo .mp4.
+          </p>
+        </div>
+        <div className="space-y-2"><Label>Legenda (opcional)</Label><Input value={c.legenda} onChange={(e) => set("legenda", e.target.value)} /></div>
+      </div>
+    );
+  }
+
+  if (bloco.tipo === "espacador") {
+    const c = bloco.config;
+    return (
+      <div className="space-y-2">
+        <Label>Altura do espaço: {c.altura}px</Label>
+        <Slider min={8} max={200} step={4} value={[c.altura]} onValueChange={(v) => set("altura", v[0])} />
+      </div>
+    );
+  }
+
+  if (bloco.tipo === "colunas") {
+    const c = bloco.config;
+    const setCol = (i: number, campo: string, valor: string) => {
+      const novas = c.colunas.map((col, idx) => (idx === i ? { ...col, [campo]: valor } : col));
+      set("colunas", novas);
+    };
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Título da seção (opcional)</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <div className="space-y-2">
+          <Label>Nº de colunas (no computador)</Label>
+          <Select value={String(c.qtd_colunas)} onValueChange={(v) => set("qtd_colunas", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">2 colunas</SelectItem>
+              <SelectItem value="3">3 colunas</SelectItem>
+              <SelectItem value="4">4 colunas</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">No celular as colunas ficam empilhadas.</p>
+        </div>
+        <div className="space-y-3">
+          <Label>Colunas</Label>
+          {c.colunas.map((col, i) => (
+            <div key={col.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Coluna {i + 1}</span>
+                <Button size="sm" variant="ghost" onClick={() => set("colunas", c.colunas.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <UploadImagem value={col.imagem_url} onChange={(v) => setCol(i, "imagem_url", v)} pasta="landing-pages/colunas" />
+              <Input placeholder="Título" value={col.titulo} onChange={(e) => setCol(i, "titulo", e.target.value)} />
+              <Textarea placeholder="Texto" rows={3} value={col.texto} onChange={(e) => setCol(i, "texto", e.target.value)} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Texto do botão" value={col.botao_texto} onChange={(e) => setCol(i, "botao_texto", e.target.value)} />
+                <Input placeholder="Link do botão" value={col.botao_link} onChange={(e) => setCol(i, "botao_link", e.target.value)} />
+              </div>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => set("colunas", [...c.colunas, { id: uid(), imagem_url: "", titulo: "Nova coluna", texto: "", botao_texto: "", botao_link: "" }])}
+          >
+            <Plus className="h-3.5 w-3.5" /> Adicionar coluna
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return null;
 };
 

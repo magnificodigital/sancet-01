@@ -8,7 +8,11 @@ export type TipoBloco =
   | "depoimentos"
   | "estatisticas"
   | "convenios"
-  | "exames_destaque";
+  | "exames_destaque"
+  | "imagem"
+  | "video"
+  | "espacador"
+  | "colunas";
 
 export type CardServico = { icone: string; titulo: string; descricao: string };
 export type Pergunta = { pergunta: string; resposta: string };
@@ -56,6 +60,27 @@ export type ConfigExamesDestaque = {
   exames_ids: string[];
   mostrar_botao_carrinho: boolean;
 };
+export type ConfigImagem = {
+  imagem_url: string;
+  legenda: string;
+  largura: "pequena" | "media" | "grande" | "total";
+  link: string;
+};
+export type ConfigVideo = { url: string; legenda: string };
+export type ConfigEspacador = { altura: number };
+export type ColunaItem = {
+  id: string;
+  imagem_url: string;
+  titulo: string;
+  texto: string;
+  botao_texto: string;
+  botao_link: string;
+};
+export type ConfigColunas = {
+  titulo_secao: string;
+  qtd_colunas: 2 | 3 | 4;
+  colunas: ColunaItem[];
+};
 
 export type Bloco =
   | { id: string; tipo: "hero"; config: ConfigHero }
@@ -67,7 +92,11 @@ export type Bloco =
   | { id: string; tipo: "depoimentos"; config: ConfigDepoimentos }
   | { id: string; tipo: "estatisticas"; config: ConfigEstatisticas }
   | { id: string; tipo: "convenios"; config: ConfigConvenios }
-  | { id: string; tipo: "exames_destaque"; config: ConfigExamesDestaque };
+  | { id: string; tipo: "exames_destaque"; config: ConfigExamesDestaque }
+  | { id: string; tipo: "imagem"; config: ConfigImagem }
+  | { id: string; tipo: "video"; config: ConfigVideo }
+  | { id: string; tipo: "espacador"; config: ConfigEspacador }
+  | { id: string; tipo: "colunas"; config: ConfigColunas };
 
 export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[] = [
   { tipo: "hero", label: "Hero", descricao: "Banner principal" },
@@ -80,6 +109,10 @@ export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[]
   { tipo: "estatisticas", label: "Estatísticas", descricao: "Números em destaque" },
   { tipo: "convenios", label: "Convênios", descricao: "Grid de logos" },
   { tipo: "exames_destaque", label: "Exames em destaque", descricao: "Cards de exames" },
+  { tipo: "imagem", label: "Imagem", descricao: "Foto avulsa com legenda" },
+  { tipo: "video", label: "Vídeo", descricao: "YouTube, Vimeo ou MP4" },
+  { tipo: "colunas", label: "Colunas", descricao: "2 a 4 colunas de conteúdo" },
+  { tipo: "espacador", label: "Espaçador", descricao: "Espaço em branco" },
 ];
 
 export const uid = () =>
@@ -206,6 +239,38 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
           subtitulo_secao: "",
           exames_ids: [],
           mostrar_botao_carrinho: true,
+        },
+      };
+    case "imagem":
+      return {
+        id: uid(),
+        tipo,
+        config: { imagem_url: "", legenda: "", largura: "grande", link: "" },
+      };
+    case "video":
+      return {
+        id: uid(),
+        tipo,
+        config: { url: "", legenda: "" },
+      };
+    case "espacador":
+      return {
+        id: uid(),
+        tipo,
+        config: { altura: 48 },
+      };
+    case "colunas":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo_secao: "",
+          qtd_colunas: 3,
+          colunas: [
+            { id: uid(), imagem_url: "", titulo: "Coluna 1", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
+            { id: uid(), imagem_url: "", titulo: "Coluna 2", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
+            { id: uid(), imagem_url: "", titulo: "Coluna 3", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
+          ],
         },
       };
   }
