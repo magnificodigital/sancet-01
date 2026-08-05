@@ -5,6 +5,7 @@ import { carregarTema } from "@/lib/tema";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import Home from "./pages/Home.tsx";
 import Index from "./pages/Index.tsx";
 import Exames from "./pages/Exames.tsx";
 import SelecaoTipoCompra from "./pages/SelecaoTipoCompra.tsx";
@@ -49,7 +50,8 @@ const App = () => {
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/central-de-exames" element={<Index />} />
           <Route path="/exames" element={<SelecaoTipoCompra />} />
           <Route path="/exames/particular" element={<ExamesParticular />} />
           <Route path="/exames/convenio/escolher-convenio" element={<EscolherConvenio />} />

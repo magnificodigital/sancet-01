@@ -11,6 +11,7 @@ import { BlocoEstatisticas } from "./blocos/BlocoEstatisticas";
 import { BlocoConvenios } from "./blocos/BlocoConvenios";
 import { BlocoExamesDestaque } from "./blocos/BlocoExamesDestaque";
 import { FormularioContato } from "./blocos/FormularioContato";
+import { AutocompleteExames } from "@/components/catalogo/AutocompleteExames";
 
 const VERMELHO = "hsl(var(--brand))";
 const AZUL = "hsl(var(--brand-2))";
@@ -493,6 +494,22 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+      );
+    }
+    case "busca_exame": {
+      const c = bloco.config;
+      return (
+        <section className="w-full py-16 px-6" style={{ backgroundColor: "#F5F5F5" }}>
+          <div className="max-w-[720px] mx-auto text-center">
+            {c.titulo && (
+              <h2 className="text-3xl font-bold mb-2" style={{ color: AZUL }}>
+                {c.titulo}
+              </h2>
+            )}
+            {c.subtitulo && <p className="text-gray-600 mb-6">{c.subtitulo}</p>}
+            <AutocompleteExames placeholder={c.placeholder || "Digite o exame (ex: Hemograma)"} />
           </div>
         </section>
       );

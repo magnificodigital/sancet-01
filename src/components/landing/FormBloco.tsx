@@ -368,6 +368,20 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
     return <FormExamesDestaque config={bloco.config} onChange={onChange} />;
   }
 
+  if (bloco.tipo === "busca_exame") {
+    const c = bloco.config;
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Título</Label><Input value={c.titulo} onChange={(e) => set("titulo", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Subtítulo</Label><Input value={c.subtitulo} onChange={(e) => set("subtitulo", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Texto do campo (placeholder)</Label><Input value={c.placeholder} onChange={(e) => set("placeholder", e.target.value)} /></div>
+        <p className="text-xs text-muted-foreground">
+          A busca leva o paciente ao catálogo de exames (mesmo fluxo de compra).
+        </p>
+      </div>
+    );
+  }
+
   if (bloco.tipo === "imagem") {
     const c = bloco.config;
     return (

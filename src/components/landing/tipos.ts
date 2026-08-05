@@ -14,7 +14,8 @@ export type TipoBloco =
   | "espacador"
   | "colunas"
   | "linha_tempo"
-  | "equipe";
+  | "equipe"
+  | "busca_exame";
 
 export type CardServico = { icone: string; titulo: string; descricao: string };
 export type Pergunta = { pergunta: string; resposta: string };
@@ -106,6 +107,11 @@ export type ConfigEquipe = {
   qtd_colunas: 3 | 4;
   membros: MembroEquipe[];
 };
+export type ConfigBuscaExame = {
+  titulo: string;
+  subtitulo: string;
+  placeholder: string;
+};
 
 export type Bloco =
   | { id: string; tipo: "hero"; config: ConfigHero }
@@ -123,7 +129,8 @@ export type Bloco =
   | { id: string; tipo: "espacador"; config: ConfigEspacador }
   | { id: string; tipo: "colunas"; config: ConfigColunas }
   | { id: string; tipo: "linha_tempo"; config: ConfigLinhaTempo }
-  | { id: string; tipo: "equipe"; config: ConfigEquipe };
+  | { id: string; tipo: "equipe"; config: ConfigEquipe }
+  | { id: string; tipo: "busca_exame"; config: ConfigBuscaExame };
 
 export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[] = [
   { tipo: "hero", label: "Hero", descricao: "Banner principal" },
@@ -141,6 +148,7 @@ export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[]
   { tipo: "colunas", label: "Colunas", descricao: "2 a 4 colunas de conteúdo" },
   { tipo: "linha_tempo", label: "Linha do tempo", descricao: "Nossa história por ano" },
   { tipo: "equipe", label: "Equipe", descricao: "Cards com foto e cargo" },
+  { tipo: "busca_exame", label: "Busca de exame", descricao: "Campo 'Qual exame procura?'" },
   { tipo: "espacador", label: "Espaçador", descricao: "Espaço em branco" },
 ];
 
@@ -330,6 +338,16 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
             { id: uid(), foto_url: "", nome: "Nome do profissional", cargo: "Cargo / função" },
             { id: uid(), foto_url: "", nome: "Nome do profissional", cargo: "Cargo / função" },
           ],
+        },
+      };
+    case "busca_exame":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo: "Qual exame você procura?",
+          subtitulo: "Busque pelo nome do exame e agende em poucos passos.",
+          placeholder: "Digite o exame (ex: Hemograma)",
         },
       };
   }

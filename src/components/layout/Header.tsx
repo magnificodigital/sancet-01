@@ -81,7 +81,7 @@ export const Header = () => {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1 ml-auto">
-          <NavLink to="/exames" className={navLinkClass}>
+          <NavLink to="/central-de-exames" className={navLinkClass}>
             Exames
           </NavLink>
 
@@ -187,7 +187,7 @@ export const Header = () => {
               </SheetHeader>
               <nav className="mt-6 flex flex-col gap-1">
                 <Link
-                  to="/exames"
+                  to="/central-de-exames"
                   className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
                 >
                   Exames
