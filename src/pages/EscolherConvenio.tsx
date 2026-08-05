@@ -17,6 +17,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
+import { CONVENIO_PULAR_CATALOGO } from "@/config/testeConvenio";
 
 type Convenio = { id: string; nome: string; codigo_shift: string };
 type Plano = { codigo_item: string; descricao: string };
@@ -104,7 +105,9 @@ const EscolherConvenio = () => {
       plano_descricao: planoSel?.descricao ?? null,
       numero_carteirinha: carteirinha.trim(),
     });
-    navigate("/exames/convenio/catalogo");
+    // Durante a fase de teste do convênio não exibimos o catálogo de exames
+    // (os exames são definidos pelo pedido médico anexado no envio).
+    navigate(CONVENIO_PULAR_CATALOGO ? "/enviar-pedido" : "/exames/convenio/catalogo");
   };
 
   const hasErr = (id: string) => erros.includes(id);
@@ -283,7 +286,7 @@ const EscolherConvenio = () => {
           onClick={continuar}
           className="w-full mt-5 bg-[#C8102E] hover:bg-[#a80d26] text-white"
         >
-          Continuar para catálogo
+          {CONVENIO_PULAR_CATALOGO ? "Continuar" : "Continuar para catálogo"}
         </Button>
       </div>
     </PageShell>

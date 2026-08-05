@@ -1,6 +1,7 @@
 import { Home, Building2, ChevronRight, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ItemSacola } from "@/stores/sacola";
+import { OCULTAR_SANCET_CASA } from "@/config/testeConvenio";
 
 type Props = {
   onEscolher: (m: "domicilio" | "unidade") => void;
@@ -10,13 +11,13 @@ type Props = {
 export const EtapaTipoAtendimento = ({ onEscolher, itens }: Props) => {
   const examesSemDomicilio = itens.filter((i) => i.disponivelEmCasa !== true);
   const todosPermitemDomicilio =
-    itens.length > 0 && examesSemDomicilio.length === 0;
+    !OCULTAR_SANCET_CASA && itens.length > 0 && examesSemDomicilio.length === 0;
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-secondary">Tipo de atendimento</h1>
 
-      {!todosPermitemDomicilio && examesSemDomicilio.length > 0 && (
+      {!OCULTAR_SANCET_CASA && !todosPermitemDomicilio && examesSemDomicilio.length > 0 && (
         <div className="flex items-start gap-2 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-700" />
           <div className="space-y-1">

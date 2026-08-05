@@ -2,6 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  SOMENTE_MATRIZ,
+  MATRIZ_CODIGO_SHIFT,
+  MATRIZ_NOME,
+} from "@/config/testeConvenio";
 
 export type Unidade = {
   codigo_shift: string;
@@ -36,10 +41,22 @@ export const ListaUnidades = ({ onEscolher }: Props) => {
     },
   });
 
-  const unidades = data && data.length > 0 ? data : MOCK;
+  const base = data && data.length > 0 ? data : MOCK;
+  const ehMatriz = (u: Unidade) =>
+    u.codigo_shift === MATRIZ_CODIGO_SHIFT ||
+    (u.nome ?? "").toLowerCase().includes(MATRIZ_NOME);
+  const unidades = SOMENTE_MATRIZ ? base.filter(ehMatriz) : base;
 
   if (isLoading) {
     return <p className="text-muted-foreground text-sm">Carregando unidades...</p>;
+  }
+
+  if (unidades.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        Nenhuma unidade disponível para atendimento no momento.
+      </p>
+    );
   }
 
   return (

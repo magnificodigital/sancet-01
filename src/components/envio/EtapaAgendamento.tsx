@@ -24,23 +24,36 @@ const hoje = () => {
   return d;
 };
 
+// Antecedência mínima de agendamento (bloqueia o mesmo dia):
+// - Solicitado até 11h00 → pode agendar a partir do dia seguinte (24h).
+// - Solicitado após 11h00 → próxima disponibilidade em 48h (2 dias).
+const minData = () => {
+  const dias = new Date().getHours() < 11 ? 1 : 2;
+  const d = hoje();
+  d.setDate(d.getDate() + dias);
+  return d;
+};
+
 const maxData = () => {
   const d = hoje();
   d.setDate(d.getDate() + 30);
   return d;
 };
 
+// Sábado, domingo e feriados a unidade atende somente pela manhã (07h–11h).
+const soPeriodoManha = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
+
 export const EtapaAgendamento = ({ onConfirmar }: Props) => {
   const [data, setData] = useState<Date | undefined>(undefined);
   const [periodo, setPeriodo] = useState<Periodo | null>(null);
 
-  const isSabado = data ? data.getDay() === 6 : false;
-  const periodoInvalido = isSabado && periodo === "tarde";
+  const apenasManha = data ? soPeriodoManha(data) : false;
+  const periodoInvalido = apenasManha && periodo === "tarde";
   const podeAvancar = !!data && !!periodo && !periodoInvalido;
 
   const escolherData = (d: Date | undefined) => {
     setData(d);
-    if (d && d.getDay() === 6 && periodo === "tarde") {
+    if (d && soPeriodoManha(d) && periodo === "tarde") {
       setPeriodo(null);
     }
   };
@@ -79,9 +92,8 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
                 onSelect={escolherData}
                 locale={ptBR}
                 disabled={(d) => {
-                  if (d < hoje()) return true;
+                  if (d < minData()) return true; // bloqueia mesmo dia / antecedência mínima
                   if (d > maxData()) return true;
-                  if (d.getDay() === 0) return true; // domingo
                   return false;
                 }}
                 initialFocus
@@ -90,7 +102,8 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
             </PopoverContent>
           </Popover>
           <p className="mt-2 text-xs text-muted-foreground">
-            Segunda a sábado, até 30 dias à frente.
+            Agende com no mínimo 24h de antecedência (pedidos após as 11h só a partir de 48h),
+            até 30 dias à frente.
           </p>
         </div>
 
@@ -114,14 +127,14 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
 
             <button
               type="button"
-              disabled={isSabado}
+              disabled={apenasManha}
               onClick={() => setPeriodo("tarde")}
               className={cn(
                 "rounded-xl border p-4 text-left transition",
                 periodo === "tarde"
                   ? "border-[#C8102E] bg-[#C8102E]/5 ring-2 ring-[#C8102E]/30"
                   : "border-border hover:border-[#C8102E]/40",
-                isSabado && "cursor-not-allowed opacity-50 hover:border-border",
+                apenasManha && "cursor-not-allowed opacity-50 hover:border-border",
               )}
             >
               <Sunset className="mb-2 h-5 w-5 text-[#C8102E]" />
@@ -129,9 +142,9 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
               <p className="text-xs text-muted-foreground">12h às 16h</p>
             </button>
           </div>
-          {isSabado && (
+          {apenasManha && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Aos sábados a unidade atende somente pela manhã.
+              Aos sábados, domingos e feriados a unidade atende somente pela manhã.
             </p>
           )}
         </div>

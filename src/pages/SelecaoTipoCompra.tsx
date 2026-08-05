@@ -5,6 +5,8 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { useSacola } from "@/stores/sacola";
 import { AlertTrocarTipo } from "@/components/catalogo/AlertTrocarTipo";
+import { cn } from "@/lib/utils";
+import { OCULTAR_PARTICULAR } from "@/config/testeConvenio";
 
 const SelecaoTipoCompra = () => {
   const navigate = useNavigate();
@@ -44,20 +46,27 @@ const SelecaoTipoCompra = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-5 max-w-4xl mx-auto">
-          <button
-            onClick={() => ir("particular")}
-            className="text-left rounded-2xl border-2 border-[#C8102E] bg-card p-6 hover:bg-[#C8102E]/5 transition group"
-          >
-            <Wallet className="h-10 w-10 text-[#C8102E] mb-3" />
-            <h2 className="text-xl font-bold text-secondary mb-2">Particular</h2>
-            <p className="text-sm text-muted-foreground mb-5">
-              Pague por exame. Preços fixos e transparentes. Resultado em até 3 dias úteis.
-            </p>
-            <Button className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white gap-2">
-              Começar Particular <ChevronRight className="h-4 w-4" />
-            </Button>
-          </button>
+        <div
+          className={cn(
+            "grid gap-5",
+            OCULTAR_PARTICULAR ? "max-w-md mx-auto" : "md:grid-cols-2 max-w-4xl mx-auto",
+          )}
+        >
+          {!OCULTAR_PARTICULAR && (
+            <button
+              onClick={() => ir("particular")}
+              className="text-left rounded-2xl border-2 border-[#C8102E] bg-card p-6 hover:bg-[#C8102E]/5 transition group"
+            >
+              <Wallet className="h-10 w-10 text-[#C8102E] mb-3" />
+              <h2 className="text-xl font-bold text-secondary mb-2">Particular</h2>
+              <p className="text-sm text-muted-foreground mb-5">
+                Pague por exame. Preços fixos e transparentes. Resultado em até 3 dias úteis.
+              </p>
+              <Button className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white gap-2">
+                Começar Particular <ChevronRight className="h-4 w-4" />
+              </Button>
+            </button>
+          )}
 
           <button
             onClick={() => ir("convenio")}
@@ -77,9 +86,11 @@ const SelecaoTipoCompra = () => {
           </button>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6 max-w-2xl mx-auto">
-          Você poderá trocar o tipo depois, mas perderá os itens já selecionados.
-        </p>
+        {!OCULTAR_PARTICULAR && (
+          <p className="text-center text-xs text-muted-foreground mt-6 max-w-2xl mx-auto">
+            Você poderá trocar o tipo depois, mas perderá os itens já selecionados.
+          </p>
+        )}
 
         <AlertTrocarTipo
           open={pendente !== null}

@@ -26,8 +26,10 @@ export const PainelUnidade = ({ unidade, onClose, onConfirmar }: Props) => {
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <div>
                 <h4 className="text-sm font-semibold mb-2">Horários de atendimento</h4>
-                <p className="text-sm text-muted-foreground">
-                  Seg–Sex 07h–18h · Sáb 07h–13h
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  {(typeof unidade.horarios === "object" && unidade.horarios?.texto) ||
+                    (typeof unidade.horarios === "string" ? unidade.horarios : null) ||
+                    "Seg–Sex 06h30–18h · Sáb 06h30–12h · Dom / Feriados 07h–11h"}
                 </p>
               </div>
 

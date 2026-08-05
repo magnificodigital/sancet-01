@@ -58,6 +58,8 @@ const EnviarPedido = () => {
   };
 
   const handleConfirmarPedido = async (extras: {
+    nomePaciente: string;
+    telefonePaciente: string;
     numeroCarteirinha: string;
     convenioId: string | null;
     convenioNome: string;
@@ -76,6 +78,24 @@ const EnviarPedido = () => {
     if (!paciente) return;
     setEnviando(true);
     try {
+      // Persiste correções de nome/telefone no cadastro do paciente (patch parcial).
+      const nomeCorrigido = extras.nomePaciente.trim() || paciente.nome;
+      const telefoneCorrigido = extras.telefonePaciente.trim();
+      if (
+        nomeCorrigido !== paciente.nome ||
+        telefoneCorrigido !== (paciente.telefone ?? "")
+      ) {
+        // Não bloqueia o pedido se a atualização do perfil falhar:
+        // o nome corrigido já segue no próprio pedido (paciente_nome).
+        await supabase
+          .rpc("atualizar_meu_perfil_auth", {
+            p_patch: { nome: nomeCorrigido, celular: telefoneCorrigido },
+          })
+          .then(({ error }) => {
+            if (error) console.warn("Falha ao atualizar perfil:", error.message);
+          });
+      }
+
       const uploadDoc = async (file: File | null, sufixo: string) => {
         if (!file) return null;
         const ext = file.name.split(".").pop();
@@ -106,7 +126,7 @@ const EnviarPedido = () => {
       const ehConvenio = tipoEfetivo === "convenio";
 
       const payload: any = {
-        paciente_nome: paciente.nome,
+        paciente_nome: nomeCorrigido,
         tipo_solicitacao: tipoEfetivo,
         modalidade_coleta: modalidade ?? "unidade",
         unidade_codigo_shift: unidade?.codigo_shift ?? null,

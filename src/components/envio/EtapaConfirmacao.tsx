@@ -43,6 +43,7 @@ import { usePaciente } from "@/hooks/usePaciente";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { mascaraCelular } from "@/lib/mascaras";
 import { toast } from "sonner";
 
 type Convenio = { id: string; nome: string; codigo_shift: string };
@@ -77,6 +78,8 @@ type Props = {
   enviando: boolean;
   convenioPreset?: ConvenioPreset;
   onConfirmar: (extras: {
+    nomePaciente: string;
+    telefonePaciente: string;
     numeroCarteirinha: string;
     convenioId: string | null;
     convenioNome: string;
@@ -219,6 +222,17 @@ export const EtapaConfirmacao = ({
   const [aceito, setAceito] = useState(false);
   const [deficiencias, setDeficiencias] = useState("");
 
+  // Nome e telefone editáveis: pré-preenchidos com o cadastro, mas o paciente
+  // pode corrigir aqui. As correções são persistidas no perfil ao confirmar.
+  const [nomePaciente, setNomePaciente] = useState("");
+  const [telefonePaciente, setTelefonePaciente] = useState("");
+  useEffect(() => {
+    if (paciente) {
+      setNomePaciente(paciente.nome ?? "");
+      setTelefonePaciente(paciente.telefone ?? "");
+    }
+  }, [paciente]);
+
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [convSel, setConvSel] = useState<ConvenioSelecionado>(null);
   const [convOpen, setConvOpen] = useState(false);
@@ -312,6 +326,8 @@ export const EtapaConfirmacao = ({
   const validar = (): { label: string; id: string }[] => {
     const faltas: { label: string; id: string }[] = [];
 
+    if (!nomePaciente.trim()) faltas.push({ label: "Nome", id: "campo-nome" });
+
     if (tipoDoc === "rg") {
       if (!arquivoRgFrente) faltas.push({ label: "RG — Frente", id: "doc-rg-frente" });
       if (!arquivoRgVerso) faltas.push({ label: "RG — Verso", id: "doc-rg-verso" });
@@ -348,6 +364,8 @@ export const EtapaConfirmacao = ({
     }
     setErros([]);
     onConfirmar({
+      nomePaciente: nomePaciente.trim(),
+      telefonePaciente: telefonePaciente.trim(),
       numeroCarteirinha,
       convenioId: convSel?.id ?? null,
       convenioNome: convSel?.nome ?? "",
@@ -725,29 +743,44 @@ export const EtapaConfirmacao = ({
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div id="campo-nome" className="grid sm:grid-cols-2 gap-3">
           <div>
-            <Label className="text-xs text-muted-foreground">Nome</Label>
-            <div className="mt-1 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-              <User className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="truncate">{paciente?.nome ?? "—"}</span>
+            <Label htmlFor="conf-nome" className="text-xs text-muted-foreground">
+              Nome *
+            </Label>
+            <div className="relative mt-1">
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="conf-nome"
+                value={nomePaciente}
+                onChange={(e) => setNomePaciente(e.target.value)}
+                placeholder="Nome completo"
+                className={cn("pl-9", hasErr("campo-nome") && "border-red-500")}
+              />
             </div>
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">Telefone</Label>
-            <div className="mt-1 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="truncate">
-                {paciente?.telefone ?? (
-                  <span className="text-muted-foreground italic">não informado</span>
-                )}
-              </span>
+            <Label htmlFor="conf-telefone" className="text-xs text-muted-foreground">
+              Telefone
+            </Label>
+            <div className="relative mt-1">
+              <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="conf-telefone"
+                type="tel"
+                inputMode="numeric"
+                value={telefonePaciente}
+                onChange={(e) => setTelefonePaciente(mascaraCelular(e.target.value))}
+                placeholder="(00) 00000-0000"
+                className="pl-9"
+              />
             </div>
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Para alterar nome ou telefone, edite seu cadastro.
+          Confira e, se precisar, corrija seu nome e telefone. As alterações serão salvas no
+          seu cadastro.
         </p>
 
         <div>
