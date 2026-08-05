@@ -6,19 +6,15 @@ import { RenderBloco } from "@/components/landing/RenderBloco";
 import type { Bloco } from "@/components/landing/tipos";
 import Index from "./Index";
 
-// Slug da home institucional editável (Sites → Páginas do site → slug "home").
-const HOME_SLUG = "home";
-
 type Estado =
   | { tipo: "carregando" }
   | { tipo: "cms"; blocos: Bloco[] }
   | { tipo: "fallback" };
 
 /**
- * Rota "/". Se existir uma página do site ativa com slug "home", ela é a
- * home institucional (editável no painel em Sites → Páginas do site).
- * Caso contrário, cai no Index atual (a home funcional que já existe) —
- * assim o site nunca fica sem home.
+ * Rota "/". Renderiza a página do site marcada como inicial (home = true e
+ * ativa). Se nenhuma estiver marcada, cai na home funcional padrão (Index) —
+ * assim o site nunca fica sem home. A escolha é feita em Sites → Páginas do site.
  */
 const Home = () => {
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
@@ -26,10 +22,11 @@ const Home = () => {
   useEffect(() => {
     let ativo = true;
     (async () => {
-      const { data } = await supabase
+      // `home` é uma coluna nova; cast evita erro de TS enquanto os types não regeneram.
+      const { data } = await (supabase as any)
         .from("paginas")
-        .select("blocos, ativa")
-        .eq("slug", HOME_SLUG)
+        .select("blocos, ativa, home")
+        .eq("home", true)
         .eq("ativa", true)
         .maybeSingle();
       if (!ativo) return;

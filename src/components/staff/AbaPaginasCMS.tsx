@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ExternalLink, FileText, Link2, Pencil, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, FileText, Link2, Pencil, Plus, Star, Trash2 } from "lucide-react";
 
 type Pagina = {
   id: string;
@@ -43,6 +43,7 @@ type Pagina = {
   ativa: boolean;
   no_menu: boolean;
   ordem_menu: number | null;
+  home: boolean;
 };
 
 const slugify = (s: string) =>
@@ -68,9 +69,9 @@ export const AbaPaginasCMS = () => {
 
   const carregar = async () => {
     setCarregando(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("paginas")
-      .select("id, slug, titulo, meta_description, ativa, no_menu, ordem_menu")
+      .select("id, slug, titulo, meta_description, ativa, no_menu, ordem_menu, home")
       .order("titulo", { ascending: true });
     if (error) toast.error(error.message);
     setPaginas((data as any) ?? []);
@@ -122,6 +123,28 @@ export const AbaPaginasCMS = () => {
     navigate(`/staff/paginas-cms/${data!.id}`);
   };
 
+  const definirHome = async (p: Pagina) => {
+    // Desmarca a home atual e marca esta (índice único garante só uma).
+    await (supabase as any).from("paginas").update({ home: false }).eq("home", true);
+    const { error } = await (supabase as any)
+      .from("paginas")
+      .update({ home: true })
+      .eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success(`"${p.titulo}" agora é a página inicial (/)`);
+    carregar();
+  };
+
+  const removerHome = async (p: Pagina) => {
+    const { error } = await (supabase as any)
+      .from("paginas")
+      .update({ home: false })
+      .eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success("Página inicial voltou para a home padrão");
+    carregar();
+  };
+
   const copiarLink = async (p: Pagina) => {
     const url = `${window.location.origin}/${p.slug}`;
     try {
@@ -152,7 +175,8 @@ export const AbaPaginasCMS = () => {
             <FileText className="h-5 w-5" /> Páginas do site
           </h2>
           <p className="text-sm text-muted-foreground">
-            Páginas fixas (Sobre, Contato…) editáveis por blocos.
+            Páginas fixas (Sobre, Contato…) editáveis por blocos. Marque uma com a
+            estrela para ser a <b>página inicial</b> (/); sem nenhuma marcada, vale a home padrão.
           </p>
         </div>
         <Button onClick={abrirNova} className="gap-1.5 bg-brand hover:bg-[#a30d25] text-white">
@@ -167,6 +191,7 @@ export const AbaPaginasCMS = () => {
               <TableHead>Título</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Início</TableHead>
               <TableHead>No menu</TableHead>
               <TableHead className="w-40">Ações</TableHead>
             </TableRow>
@@ -203,6 +228,30 @@ export const AbaPaginasCMS = () => {
                       <Link2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
+                </TableCell>
+                <TableCell>
+                  {p.home ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removerHome(p)}
+                      className="gap-1 border-brand text-brand hover:text-brand"
+                      title="Deixar de ser a página inicial"
+                    >
+                      <Star className="h-3.5 w-3.5 fill-current" /> Inicial
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={!p.ativa}
+                      onClick={() => definirHome(p)}
+                      className="gap-1 text-muted-foreground"
+                      title={p.ativa ? "Definir como página inicial (/)" : "Ative a página primeiro"}
+                    >
+                      <Star className="h-3.5 w-3.5" /> Definir
+                    </Button>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -259,7 +308,7 @@ export const AbaPaginasCMS = () => {
             ))}
             {!carregando && paginas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   Nenhuma página do site criada ainda.
                 </TableCell>
               </TableRow>
