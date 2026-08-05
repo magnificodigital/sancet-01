@@ -42,6 +42,8 @@ export const TEMA_PADRAO: Record<string, string> = {
   TEMA_PRIMARIA: "#C8102E",
   TEMA_SECUNDARIA: "#1B3A6B",
   TEMA_SIDEBAR: "#0B1F3A",
+  TEMA_RODAPE: "#3A3A3A",
+  TEMA_RODAPE_TEXTO: "#EBEBEB",
 };
 
 type HSL = { h: number; s: number; l: number };
@@ -107,6 +109,12 @@ export function aplicarTema(cores: Partial<Record<string, string>>) {
 
   const side = cores.TEMA_SIDEBAR && hexToHsl(cores.TEMA_SIDEBAR);
   if (side) root.style.setProperty("--brand-sidebar", hslStr(side));
+
+  const rod = cores.TEMA_RODAPE && hexToHsl(cores.TEMA_RODAPE);
+  if (rod) root.style.setProperty("--footer", hslStr(rod));
+
+  const rodTxt = cores.TEMA_RODAPE_TEXTO && hexToHsl(cores.TEMA_RODAPE_TEXTO);
+  if (rodTxt) root.style.setProperty("--footer-foreground", hslStr(rodTxt));
 }
 
 /** Lê as cores salvas no banco (via RPC pública, sem expor segredos) e aplica.

@@ -66,6 +66,8 @@ const CHAVES = [
   "TEMA_PRIMARIA",
   "TEMA_SECUNDARIA",
   "TEMA_SIDEBAR",
+  "TEMA_RODAPE",
+  "TEMA_RODAPE_TEXTO",
   "LOGO_CLARO",
   "LOGO_ESCURO",
   "FAVICON",
@@ -393,6 +395,8 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
       TEMA_PRIMARIA: novos.TEMA_PRIMARIA || TEMA_PADRAO.TEMA_PRIMARIA,
       TEMA_SECUNDARIA: novos.TEMA_SECUNDARIA || TEMA_PADRAO.TEMA_SECUNDARIA,
       TEMA_SIDEBAR: novos.TEMA_SIDEBAR || TEMA_PADRAO.TEMA_SIDEBAR,
+      TEMA_RODAPE: novos.TEMA_RODAPE || TEMA_PADRAO.TEMA_RODAPE,
+      TEMA_RODAPE_TEXTO: novos.TEMA_RODAPE_TEXTO || TEMA_PADRAO.TEMA_RODAPE_TEXTO,
     });
   };
 
@@ -562,6 +566,8 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                 {corField("TEMA_PRIMARIA", "Cor primária", "Botões, links e destaques (vermelho Sancet).")}
                 {corField("TEMA_SECUNDARIA", "Cor secundária", "Títulos e elementos de apoio (azul).")}
                 {corField("TEMA_SIDEBAR", "Menu lateral do painel", "Fundo da barra lateral do painel interno.")}
+                {corField("TEMA_RODAPE", "Fundo do rodapé", "Cor de fundo do rodapé do site.")}
+                {corField("TEMA_RODAPE_TEXTO", "Texto do rodapé", "Cor do texto sobre o rodapé.")}
                 <Button
                   type="button"
                   variant="outline"
