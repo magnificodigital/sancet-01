@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
 import logoLight from "@/assets/logo-sancet-light.png";
+import { useLogos } from "@/lib/tema";
 
 export const Footer = () => {
+  const { claro } = useLogos();
   return (
     <footer className="bg-footer text-footer-foreground mt-auto">
       <div className="container py-8 flex flex-col md:flex-row items-center justify-between gap-4">
         <img
-          src={logoLight}
+          src={claro || logoLight}
           alt="Sancet Medicina Diagnóstica"
           className="h-14 w-auto"
         />

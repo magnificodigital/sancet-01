@@ -1,7 +1,31 @@
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Cores da marca controláveis em Configurações → Aparência.
 export const CHAVES_TEMA = ["TEMA_PRIMARIA", "TEMA_SECUNDARIA", "TEMA_SIDEBAR"] as const;
+
+// ---- Logos (URLs no storage; controláveis em Configurações → Aparência) ----
+export type Logos = { claro: string | null; escuro: string | null };
+let logosAtuais: Logos = { claro: null, escuro: null };
+const logoSubs = new Set<() => void>();
+
+export function setLogos(next: Logos) {
+  logosAtuais = next;
+  logoSubs.forEach((cb) => cb());
+}
+
+/** Hook reativo: retorna as URLs de logo configuradas (ou null). */
+export function useLogos(): Logos {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const cb = () => force((x) => x + 1);
+    logoSubs.add(cb);
+    return () => {
+      logoSubs.delete(cb);
+    };
+  }, []);
+  return logosAtuais;
+}
 
 export const TEMA_PADRAO: Record<string, string> = {
   TEMA_PRIMARIA: "#C8102E",
@@ -78,10 +102,14 @@ export function aplicarTema(cores: Partial<Record<string, string>>) {
     Chamado no boot do app — funciona também para visitantes anônimos. */
 export async function carregarTema() {
   try {
-    // RPC tema_publico(): retorna apenas as chaves TEMA_* como jsonb.
+    // RPC tema_publico(): retorna apenas as chaves TEMA_*/LOGO_* como jsonb.
     const { data } = await (supabase as any).rpc("tema_publico");
     const cores = (data ?? {}) as Record<string, string>;
     if (cores && Object.keys(cores).length) aplicarTema(cores);
+    setLogos({
+      claro: cores.LOGO_CLARO || null,
+      escuro: cores.LOGO_ESCURO || null,
+    });
   } catch {
     /* silencioso — mantém as cores padrão do CSS */
   }

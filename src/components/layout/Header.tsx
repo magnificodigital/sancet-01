@@ -22,16 +22,22 @@ import {
 } from "@/components/ui/sheet";
 import { useSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
+import { useLogos } from "@/lib/tema";
 
-const Logo = ({ dark }: { dark: boolean }) => (
-  <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="Sancet">
-    <img
-      src={dark ? logoLight : logoDark}
-      alt="Sancet Medicina Diagnóstica"
-      className="h-14 w-auto drop-shadow"
-    />
-  </Link>
-);
+const Logo = ({ dark }: { dark: boolean }) => {
+  const { claro, escuro } = useLogos();
+  // Fundo escuro → logo claro (branco); fundo claro → logo escuro (preto).
+  const src = dark ? claro || logoLight : escuro || logoDark;
+  return (
+    <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="Sancet">
+      <img
+        src={src}
+        alt="Sancet Medicina Diagnóstica"
+        className="h-14 w-auto drop-shadow"
+      />
+    </Link>
+  );
+};
 
 const makeNavLinkClass = (dark: boolean) =>
   ({ isActive }: { isActive: boolean }) =>

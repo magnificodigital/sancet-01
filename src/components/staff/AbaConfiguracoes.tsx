@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AbaCatalogoShift } from "./AbaCatalogoShift";
-import { aplicarTema, TEMA_PADRAO } from "@/lib/tema";
+import { aplicarTema, setLogos, TEMA_PADRAO } from "@/lib/tema";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -66,6 +66,8 @@ const CHAVES = [
   "TEMA_PRIMARIA",
   "TEMA_SECUNDARIA",
   "TEMA_SIDEBAR",
+  "LOGO_CLARO",
+  "LOGO_ESCURO",
 ];
 
 const SENSIVEIS = new Set([
@@ -170,6 +172,84 @@ const BrandIcon = ({ name, className }: { name: string; className?: string }) =>
       className={cn("h-6 w-6 object-contain", className)}
       loading="lazy"
     />
+  );
+};
+
+const LogoUpload = ({
+  label,
+  valor,
+  onChange,
+  escuro,
+  disabled,
+}: {
+  label: string;
+  valor: string;
+  onChange: (url: string) => void;
+  escuro?: boolean;
+  disabled?: boolean;
+}) => {
+  const [up, setUp] = useState(false);
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUp(true);
+    try {
+      const path = `tema/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage
+        .from("imagens-exames")
+        .upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("imagens-exames").getPublicUrl(path);
+      onChange(data.publicUrl);
+      toast.success("Logo enviado");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Erro ao enviar logo");
+    } finally {
+      setUp(false);
+      e.target.value = "";
+    }
+  };
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex items-center gap-3">
+        <div
+          className="flex h-16 w-40 items-center justify-center rounded border p-2"
+          style={{ backgroundColor: escuro ? "hsl(var(--brand-sidebar))" : "#ffffff" }}
+        >
+          {valor ? (
+            <img src={valor} alt="" className="max-h-full max-w-full object-contain" />
+          ) : (
+            <span className="text-xs text-muted-foreground">Sem logo</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="inline-flex">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onFile}
+              disabled={disabled}
+            />
+            <Button type="button" variant="outline" size="sm" disabled={disabled || up} asChild>
+              <span className="cursor-pointer">{up ? "Enviando..." : "Enviar logo"}</span>
+            </Button>
+          </label>
+          {valor && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={disabled}
+              onClick={() => onChange("")}
+            >
+              Remover
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -318,6 +398,12 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
   const restaurarCoresPadrao = () => {
     setConfigs((prev) => ({ ...prev, ...TEMA_PADRAO }));
     aplicarTema(TEMA_PADRAO);
+  };
+
+  const setLogoConfig = (chave: "LOGO_CLARO" | "LOGO_ESCURO", url: string) => {
+    const novos = { ...configs, [chave]: url };
+    setConfigs(novos);
+    setLogos({ claro: novos.LOGO_CLARO || null, escuro: novos.LOGO_ESCURO || null });
   };
 
   const corField = (chave: string, label: string, helper?: string) => {
@@ -479,6 +565,28 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                 >
                   Restaurar cores padrão
                 </Button>
+
+                <div className="space-y-4 border-t pt-5">
+                  <div>
+                    <p className="text-sm font-medium">Logotipo</p>
+                    <p className="text-xs text-muted-foreground">
+                      Ideal PNG com fundo transparente. Sem envio, usamos o logo padrão da Sancet.
+                    </p>
+                  </div>
+                  <LogoUpload
+                    label="Logo para fundo escuro (versão clara)"
+                    valor={configs.LOGO_CLARO || ""}
+                    onChange={(u) => setLogoConfig("LOGO_CLARO", u)}
+                    escuro
+                    disabled={!podeEditar}
+                  />
+                  <LogoUpload
+                    label="Logo para fundo claro (versão escura)"
+                    valor={configs.LOGO_ESCURO || ""}
+                    onChange={(u) => setLogoConfig("LOGO_ESCURO", u)}
+                    disabled={!podeEditar}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}

@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import logoLight from "@/assets/logo-sancet-light.png";
+import { useLogos } from "@/lib/tema";
 
 export type StaffTab =
   | "visao"
@@ -71,6 +72,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
   );
   const navigate = useNavigate();
   const location = useLocation();
+  const { claro } = useLogos();
   const checkinAtivo = location.pathname.startsWith("/staff/checkin");
   const [mobileAberto, setMobileAberto] = useState(false);
   const [pedidosNovos, setPedidosNovos] = useState<number>(0);
@@ -103,7 +105,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
       style={{ backgroundColor: SIDEBAR_BG }}
     >
       <div className="flex flex-col items-start gap-2 px-5 py-6">
-        <img src={logoLight} alt="Sancet" className="h-14 w-auto" />
+        <img src={claro || logoLight} alt="Sancet" className="h-14 w-auto" />
         <p className="text-xs text-white/60">Painel Interno</p>
       </div>
       <hr className="border-white/15" />
