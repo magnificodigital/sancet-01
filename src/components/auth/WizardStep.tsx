@@ -34,7 +34,7 @@ export const WizardStep = ({
           onClick={onProximo}
           disabled={!podeAvancar || carregando}
           className={cn(
-            "w-full h-12 text-base font-bold bg-[#C8102E] hover:bg-[#a80d26] text-white shadow-lg shadow-[#C8102E]/30 transition-transform hover:scale-[1.02]"
+            "w-full h-12 text-base font-bold bg-brand hover:bg-brand-hover text-white shadow-lg shadow-brand/30 transition-transform hover:scale-[1.02]"
           )}
         >
           {carregando ? (

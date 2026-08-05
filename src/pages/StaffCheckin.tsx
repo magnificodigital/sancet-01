@@ -126,7 +126,7 @@ const StaffCheckin = () => {
       isAdmin={isAdmin}
     >
       <div className="mx-auto flex max-w-2xl flex-col items-center pt-12">
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#0B1F3A] text-white">
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-sidebar text-white">
           <QrCode className="h-8 w-8" />
         </div>
         <h1 className="mb-2 text-2xl font-bold text-foreground">Check-in de pedido</h1>
@@ -149,7 +149,7 @@ const StaffCheckin = () => {
               type="submit"
               disabled={buscando || !protocolo.trim()}
               className="h-14 px-6 text-white"
-              style={{ backgroundColor: "#C8102E" }}
+              style={{ backgroundColor: "hsl(var(--brand))" }}
             >
               {buscando ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -163,7 +163,7 @@ const StaffCheckin = () => {
             onClick={() => setScannerAberto(true)}
             aria-label="Escanear QR code com a câmera"
             className="mt-3 h-14 w-full text-base text-white"
-            style={{ backgroundColor: "#0B1F3A" }}
+            style={{ backgroundColor: "hsl(var(--brand-sidebar))" }}
           >
             <Camera className="mr-2 h-5 w-5" />
             Escanear com câmera

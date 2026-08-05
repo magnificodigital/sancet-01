@@ -139,7 +139,7 @@ const UploadField = ({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Label className="text-sm">
-            {label} {required && <span className="text-[#C8102E]">*</span>}
+            {label} {required && <span className="text-brand">*</span>}
           </Label>
           {helper && (
             <p className="mt-0.5 text-xs text-muted-foreground">{helper}</p>
@@ -452,8 +452,8 @@ export const EtapaConfirmacao = ({
         </div>
 
         {agendamento && modalidade === "unidade" && (
-          <div className="flex items-start gap-2 rounded-lg border border-[#C8102E]/20 bg-[#C8102E]/5 p-3">
-            <CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#C8102E]" />
+          <div className="flex items-start gap-2 rounded-lg border border-brand/20 bg-brand/5 p-3">
+            <CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
             <p className="text-sm text-secondary">
               {formatarAgendamento(agendamento.data, agendamento.periodo)}
             </p>
@@ -469,7 +469,7 @@ export const EtapaConfirmacao = ({
           ) : (
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Total</span>
-              <span className="text-xl font-bold text-[#C8102E]">
+              <span className="text-xl font-bold text-brand">
                 {formatBRL(totalParticular)}
               </span>
             </div>
@@ -814,7 +814,7 @@ export const EtapaConfirmacao = ({
           className="mt-0.5"
         />
         <span className="text-muted-foreground">
-          Concordo com os <span className="text-[#C8102E] underline">Termos de uso</span> e
+          Concordo com os <span className="text-brand underline">Termos de uso</span> e
           autorizo o tratamento dos meus dados conforme a LGPD.
         </span>
       </label>
@@ -822,7 +822,7 @@ export const EtapaConfirmacao = ({
       <Button
         disabled={enviando}
         onClick={handleConfirmar}
-        className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white"
+        className="w-full bg-brand hover:bg-brand-hover text-white"
       >
         {enviando ? "Enviando..." : "Confirmar pedido"}
       </Button>
@@ -850,7 +850,7 @@ export const EtapaConfirmacao = ({
           <DialogFooter>
             <Button
               onClick={fecharModalErros}
-              className="bg-[#C8102E] hover:bg-[#a80d26] text-white w-full"
+              className="bg-brand hover:bg-brand-hover text-white w-full"
             >
               FECHAR
             </Button>

@@ -1,7 +1,7 @@
 import type { ConfigEstatisticas } from "../tipos";
 
-const VERMELHO = "#C8102E";
-const AZUL = "#1B3A6B";
+const VERMELHO = "hsl(var(--brand))";
+const AZUL = "hsl(var(--brand-2))";
 
 export const BlocoEstatisticas = ({ config }: { config: ConfigEstatisticas }) => {
   const cores: Record<string, { bg: string; texto: string; descricao: string }> = {

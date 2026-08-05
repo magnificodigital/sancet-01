@@ -284,7 +284,7 @@ const EscolherConvenio = () => {
 
         <Button
           onClick={continuar}
-          className="w-full mt-5 bg-[#C8102E] hover:bg-[#a80d26] text-white"
+          className="w-full mt-5 bg-brand hover:bg-brand-hover text-white"
         >
           {CONVENIO_PULAR_CATALOGO ? "Continuar" : "Continuar para catálogo"}
         </Button>

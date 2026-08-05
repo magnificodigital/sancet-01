@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/carousel";
 import type { ConfigDepoimentos } from "../tipos";
 
-const AZUL = "#1B3A6B";
+const AZUL = "hsl(var(--brand-2))";
 
 export const BlocoDepoimentos = ({ config }: { config: ConfigDepoimentos }) => {
   return (

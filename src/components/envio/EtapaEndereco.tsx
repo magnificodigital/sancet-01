@@ -92,7 +92,7 @@ export const EtapaEndereco = ({ onConfirmar }: Props) => {
 
       <Button
         onClick={() => onConfirmar(end)}
-        className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white"
+        className="w-full bg-brand hover:bg-brand-hover text-white"
       >
         Confirmar endereço
       </Button>

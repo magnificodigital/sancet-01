@@ -155,7 +155,7 @@ export const AbaPaginasCMS = () => {
             Páginas fixas (Sobre, Contato…) editáveis por blocos.
           </p>
         </div>
-        <Button onClick={abrirNova} className="gap-1.5 bg-[#C8102E] hover:bg-[#a30d25] text-white">
+        <Button onClick={abrirNova} className="gap-1.5 bg-brand hover:bg-[#a30d25] text-white">
           <Plus className="h-4 w-4" /> Nova página
         </Button>
       </div>
@@ -313,7 +313,7 @@ export const AbaPaginasCMS = () => {
             <Button
               onClick={criar}
               disabled={salvando}
-              className="bg-[#C8102E] hover:bg-[#a30d25] text-white"
+              className="bg-brand hover:bg-[#a30d25] text-white"
             >
               {salvando ? "Criando..." : "Criar e editar"}
             </Button>

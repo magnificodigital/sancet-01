@@ -148,7 +148,7 @@ export const GerenciarUnidadesUsuario = ({
             <p className="font-medium">{userEmail}</p>
             <div className="mt-1">
               {role === "admin" ? (
-                <Badge className="bg-[#1B3A6B] hover:bg-[#1B3A6B] text-white">Admin</Badge>
+                <Badge className="bg-brand-2 hover:bg-brand-2 text-white">Admin</Badge>
               ) : (
                 <Badge variant="secondary">Staff</Badge>
               )}

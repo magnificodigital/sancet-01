@@ -246,7 +246,7 @@ export const AbaEquipe = () => {
         </h2>
         <Button
           onClick={abrirNovo}
-          className="gap-1.5 bg-[#C8102E] hover:bg-[#a30d25] text-white"
+          className="gap-1.5 bg-brand hover:bg-[#a30d25] text-white"
         >
           <Plus className="h-4 w-4" /> Novo usuário
         </Button>
@@ -273,7 +273,7 @@ export const AbaEquipe = () => {
                   <TableCell>{u.email}</TableCell>
                   <TableCell>
                     {u.role === "admin" ? (
-                      <Badge className="bg-[#1B3A6B] hover:bg-[#1B3A6B] text-white">Admin</Badge>
+                      <Badge className="bg-brand-2 hover:bg-brand-2 text-white">Admin</Badge>
                     ) : (
                       <Badge variant="secondary">Staff</Badge>
                     )}
@@ -503,11 +503,11 @@ export const AbaEquipe = () => {
               Cancelar
             </Button>
             {editando ? (
-              <Button onClick={salvar} disabled={salvando} className="bg-[#1B3A6B] hover:bg-[#162f58] text-white">
+              <Button onClick={salvar} disabled={salvando} className="bg-brand-2 hover:bg-[#162f58] text-white">
                 {salvando ? "Salvando..." : "Salvar"}
               </Button>
             ) : (
-              <Button onClick={criar} disabled={criando} className="bg-[#C8102E] hover:bg-[#a30d25] text-white">
+              <Button onClick={criar} disabled={criando} className="bg-brand hover:bg-[#a30d25] text-white">
                 {criando ? "Criando..." : "Criar"}
               </Button>
             )}

@@ -112,7 +112,7 @@ export const AbaCatalogoShift = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#1B3A6B" }}>Sync Shift</h1>
+          <h1 className="text-2xl font-bold" style={{ color: "hsl(var(--brand-2))" }}>Sync Shift</h1>
           <p className="text-sm text-muted-foreground">
             Sincroniza exames, unidades e convênios do Shift LIS em uma única execução.
           </p>

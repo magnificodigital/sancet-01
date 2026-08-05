@@ -90,9 +90,9 @@ const Pronto = () => {
 
         {!isLoading && (isError || !pedido) && (
           <div className="mt-6 flex flex-col items-center rounded-2xl border border-border bg-card p-10 text-center">
-            <AlertCircle className="mb-3 h-12 w-12 text-[#C8102E]" />
+            <AlertCircle className="mb-3 h-12 w-12 text-brand" />
             <h1 className="text-lg font-bold text-secondary">Protocolo não encontrado</h1>
-            <Button asChild className="mt-5 bg-[#C8102E] text-white hover:bg-[#a80d26]">
+            <Button asChild className="mt-5 bg-brand text-white hover:bg-brand-hover">
               <Link to="/agendamentos">Ir para agendamentos</Link>
             </Button>
           </div>
@@ -122,7 +122,7 @@ const Pronto = () => {
               {/* Header do voucher */}
               <div
                 className="flex items-center justify-between px-6 py-4 text-white"
-                style={{ backgroundColor: "#1B3A6B" }}
+                style={{ backgroundColor: "hsl(var(--brand-2))" }}
               >
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-widest opacity-80">Sancet</p>
@@ -212,9 +212,9 @@ const Pronto = () => {
                   )}
 
                   {(pedido as any).data_agendamento && (pedido as any).periodo_agendamento && (
-                    <div className="rounded-lg border border-[#C8102E]/20 bg-[#C8102E]/5 p-3">
+                    <div className="rounded-lg border border-brand/20 bg-brand/5 p-3">
                       <div className="flex items-start gap-2">
-                        <CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#C8102E]" />
+                        <CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                         <div className="space-y-1">
                           <p className="text-sm font-semibold text-secondary">
                             {formatarAgendamento(
@@ -280,7 +280,7 @@ const Pronto = () => {
                   {pedido.tipo_solicitacao === "particular" && pedido.valor_total_centavos > 0 && (
                     <div className="border-t border-border pt-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</p>
-                      <p className="mt-1 text-2xl font-bold text-[#C8102E]">
+                      <p className="mt-1 text-2xl font-bold text-brand">
                         {formatarPreco(pedido.valor_total_centavos)}
                       </p>
                     </div>
@@ -324,7 +324,7 @@ const Pronto = () => {
               </Button>
             </div>
 
-            <Button asChild className="no-print w-full bg-[#C8102E] text-white hover:bg-[#a80d26]">
+            <Button asChild className="no-print w-full bg-brand text-white hover:bg-brand-hover">
               <Link to="/agendamentos">Ver meus agendamentos</Link>
             </Button>
           </div>

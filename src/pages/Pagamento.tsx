@@ -155,17 +155,17 @@ const Pagamento = () => {
         <div className="mt-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
           {etapa === "carregando" && (
             <div className="flex flex-col items-center py-10 text-center">
-              <Loader2 className="mb-3 h-10 w-10 animate-spin text-[#C8102E]" />
+              <Loader2 className="mb-3 h-10 w-10 animate-spin text-brand" />
               <p className="text-sm font-medium text-secondary">Carregando pedido...</p>
             </div>
           )}
 
           {etapa === "erro" && (
             <div className="flex flex-col items-center py-10 text-center">
-              <AlertCircle className="mb-3 h-12 w-12 text-[#C8102E]" />
+              <AlertCircle className="mb-3 h-12 w-12 text-brand" />
               <h2 className="text-lg font-bold text-secondary">Não foi possível gerar o pagamento</h2>
               <p className="mt-2 text-sm text-muted-foreground">{erroMsg}</p>
-              <Button onClick={() => window.location.reload()} className="mt-5 bg-[#C8102E] text-white hover:bg-[#a80d26]">
+              <Button onClick={() => window.location.reload()} className="mt-5 bg-brand text-white hover:bg-brand-hover">
                 Tentar novamente
               </Button>
             </div>
@@ -178,7 +178,7 @@ const Pagamento = () => {
                   Aguardando pagamento
                 </Badge>
                 <h1 className="mt-3 text-2xl font-bold text-secondary">Escolha como pagar</h1>
-                <p className="mt-1 text-3xl font-bold text-[#C8102E]">{formatarPreco(pedido.valor_total_centavos)}</p>
+                <p className="mt-1 text-3xl font-bold text-brand">{formatarPreco(pedido.valor_total_centavos)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Protocolo: {pedido.protocolo}</p>
               </div>
 
@@ -191,7 +191,7 @@ const Pagamento = () => {
 
                 {gerando && (
                   <div className="mt-6 flex flex-col items-center py-6">
-                    <Loader2 className="mb-2 h-8 w-8 animate-spin text-[#C8102E]" />
+                    <Loader2 className="mb-2 h-8 w-8 animate-spin text-brand" />
                     <p className="text-sm text-muted-foreground">Gerando cobrança...</p>
                     <Skeleton className="mt-3 h-40 w-40" />
                   </div>
@@ -200,20 +200,20 @@ const Pagamento = () => {
                 {!gerando && !dados && erroMsg && (
                   <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
                     <div className="flex items-start gap-3">
-                      <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#C8102E]" />
+                      <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#C8102E]">Não foi possível gerar o pagamento</p>
+                        <p className="text-sm font-semibold text-brand">Não foi possível gerar o pagamento</p>
                         <p className="mt-1 whitespace-pre-wrap break-words text-sm text-secondary">{erroMsg}</p>
 
                         <div className="mt-3 flex flex-wrap gap-2">
                           {camposPaciente.has(erroCampo) && (
                             <Link to="/agendamentos?aba=perfil">
-                              <Button size="sm" className="bg-[#C8102E] text-white hover:bg-[#a80d26]">
+                              <Button size="sm" className="bg-brand text-white hover:bg-brand-hover">
                                 <UserCog className="mr-1.5 h-3.5 w-3.5" /> Atualizar cadastro
                               </Button>
                             </Link>
                           )}
-                          <Button size="sm" variant={camposPaciente.has(erroCampo) ? "outline" : "default"} onClick={() => pedido && gerar(metodo, pedido)} className={camposPaciente.has(erroCampo) ? "" : "bg-[#C8102E] text-white hover:bg-[#a80d26]"}>
+                          <Button size="sm" variant={camposPaciente.has(erroCampo) ? "outline" : "default"} onClick={() => pedido && gerar(metodo, pedido)} className={camposPaciente.has(erroCampo) ? "" : "bg-brand text-white hover:bg-brand-hover"}>
                             Tentar novamente
                           </Button>
                         </div>

@@ -420,7 +420,7 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
               size="sm"
               onClick={() => { setEditando(null); setDrawerAberto(true); }}
               className="gap-1.5 text-white"
-              style={{ backgroundColor: "#C8102E" }}
+              style={{ backgroundColor: "hsl(var(--brand))" }}
             >
               <Plus className="h-4 w-4" /> Novo item
             </Button>
@@ -600,7 +600,7 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
                 onClick={salvar}
                 disabled={salvando}
                 className="flex-1 text-white hover:opacity-90"
-                style={{ backgroundColor: "#C8102E" }}
+                style={{ backgroundColor: "hsl(var(--brand))" }}
               >
                 {salvando ? "Salvando..." : "Salvar"}
               </Button>

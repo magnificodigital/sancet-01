@@ -80,7 +80,7 @@ export const AbaVisaoGeral = ({ onAtualizar }: { onAtualizar?: () => void }) => 
       <h1 className="text-2xl font-bold text-secondary">Visão Geral</h1>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card Icon={LayoutDashboard} cor="#1B3A6B" valor={metricas.total} label="Total de pedidos" />
+        <Card Icon={LayoutDashboard} cor="hsl(var(--brand-2))" valor={metricas.total} label="Total de pedidos" />
         <Card Icon={Clock} cor="#F97316" valor={metricas.novos} label="Novos" />
         <Card Icon={CheckCircle2} cor="#16A34A" valor={metricas.confirmados} label="Confirmados" />
         <Card Icon={XCircle} cor="#DC2626" valor={metricas.cancelados} label="Cancelados" />

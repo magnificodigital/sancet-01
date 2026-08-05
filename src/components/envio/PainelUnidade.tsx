@@ -45,13 +45,13 @@ export const PainelUnidade = ({ unidade, onClose, onConfirmar }: Props) => {
               <Button
                 variant="outline"
                 onClick={() => toast.success("Instruções enviadas!")}
-                className="w-full border-[#C8102E] text-[#C8102E] hover:bg-[#C8102E]/5 hover:text-[#C8102E]"
+                className="w-full border-brand text-brand hover:bg-brand/5 hover:text-brand"
               >
                 <Mail className="h-4 w-4" /> Receber instruções por e-mail
               </Button>
               <Button
                 onClick={() => onConfirmar(unidade)}
-                className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white"
+                className="w-full bg-brand hover:bg-brand-hover text-white"
               >
                 Confirmar esta unidade
               </Button>

@@ -155,7 +155,7 @@ export const TabelaPedidos = ({ pedidos, onAbrir, vazioMsg = "Nenhum pedido." }:
                   onClick={() => onAbrir(p)}
                   aria-label="Ver detalhes"
                 >
-                  <Eye className="h-4 w-4" style={{ color: "#C8102E" }} />
+                  <Eye className="h-4 w-4" style={{ color: "hsl(var(--brand))" }} />
                 </Button>
               </TableCell>
             </TableRow>

@@ -145,7 +145,7 @@ export const AbaDadosPessoais = () => {
       <Button
         onClick={salvar}
         disabled={salvando}
-        className="bg-[#C8102E] hover:bg-[#a80d26] text-white"
+        className="bg-brand hover:bg-brand-hover text-white"
       >
         {salvando ? "Salvando..." : "Salvar alterações"}
       </Button>

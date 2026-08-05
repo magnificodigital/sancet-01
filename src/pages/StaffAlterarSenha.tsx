@@ -133,7 +133,7 @@ const StaffAlterarSenha = () => {
             type="submit"
             disabled={salvando}
             className="w-full text-white"
-            style={{ backgroundColor: "#C8102E" }}
+            style={{ backgroundColor: "hsl(var(--brand))" }}
           >
             {salvando ? (
               <>

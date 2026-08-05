@@ -245,7 +245,7 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
               size="sm"
               onClick={abrirNovo}
               className="gap-1.5 text-white"
-              style={{ backgroundColor: "#C8102E" }}
+              style={{ backgroundColor: "hsl(var(--brand))" }}
             >
               <Plus className="h-4 w-4" /> Nova unidade
             </Button>
@@ -521,7 +521,7 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
                 onClick={salvar}
                 disabled={salvando}
                 className="flex-1 text-white hover:opacity-90"
-                style={{ backgroundColor: "#C8102E" }}
+                style={{ backgroundColor: "hsl(var(--brand))" }}
               >
                 {salvando ? "Salvando..." : "Salvar"}
               </Button>

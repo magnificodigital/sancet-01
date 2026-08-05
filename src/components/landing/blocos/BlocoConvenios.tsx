@@ -1,6 +1,6 @@
 import type { ConfigConvenios } from "../tipos";
 
-const AZUL = "#1B3A6B";
+const AZUL = "hsl(var(--brand-2))";
 
 export const BlocoConvenios = ({ config }: { config: ConfigConvenios }) => {
   return (

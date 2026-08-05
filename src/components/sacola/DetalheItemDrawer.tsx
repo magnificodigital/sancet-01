@@ -86,7 +86,7 @@ export const DetalheItemDrawer = ({ item, onClose }: Props) => {
                   onClose();
                 }}
                 variant="outline"
-                className="w-full border-[#C8102E] text-[#C8102E] hover:bg-[#C8102E]/5 hover:text-[#C8102E]"
+                className="w-full border-brand text-brand hover:bg-brand/5 hover:text-brand"
               >
                 <Trash2 className="h-4 w-4" /> Remover da sacola
               </Button>

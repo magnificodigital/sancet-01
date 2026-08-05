@@ -35,13 +35,13 @@ export const UploadReceita = ({ arquivo, onArquivo }: Props) => {
 
   if (arquivo) {
     return (
-      <div className="rounded-xl border-2 border-dashed border-[#C8102E] bg-white p-4">
+      <div className="rounded-xl border-2 border-dashed border-brand bg-white p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
             {previewUrl ? (
               <img src={previewUrl} alt="Prévia do pedido" className="h-full w-full object-cover" />
             ) : (
-              <FileText className="h-8 w-8 text-[#C8102E]" />
+              <FileText className="h-8 w-8 text-brand" />
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -75,7 +75,7 @@ export const UploadReceita = ({ arquivo, onArquivo }: Props) => {
     <button
       type="button"
       onClick={() => inputRef.current?.click()}
-      className="w-full rounded-xl border-2 border-dashed border-[#C8102E] bg-white p-6 text-center transition hover:bg-[#FFF5F6]"
+      className="w-full rounded-xl border-2 border-dashed border-brand bg-white p-6 text-center transition hover:bg-[#FFF5F6]"
     >
       <input
         ref={inputRef}
@@ -84,7 +84,7 @@ export const UploadReceita = ({ arquivo, onArquivo }: Props) => {
         className="hidden"
         onChange={onSelect}
       />
-      <FileText className="mx-auto mb-3 text-[#C8102E]" size={40} />
+      <FileText className="mx-auto mb-3 text-brand" size={40} />
       <p className="font-bold text-secondary">Enviar imagem do pedido médico</p>
       <p className="mt-1 text-xs text-muted-foreground">JPG, PNG ou PDF</p>
     </button>

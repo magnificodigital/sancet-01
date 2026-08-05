@@ -119,7 +119,7 @@ const StaffLogin = () => {
             type="submit"
             disabled={carregando}
             className="w-full text-white"
-            style={{ backgroundColor: "#C8102E" }}
+            style={{ backgroundColor: "hsl(var(--brand))" }}
           >
             {carregando ? (
               <>

@@ -70,7 +70,7 @@ const Unidades = () => {
   return (
     <PageShell>
       <section className="py-12">
-        <div className="max-w-6xl mx-auto px-4 text-center" style={{ color: "#1B3A6B" }}>
+        <div className="max-w-6xl mx-auto px-4 text-center" style={{ color: "hsl(var(--brand-2))" }}>
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Nossas Unidades</h1>
           <p className="opacity-80">Encontre a unidade mais próxima de você</p>
         </div>
@@ -155,7 +155,7 @@ const Unidades = () => {
                     {u.aceita_domicilio && (
                       <span
                         className="inline-block self-start mt-2 px-3 py-1 rounded-full text-xs font-semibold text-white"
-                        style={{ backgroundColor: "#C8102E" }}
+                        style={{ backgroundColor: "hsl(var(--brand))" }}
                       >
                         Atende em domicílio
                       </span>

@@ -12,8 +12,8 @@ import { BlocoConvenios } from "./blocos/BlocoConvenios";
 import { BlocoExamesDestaque } from "./blocos/BlocoExamesDestaque";
 import { FormularioContato } from "./blocos/FormularioContato";
 
-const VERMELHO = "#C8102E";
-const AZUL = "#1B3A6B";
+const VERMELHO = "hsl(var(--brand))";
+const AZUL = "hsl(var(--brand-2))";
 
 // Marcador da linha do tempo: bolinha (padrão) ou ícone (gota de sangue, estrela, relógio).
 const iconeMarco = (icone: string | undefined) => {
@@ -69,7 +69,7 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
         <section
           className="relative w-full h-[500px] flex"
           style={{
-            backgroundColor: "#1B3A6B",
+            backgroundColor: "hsl(var(--brand-2))",
             backgroundImage: c.imagem_url ? `url(${c.imagem_url})` : undefined,
             backgroundSize: "cover",
             backgroundPosition: "center",

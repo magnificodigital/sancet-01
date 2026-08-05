@@ -39,7 +39,7 @@ const EsqueciSenha = () => {
         <button
           type="button"
           onClick={() => navigate("/entrar")}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-[#C8102E] hover:underline mb-6"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline mb-6"
         >
           <ArrowLeft className="h-4 w-4" /> Voltar
         </button>
@@ -52,7 +52,7 @@ const EsqueciSenha = () => {
               Se existe uma conta com esse e-mail, enviamos um link para redefinir sua senha.
               Verifique sua caixa de entrada e o spam.
             </p>
-            <Button asChild className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white">
+            <Button asChild className="w-full bg-brand hover:bg-brand-hover text-white">
               <Link to="/entrar">Voltar para o login</Link>
             </Button>
           </div>
@@ -74,7 +74,7 @@ const EsqueciSenha = () => {
             <Button
               type="submit"
               disabled={carregando}
-              className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white h-11"
+              className="w-full bg-brand hover:bg-brand-hover text-white h-11"
             >
               {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar link"}
             </Button>

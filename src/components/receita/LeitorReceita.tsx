@@ -153,13 +153,13 @@ export const LeitorReceita = () => {
   if (etapa === "lendo") {
     return (
       <div className="flex flex-col items-center text-center">
-        <Brain size={48} className="mb-4 animate-pulse text-[#C8102E]" />
+        <Brain size={48} className="mb-4 animate-pulse text-brand" />
         <h2 className="text-xl font-bold text-secondary">Lendo o pedido médico...</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Nossa IA está identificando os exames e vacinas
         </p>
         <div className="mt-6 w-full">
-          <Progress value={progresso} className="h-2 [&>div]:bg-[#C8102E]" />
+          <Progress value={progresso} className="h-2 [&>div]:bg-brand" />
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
           Isso pode levar alguns segundos
@@ -214,7 +214,7 @@ export const LeitorReceita = () => {
                   <span>{nome}</span>
                   <Link
                     to={`/exames?q=${encodeURIComponent(nome)}`}
-                    className="text-xs font-medium text-[#C8102E] underline"
+                    className="text-xs font-medium text-brand underline"
                   >
                     Buscar manualmente
                   </Link>
@@ -226,7 +226,7 @@ export const LeitorReceita = () => {
 
         <div className="mt-6 flex w-full flex-col gap-2">
           <Button
-            className="w-full bg-[#C8102E] text-white hover:bg-[#a80d26]"
+            className="w-full bg-brand text-white hover:bg-brand-hover"
             onClick={() => navigate("/sacola")}
           >
             Ver sacola
@@ -242,14 +242,14 @@ export const LeitorReceita = () => {
   if (etapa === "erro") {
     return (
       <div className="flex flex-col items-center text-center">
-        <AlertCircle size={48} className="mb-3 text-[#C8102E]" />
+        <AlertCircle size={48} className="mb-3 text-brand" />
         <h2 className="text-xl font-bold text-secondary">Não conseguimos ler o pedido</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Tente uma foto mais nítida ou adicione os exames manualmente
         </p>
         <div className="mt-6 flex w-full flex-col gap-2">
           <Button
-            className="w-full bg-[#C8102E] text-white hover:bg-[#a80d26]"
+            className="w-full bg-brand text-white hover:bg-brand-hover"
             onClick={() => {
               setArquivo(null);
               setResultado(null);
@@ -303,7 +303,7 @@ export const LeitorReceita = () => {
       <Button
         onClick={enviar}
         disabled={!arquivo}
-        className="mt-5 w-full bg-[#C8102E] text-white hover:bg-[#a80d26] disabled:opacity-50"
+        className="mt-5 w-full bg-brand text-white hover:bg-brand-hover disabled:opacity-50"
       >
         Continuar
       </Button>

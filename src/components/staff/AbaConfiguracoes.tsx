@@ -15,6 +15,7 @@ import {
   Settings as SettingsIcon,
   CheckCircle2,
   CircleDashed,
+  Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AbaCatalogoShift } from "./AbaCatalogoShift";
+import { aplicarTema, TEMA_PADRAO } from "@/lib/tema";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -61,6 +63,9 @@ const CHAVES = [
   "RESEND_API_KEY",
   "RESEND_EMAIL_FROM",
   "RESEND_EMAILS_ADMIN",
+  "TEMA_PRIMARIA",
+  "TEMA_SECUNDARIA",
+  "TEMA_SIDEBAR",
 ];
 
 const SENSIVEIS = new Set([
@@ -74,7 +79,7 @@ const SENSIVEIS = new Set([
   "RESEND_API_KEY",
 ]);
 
-type SecaoId = "shift" | "ia" | "pagamento" | "email" | "risco";
+type SecaoId = "shift" | "ia" | "pagamento" | "email" | "aparencia" | "risco";
 
 type Secao = {
   id: SecaoId;
@@ -119,6 +124,12 @@ const SECOES: Secao[] = [
     brand: "resend",
     icone: Mail,
     chavesRequeridas: ["RESEND_API_KEY", "RESEND_EMAIL_FROM"],
+  },
+  {
+    id: "aparencia",
+    titulo: "Aparência",
+    descricao: "Cores do site e do painel",
+    icone: Palette,
   },
   {
     id: "risco",
@@ -293,6 +304,49 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
     );
   };
 
+  // ---- Aparência (cores) ----
+  const setCor = (chave: string, valor: string) => {
+    const novos = { ...configs, [chave]: valor };
+    setConfigs(novos);
+    aplicarTema({
+      TEMA_PRIMARIA: novos.TEMA_PRIMARIA || TEMA_PADRAO.TEMA_PRIMARIA,
+      TEMA_SECUNDARIA: novos.TEMA_SECUNDARIA || TEMA_PADRAO.TEMA_SECUNDARIA,
+      TEMA_SIDEBAR: novos.TEMA_SIDEBAR || TEMA_PADRAO.TEMA_SIDEBAR,
+    });
+  };
+
+  const restaurarCoresPadrao = () => {
+    setConfigs((prev) => ({ ...prev, ...TEMA_PADRAO }));
+    aplicarTema(TEMA_PADRAO);
+  };
+
+  const corField = (chave: string, label: string, helper?: string) => {
+    const valor = configs[chave] || TEMA_PADRAO[chave] || "#000000";
+    return (
+      <div className="space-y-1.5">
+        <Label>{label}</Label>
+        <div className="flex items-center gap-3">
+          <input
+            type="color"
+            value={valor}
+            onChange={(e) => setCor(chave, e.target.value)}
+            disabled={!podeEditar}
+            className="h-10 w-14 cursor-pointer rounded border bg-background p-1"
+            aria-label={label}
+          />
+          <Input
+            value={valor}
+            onChange={(e) => setCor(chave, e.target.value)}
+            disabled={!podeEditar}
+            className="w-32 font-mono text-sm"
+          />
+          <span className="h-8 flex-1 rounded border" style={{ backgroundColor: valor }} />
+        </div>
+        {helper && <p className="text-xs text-muted-foreground">{helper}</p>}
+      </div>
+    );
+  };
+
   const gatewayAtivo = configs["GATEWAY_ATIVO"] ?? "";
 
   return (
@@ -399,6 +453,34 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                 </p>
               )}
             </>
+          )}
+
+          {secaoAtiva === "aparencia" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-secondary" /> Cores do sistema
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <p className="text-sm text-muted-foreground">
+                  Estas cores valem para todo o site e o painel. As mudanças aparecem na hora;
+                  clique em <b>Salvar</b> (no rodapé) para aplicá-las de forma permanente.
+                </p>
+                {corField("TEMA_PRIMARIA", "Cor primária", "Botões, links e destaques (vermelho Sancet).")}
+                {corField("TEMA_SECUNDARIA", "Cor secundária", "Títulos e elementos de apoio (azul).")}
+                {corField("TEMA_SIDEBAR", "Menu lateral do painel", "Fundo da barra lateral do painel interno.")}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!podeEditar}
+                  onClick={restaurarCoresPadrao}
+                >
+                  Restaurar cores padrão
+                </Button>
+              </CardContent>
+            </Card>
           )}
 
           {secaoAtiva === "ia" && (
@@ -617,7 +699,7 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                 onClick={salvar}
                 disabled={salvando}
                 className="gap-2 text-white hover:opacity-90"
-                style={{ backgroundColor: "#C8102E" }}
+                style={{ backgroundColor: "hsl(var(--brand))" }}
               >
                 <Save className="h-4 w-4" />
                 {salvando ? "Salvando..." : "Salvar configurações"}

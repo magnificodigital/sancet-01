@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
-const VERMELHO = "#C8102E";
-const AZUL = "#1B3A6B";
+const VERMELHO = "hsl(var(--brand))";
+const AZUL = "hsl(var(--brand-2))";
 
 type Props = { titulo?: string; botaoTexto?: string };
 

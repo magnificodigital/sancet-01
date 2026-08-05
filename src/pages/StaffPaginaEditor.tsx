@@ -94,7 +94,7 @@ const BlocoSortavel = ({
       onClick={onSelecionar}
       className={cn(
         "relative group cursor-pointer outline outline-2 outline-transparent",
-        selecionado && "outline-[#1B3A6B]",
+        selecionado && "outline-brand-2",
       )}
     >
       <RenderBloco bloco={bloco} />
@@ -349,7 +349,7 @@ const StaffPaginaEditor = ({ kind = "landing" }: Props) => {
             size="sm"
             onClick={() => salvar(false)}
             disabled={estadoSalvar === "salvando"}
-            className="gap-1.5 bg-[#C8102E] hover:bg-[#a30d25] text-white"
+            className="gap-1.5 bg-brand hover:bg-[#a30d25] text-white"
           >
             {estadoSalvar === "salvando" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -370,7 +370,7 @@ const StaffPaginaEditor = ({ kind = "landing" }: Props) => {
             <button
               key={b.tipo}
               onClick={() => adicionar(b.tipo)}
-              className="w-full text-left rounded-lg border p-3 hover:border-[#1B3A6B] hover:bg-[#F5F5F5] transition"
+              className="w-full text-left rounded-lg border p-3 hover:border-brand-2 hover:bg-[#F5F5F5] transition"
             >
               <p className="text-sm font-medium">{b.label}</p>
               <p className="text-xs text-muted-foreground">{b.descricao}</p>

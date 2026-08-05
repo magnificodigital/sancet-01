@@ -78,7 +78,7 @@ export const CardPedido = ({ pedido, onVerDetalhes }: Props) => {
 
         <button
           onClick={() => onVerDetalhes(pedido)}
-          className="ml-auto text-sm font-medium text-[#C8102E] hover:underline"
+          className="ml-auto text-sm font-medium text-brand hover:underline"
         >
           Ver detalhes
         </button>

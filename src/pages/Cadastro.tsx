@@ -250,7 +250,7 @@ const Cadastro = () => {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-[#C8102E] hover:underline mb-6 self-start"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline mb-6 self-start"
           >
             <ArrowLeft className="h-4 w-4" />
             Voltar
@@ -360,7 +360,7 @@ const Cadastro = () => {
                           className={cn(
                             "px-5 py-2 rounded-full border text-sm font-semibold transition-colors capitalize",
                             form.sexo === opt
-                              ? "bg-[#C8102E] text-white border-[#C8102E]"
+                              ? "bg-brand text-white border-brand"
                               : "bg-background text-secondary border-border hover:bg-muted"
                           )}
                         >
@@ -524,7 +524,7 @@ const Cadastro = () => {
 
             <p className="text-sm text-muted-foreground mt-6">
               Já tem cadastro?{" "}
-              <Link to="/entrar" className="text-[#C8102E] font-semibold hover:underline">
+              <Link to="/entrar" className="text-brand font-semibold hover:underline">
                 Entrar
               </Link>
             </p>

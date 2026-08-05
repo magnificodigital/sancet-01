@@ -38,10 +38,10 @@ export const BarraCheckoutFlutuante = () => {
       <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background/95 backdrop-blur shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         <div className="container py-3 flex items-center gap-3">
           <div className="relative shrink-0">
-            <div className="h-11 w-11 rounded-full bg-[#C8102E]/10 flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 text-[#C8102E]" />
+            <div className="h-11 w-11 rounded-full bg-brand/10 flex items-center justify-center">
+              <ShoppingBag className="h-5 w-5 text-brand" />
             </div>
-            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-[#C8102E] text-white text-[11px] font-bold flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-brand text-white text-[11px] font-bold flex items-center justify-center">
               {itens.length}
             </span>
           </div>
@@ -64,7 +64,7 @@ export const BarraCheckoutFlutuante = () => {
 
           <Button
             onClick={() => navigate("/sacola")}
-            className="h-12 px-4 md:px-6 bg-[#C8102E] hover:bg-[#a80d26] text-white gap-2 shrink-0"
+            className="h-12 px-4 md:px-6 bg-brand hover:bg-brand-hover text-white gap-2 shrink-0"
           >
             <span className="hidden sm:inline">Ir para sacola</span>
             <span className="sm:hidden">Sacola</span>

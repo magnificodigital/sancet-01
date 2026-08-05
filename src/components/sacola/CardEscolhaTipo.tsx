@@ -30,7 +30,7 @@ export const CardEscolhaTipo = () => {
         </p>
         <Button
           onClick={() => navigate("/exames")}
-          className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white"
+          className="w-full bg-brand hover:bg-brand-hover text-white"
         >
           Escolher tipo
         </Button>
@@ -53,9 +53,9 @@ export const CardEscolhaTipo = () => {
         </div>
       ) : (
         <div className="flex items-start gap-3 rounded-lg bg-red-50 border border-red-200 p-3">
-          <Wallet className="h-5 w-5 shrink-0 text-[#C8102E] mt-0.5" />
+          <Wallet className="h-5 w-5 shrink-0 text-brand mt-0.5" />
           <div className="min-w-0">
-            <p className="font-semibold text-[#C8102E] text-sm">Particular</p>
+            <p className="font-semibold text-brand text-sm">Particular</p>
             <p className="text-xs text-muted-foreground">
               Total estimado:{" "}
               <strong>
@@ -71,7 +71,7 @@ export const CardEscolhaTipo = () => {
 
       <Button
         onClick={irCheckout}
-        className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white"
+        className="w-full bg-brand hover:bg-brand-hover text-white"
       >
         Ir para o checkout
       </Button>

@@ -6,8 +6,8 @@ import { useSacola } from "@/stores/sacola";
 import { toast } from "sonner";
 import type { ConfigExamesDestaque } from "../tipos";
 
-const VERMELHO = "#C8102E";
-const AZUL = "#1B3A6B";
+const VERMELHO = "hsl(var(--brand))";
+const AZUL = "hsl(var(--brand-2))";
 
 type ExameRow = {
   id: string;

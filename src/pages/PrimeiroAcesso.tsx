@@ -65,7 +65,7 @@ const PrimeiroAcesso = () => {
         <button
           type="button"
           onClick={() => navigate("/entrar")}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-[#C8102E] hover:underline mb-6"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline mb-6"
         >
           <ArrowLeft className="h-4 w-4" /> Voltar
         </button>
@@ -119,14 +119,14 @@ const PrimeiroAcesso = () => {
           <Button
             type="submit"
             disabled={carregando}
-            className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white h-11"
+            className="w-full bg-brand hover:bg-brand-hover text-white h-11"
           >
             {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar acesso"}
           </Button>
 
           <p className="text-xs text-muted-foreground text-center">
             Não é paciente ainda?{" "}
-            <Link to="/cadastro" className="text-[#C8102E] font-semibold hover:underline">
+            <Link to="/cadastro" className="text-brand font-semibold hover:underline">
               Fazer cadastro
             </Link>
           </p>

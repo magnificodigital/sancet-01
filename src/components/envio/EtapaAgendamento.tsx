@@ -116,11 +116,11 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
               className={cn(
                 "rounded-xl border p-4 text-left transition",
                 periodo === "manha"
-                  ? "border-[#C8102E] bg-[#C8102E]/5 ring-2 ring-[#C8102E]/30"
-                  : "border-border hover:border-[#C8102E]/40",
+                  ? "border-brand bg-brand/5 ring-2 ring-brand/30"
+                  : "border-border hover:border-brand/40",
               )}
             >
-              <Sun className="mb-2 h-5 w-5 text-[#C8102E]" />
+              <Sun className="mb-2 h-5 w-5 text-brand" />
               <p className="font-semibold text-secondary">Manhã</p>
               <p className="text-xs text-muted-foreground">7h às 11h</p>
             </button>
@@ -132,12 +132,12 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
               className={cn(
                 "rounded-xl border p-4 text-left transition",
                 periodo === "tarde"
-                  ? "border-[#C8102E] bg-[#C8102E]/5 ring-2 ring-[#C8102E]/30"
-                  : "border-border hover:border-[#C8102E]/40",
+                  ? "border-brand bg-brand/5 ring-2 ring-brand/30"
+                  : "border-border hover:border-brand/40",
                 apenasManha && "cursor-not-allowed opacity-50 hover:border-border",
               )}
             >
-              <Sunset className="mb-2 h-5 w-5 text-[#C8102E]" />
+              <Sunset className="mb-2 h-5 w-5 text-brand" />
               <p className="font-semibold text-secondary">Tarde</p>
               <p className="text-xs text-muted-foreground">12h às 16h</p>
             </button>
@@ -153,7 +153,7 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
       <Button
         disabled={!podeAvancar}
         onClick={() => onConfirmar({ data: data!, periodo: periodo! })}
-        className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white"
+        className="w-full bg-brand hover:bg-brand-hover text-white"
       >
         Continuar
       </Button>

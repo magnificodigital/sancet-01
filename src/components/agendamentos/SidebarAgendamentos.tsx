@@ -38,7 +38,7 @@ export const SidebarAgendamentos = ({ ativa, onMudar }: Props) => {
               className={cn(
                 "flex items-center gap-3 px-4 py-3 text-sm text-left border-l-[3px] transition",
                 isAtiva
-                  ? "bg-[#F5F5F5] border-[#C8102E] font-semibold text-secondary"
+                  ? "bg-[#F5F5F5] border-brand font-semibold text-secondary"
                   : "border-transparent text-muted-foreground hover:bg-muted/40"
               )}
             >

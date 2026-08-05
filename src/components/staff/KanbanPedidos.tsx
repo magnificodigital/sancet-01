@@ -124,7 +124,7 @@ const CardPedido = ({
       )}
 
       {p.valor_total_centavos != null && p.valor_total_centavos > 0 && (
-        <p className="mt-1.5 text-sm font-bold text-[#C8102E]">
+        <p className="mt-1.5 text-sm font-bold text-brand">
           {formatarPreco(p.valor_total_centavos)}
         </p>
       )}
@@ -190,7 +190,7 @@ const Coluna = ({
         className={cn(
           "flex-1 space-y-2 overflow-y-auto p-2 transition",
           "max-h-[75vh] min-h-[200px]",
-          isOver && "bg-[#C8102E]/5 ring-2 ring-[#C8102E]/30",
+          isOver && "bg-brand/5 ring-2 ring-brand/30",
         )}
       >
         {pedidos.length === 0 && (

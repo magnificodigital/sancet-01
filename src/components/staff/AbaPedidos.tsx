@@ -185,7 +185,7 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
               className={cn(
                 "rounded px-3 py-1.5 text-sm font-medium transition",
                 vistaEfetiva === "lista"
-                  ? "bg-[#C8102E] text-white"
+                  ? "bg-brand text-white"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -196,7 +196,7 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
               className={cn(
                 "rounded px-3 py-1.5 text-sm font-medium transition",
                 vistaEfetiva === "kanban"
-                  ? "bg-[#C8102E] text-white"
+                  ? "bg-brand text-white"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >

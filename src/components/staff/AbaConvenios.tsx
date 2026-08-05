@@ -442,7 +442,7 @@ export const AbaConvenios = () => {
               onChange={importarPlanilha}
               disabled={importando}
             />
-            <Button asChild disabled={importando} className="gap-2 text-white cursor-pointer" style={{ backgroundColor: "#C8102E" }}>
+            <Button asChild disabled={importando} className="gap-2 text-white cursor-pointer" style={{ backgroundColor: "hsl(var(--brand))" }}>
               <span>
                 {importando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {importando ? "Importando..." : "Importar planilha"}

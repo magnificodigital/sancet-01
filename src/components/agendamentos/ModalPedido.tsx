@@ -155,7 +155,7 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
 
           <section>
             <h4 className="text-sm font-semibold mb-2">Valor total</h4>
-            <p className="text-lg font-bold text-[#C8102E]">
+            <p className="text-lg font-bold text-brand">
               {formatarPreco(pedido.valor_total_centavos ?? 0)}
             </p>
           </section>
@@ -177,7 +177,7 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="gap-1.5 border-[#1B3A6B] text-[#1B3A6B]"
+                      className="gap-1.5 border-brand-2 text-brand-2"
                       onClick={() => window.open(r.arquivo_url, "_blank", "noopener,noreferrer")}
                     >
                       <Download className="h-3.5 w-3.5" /> Baixar
@@ -200,12 +200,12 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
                       <span
                         className={cn(
                           "absolute left-[9px] top-5 w-px h-6",
-                          concluida ? "bg-[#C8102E]" : "bg-border"
+                          concluida ? "bg-brand" : "bg-border"
                         )}
                       />
                     )}
                     {concluida ? (
-                      <CheckCircle2 className="h-5 w-5 text-[#C8102E] shrink-0" />
+                      <CheckCircle2 className="h-5 w-5 text-brand shrink-0" />
                     ) : (
                       <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
                     )}
@@ -230,7 +230,7 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
               <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full border-[#C8102E] text-[#C8102E] hover:bg-[#C8102E]/5 hover:text-[#C8102E]"
+                  className="w-full border-brand text-brand hover:bg-brand/5 hover:text-brand"
                 >
                   Cancelar agendamento
                 </Button>
@@ -246,7 +246,7 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
                   <AlertDialogCancel>Voltar</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={cancelar}
-                    className="bg-[#C8102E] hover:bg-[#a80d26]"
+                    className="bg-brand hover:bg-brand-hover"
                   >
                     Sim, cancelar
                   </AlertDialogAction>

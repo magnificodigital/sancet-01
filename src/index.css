@@ -59,6 +59,13 @@
     --sidebar-accent-foreground: 0 0% 0%;
     --sidebar-border: 0 0% 90%;
     --sidebar-ring: 351 85% 42%;
+
+    /* Cores da marca — controláveis em Configurações → Aparência.
+       Em HSL (canais) para permitir opacidade (ex: bg-brand/5). */
+    --brand: 351 85% 42%;         /* vermelho Sancet #C8102E */
+    --brand-hover: 350 86% 36%;   /* vermelho escuro #a80d26 */
+    --brand-2: 215 60% 26%;       /* azul Sancet #1B3A6B */
+    --brand-sidebar: 214 68% 14%; /* sidebar #0B1F3A */
   }
 
   .dark {

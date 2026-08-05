@@ -311,7 +311,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                       ? "border-orange-200 bg-orange-50"
                       : agStatus === "amanha"
                         ? "border-blue-200 bg-blue-50"
-                        : "border-[#C8102E]/20 bg-[#C8102E]/5",
+                        : "border-brand/20 bg-brand/5",
                 )}
               >
                 <CalendarCheck
@@ -323,7 +323,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                         ? "text-orange-600"
                         : agStatus === "amanha"
                           ? "text-blue-600"
-                          : "text-[#C8102E]",
+                          : "text-brand",
                   )}
                 />
                 <div className="min-w-0">
@@ -482,7 +482,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                         style={
                           isDestructive || isSuccess
                             ? undefined
-                            : { backgroundColor: "#C8102E" }
+                            : { backgroundColor: "hsl(var(--brand))" }
                         }
                         disabled={mudandoTransicao !== null}
                         onClick={() => aplicarMudancaStatus(t.alvo, true)}
@@ -509,7 +509,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
               {mudouStatus && (
                 <Button
                   className="mt-2 w-full text-white"
-                  style={{ backgroundColor: "#C8102E" }}
+                  style={{ backgroundColor: "hsl(var(--brand))" }}
                   onClick={salvarStatus}
                   disabled={salvando}
                 >

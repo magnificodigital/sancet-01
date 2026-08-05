@@ -372,7 +372,7 @@ export const TEMPLATES: LandingTemplate[] = [
     nome: "Check-up Anual — Pacotes por idade",
     descricao: "Template comercial para venda recorrente de check-ups, com 3 perfis (Essencial, Completo, Premium).",
     thumbnail_gradient: "linear-gradient(135deg, #B0BEC5, #1B3A6B)",
-    cor_principal: "#1B3A6B",
+    cor_principal: "hsl(var(--brand-2))",
     blocos: checkupAnual,
   },
 ];

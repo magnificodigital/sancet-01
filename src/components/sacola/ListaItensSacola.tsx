@@ -63,13 +63,13 @@ export const ListaItensSacola = ({ onVerDetalhes }: Props) => {
             <div className="flex items-center justify-between pt-2 border-t">
               <button
                 onClick={() => onVerDetalhes(item)}
-                className="text-sm font-medium text-[#C8102E] hover:underline"
+                className="text-sm font-medium text-brand hover:underline"
               >
                 Ver detalhes
               </button>
               <button
                 onClick={() => remover(item.codigoShift)}
-                className="text-[#C8102E] p-1 hover:bg-[#C8102E]/10 rounded"
+                className="text-brand p-1 hover:bg-brand/10 rounded"
                 aria-label="Remover"
               >
                 <Trash2 className="h-4 w-4" />
@@ -83,7 +83,7 @@ export const ListaItensSacola = ({ onVerDetalhes }: Props) => {
         {itens.length > 5 ? (
           <button
             onClick={() => setExpandido((v) => !v)}
-            className="text-sm text-[#C8102E] flex items-center gap-1 hover:underline"
+            className="text-sm text-brand flex items-center gap-1 hover:underline"
           >
             <ChevronDown className={expandido ? "h-4 w-4 rotate-180" : "h-4 w-4"} />
             {expandido ? "Ver menos" : "Ver mais"}
@@ -94,7 +94,7 @@ export const ListaItensSacola = ({ onVerDetalhes }: Props) => {
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <button className="text-sm text-[#C8102E] flex items-center gap-1 hover:underline">
+            <button className="text-sm text-brand flex items-center gap-1 hover:underline">
               <Trash2 className="h-4 w-4" /> Limpar tudo
             </button>
           </AlertDialogTrigger>
@@ -109,7 +109,7 @@ export const ListaItensSacola = ({ onVerDetalhes }: Props) => {
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => limpar()}
-                className="bg-[#C8102E] hover:bg-[#a80d26]"
+                className="bg-brand hover:bg-brand-hover"
               >
                 Limpar tudo
               </AlertDialogAction>

@@ -19,7 +19,7 @@ import { ConfirmarExclusao } from "./ConfirmarExclusao";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 const POR_PAGINA = 20;
-const COR_PRIMARIA = "#1B3A6B";
+const COR_PRIMARIA = "hsl(var(--brand-2))";
 
 type Pac = {
   id: string;

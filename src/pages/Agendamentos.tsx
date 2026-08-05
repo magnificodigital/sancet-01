@@ -74,7 +74,7 @@ const Agendamentos = () => {
     <div className="rounded-xl bg-[#F5F5F5] p-10 text-center space-y-4">
       <CalendarX className="h-12 w-12 text-muted-foreground mx-auto" />
       <p className="font-semibold text-secondary">Você ainda não tem agendamentos</p>
-      <Button asChild className="bg-[#C8102E] hover:bg-[#a80d26] text-white">
+      <Button asChild className="bg-brand hover:bg-brand-hover text-white">
         <Link to="/exames">Buscar exames</Link>
       </Button>
     </div>
@@ -168,7 +168,7 @@ const Agendamentos = () => {
                       </div>
                       <Button
                         size="sm"
-                        className="shrink-0 bg-[#1B3A6B] hover:bg-[#162f58] text-white gap-1.5"
+                        className="shrink-0 bg-brand-2 hover:bg-[#162f58] text-white gap-1.5"
                         onClick={() => window.open(r.arquivo_url, "_blank", "noopener,noreferrer")}
                       >
                         <Download className="h-3.5 w-3.5" /> Baixar

@@ -234,7 +234,7 @@ export const AbaPaginas = () => {
         </h2>
         <Button
           onClick={abrirEscolherTemplate}
-          className="gap-1.5 bg-[#C8102E] hover:bg-[#a30d25] text-white"
+          className="gap-1.5 bg-brand hover:bg-[#a30d25] text-white"
         >
           <Plus className="h-4 w-4" /> Nova página
         </Button>
@@ -389,7 +389,7 @@ export const AbaPaginas = () => {
               <button
                 key={t.id}
                 onClick={() => escolherTemplate(t)}
-                className="group text-left rounded-xl border bg-white overflow-hidden transition hover:shadow-md hover:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                className="group text-left rounded-xl border bg-white overflow-hidden transition hover:shadow-md hover:border-brand focus:outline-none focus:ring-2 focus:ring-brand"
               >
                 <div
                   className="h-28 w-full flex items-center justify-center text-white font-semibold"
@@ -406,7 +406,7 @@ export const AbaPaginas = () => {
                 <div className="p-3 space-y-1">
                   <div className="font-medium text-sm leading-tight">{t.nome}</div>
                   <div className="text-xs text-muted-foreground line-clamp-2">{t.descricao}</div>
-                  <div className="pt-2 text-xs flex items-center gap-1 text-[#C8102E] opacity-0 group-hover:opacity-100 transition">
+                  <div className="pt-2 text-xs flex items-center gap-1 text-brand opacity-0 group-hover:opacity-100 transition">
                     <Check className="h-3.5 w-3.5" /> Usar este
                   </div>
                 </div>
@@ -458,7 +458,7 @@ export const AbaPaginas = () => {
             <Button
               onClick={criar}
               disabled={salvando}
-              className="bg-[#C8102E] hover:bg-[#a30d25] text-white"
+              className="bg-brand hover:bg-[#a30d25] text-white"
             >
               {salvando ? "Criando..." : "Criar e editar"}
             </Button>

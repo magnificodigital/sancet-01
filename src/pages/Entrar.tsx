@@ -142,7 +142,7 @@ const Entrar = () => {
         <button
           type="button"
           onClick={() => (etapa === "codigo" ? setEtapa("senha") : navigate("/"))}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-[#C8102E] hover:underline mb-6"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar
@@ -186,7 +186,7 @@ const Entrar = () => {
                 />
                 <Link
                   to="/esqueci-senha"
-                  className="text-xs text-[#C8102E] font-semibold hover:underline"
+                  className="text-xs text-brand font-semibold hover:underline"
                 >
                   Esqueci minha senha
                 </Link>
@@ -195,7 +195,7 @@ const Entrar = () => {
               <Button
                 type="submit"
                 disabled={carregando}
-                className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white font-semibold h-11"
+                className="w-full bg-brand hover:bg-brand-hover text-white font-semibold h-11"
               >
                 {carregando ? (
                   <>
@@ -219,7 +219,7 @@ const Entrar = () => {
         ) : (
           <>
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-full bg-[#C8102E]/10 text-[#C8102E]">
+              <div className="p-2 rounded-full bg-brand/10 text-brand">
                 <Mail className="h-5 w-5" />
               </div>
               <h1 className="text-2xl font-extrabold text-secondary">Confirme o código</h1>
@@ -248,7 +248,7 @@ const Entrar = () => {
               <Button
                 type="submit"
                 disabled={carregando || codigo.length !== 6}
-                className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white font-semibold h-11"
+                className="w-full bg-brand hover:bg-brand-hover text-white font-semibold h-11"
               >
                 {carregando ? (
                   <>
@@ -271,7 +271,7 @@ const Entrar = () => {
                   type="button"
                   disabled={cooldown > 0 || carregando}
                   onClick={pedirCodigo}
-                  className="text-[#C8102E] font-semibold hover:underline disabled:opacity-50 disabled:no-underline"
+                  className="text-brand font-semibold hover:underline disabled:opacity-50 disabled:no-underline"
                 >
                   {cooldown > 0 ? `Reenviar em ${cooldown}s` : "Reenviar código"}
                 </button>

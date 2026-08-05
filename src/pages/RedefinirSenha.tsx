@@ -59,7 +59,7 @@ const RedefinirSenha = () => {
             <Button
               type="submit"
               disabled={carregando}
-              className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white h-11"
+              className="w-full bg-brand hover:bg-brand-hover text-white h-11"
             >
               {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar nova senha"}
             </Button>

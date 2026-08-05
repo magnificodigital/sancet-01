@@ -75,7 +75,7 @@ export const ListaUnidades = ({ onEscolher }: Props) => {
           </div>
           <Button
             onClick={() => onEscolher(u)}
-            className="bg-[#C8102E] hover:bg-[#a80d26] text-white whitespace-nowrap"
+            className="bg-brand hover:bg-brand-hover text-white whitespace-nowrap"
           >
             Escolher local
           </Button>

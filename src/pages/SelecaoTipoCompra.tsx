@@ -55,14 +55,14 @@ const SelecaoTipoCompra = () => {
           {!OCULTAR_PARTICULAR && (
             <button
               onClick={() => ir("particular")}
-              className="text-left rounded-2xl border-2 border-[#C8102E] bg-card p-6 hover:bg-[#C8102E]/5 transition group"
+              className="text-left rounded-2xl border-2 border-brand bg-card p-6 hover:bg-brand/5 transition group"
             >
-              <Wallet className="h-10 w-10 text-[#C8102E] mb-3" />
+              <Wallet className="h-10 w-10 text-brand mb-3" />
               <h2 className="text-xl font-bold text-secondary mb-2">Particular</h2>
               <p className="text-sm text-muted-foreground mb-5">
                 Pague por exame. Preços fixos e transparentes. Resultado em até 3 dias úteis.
               </p>
-              <Button className="w-full bg-[#C8102E] hover:bg-[#a80d26] text-white gap-2">
+              <Button className="w-full bg-brand hover:bg-brand-hover text-white gap-2">
                 Começar Particular <ChevronRight className="h-4 w-4" />
               </Button>
             </button>
@@ -70,9 +70,9 @@ const SelecaoTipoCompra = () => {
 
           <button
             onClick={() => ir("convenio")}
-            className="text-left rounded-2xl border-2 border-[#1B3A6B] bg-card p-6 hover:bg-[#1B3A6B]/5 transition group"
+            className="text-left rounded-2xl border-2 border-brand-2 bg-card p-6 hover:bg-brand-2/5 transition group"
           >
-            <ShieldCheck className="h-10 w-10 text-[#1B3A6B] mb-3" />
+            <ShieldCheck className="h-10 w-10 text-brand-2 mb-3" />
             <h2 className="text-xl font-bold text-secondary mb-2">
               Convênio / Plano de Saúde
             </h2>
@@ -80,7 +80,7 @@ const SelecaoTipoCompra = () => {
               Realize seus exames pelo seu plano. Verificamos cobertura. Apresentação
               obrigatória de carteirinha e documentos.
             </p>
-            <Button className="w-full bg-[#1B3A6B] hover:bg-[#16315a] text-white gap-2">
+            <Button className="w-full bg-brand-2 hover:bg-[#16315a] text-white gap-2">
               Começar por Convênio <ChevronRight className="h-4 w-4" />
             </Button>
           </button>

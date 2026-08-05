@@ -101,7 +101,7 @@ const LandingPublica = () => {
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
           <h1 className="text-2xl font-semibold">Não foi possível carregar a página</h1>
           <p className="text-muted-foreground text-sm">{estado.mensagem}</p>
-          <Button asChild className="bg-[#C8102E] hover:bg-[#a30d25] text-white">
+          <Button asChild className="bg-brand hover:bg-[#a30d25] text-white">
             <Link to="/">Voltar para o início</Link>
           </Button>
         </div>
@@ -113,7 +113,7 @@ const LandingPublica = () => {
           <p className="text-muted-foreground">
             A página que você procura não existe ou ainda não foi publicada.
           </p>
-          <Button asChild className="bg-[#C8102E] hover:bg-[#a30d25] text-white">
+          <Button asChild className="bg-brand hover:bg-[#a30d25] text-white">
             <Link to="/">Voltar para o início</Link>
           </Button>
         </div>

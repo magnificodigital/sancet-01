@@ -30,7 +30,7 @@ export const AlertTrocarTipo = ({ open, onOpenChange, quantidade, onConfirmar }:
         <AlertDialogCancel>Cancelar</AlertDialogCancel>
         <AlertDialogAction
           onClick={onConfirmar}
-          className="bg-[#C8102E] hover:bg-[#a80d26]"
+          className="bg-brand hover:bg-brand-hover"
         >
           Sim, trocar
         </AlertDialogAction>

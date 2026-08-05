@@ -325,7 +325,7 @@ const Index = () => {
               asChild
               variant="outline"
               className="rounded-pill px-8"
-              style={{ borderColor: "#1B3A6B", color: "#1B3A6B" }}
+              style={{ borderColor: "hsl(var(--brand-2))", color: "hsl(var(--brand-2))" }}
             >
               <Link to="/unidades">Ver todas as unidades →</Link>
             </Button>

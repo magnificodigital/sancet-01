@@ -244,12 +244,12 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostr
                     )}
 
                     {mostrarPreco && tipo === "exame" && item.preco_particular != null && (
-                      <span className="ml-auto text-sm font-bold text-[#C8102E]">
+                      <span className="ml-auto text-sm font-bold text-brand">
                         {formatBRL(Number(item.preco_particular))}
                       </span>
                     )}
                     {mostrarPreco && tipo === "vacina" && item.preco_centavos != null && (
-                      <span className="ml-auto text-sm font-bold text-[#C8102E]">
+                      <span className="ml-auto text-sm font-bold text-brand">
                         {formatBRL(item.preco_centavos / 100)}
                       </span>
                     )}
