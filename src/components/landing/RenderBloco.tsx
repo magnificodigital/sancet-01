@@ -401,8 +401,8 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
               </h2>
             )}
             {horizontal ? (
-              {/* pt/px extras: o container com overflow-x recorta o eixo Y, então
-                  damos folga para o marcador (que sobe acima da linha) não ser cortado. */}
+              // pt/px extras: o container com overflow-x recorta o eixo Y, então
+              // damos folga para o marcador (que sobe acima da linha) não ser cortado.
               <div className="overflow-x-auto pt-5 pb-4 px-1">
                 <ol className="flex gap-6 min-w-min">
                   {c.marcos.map((m) => (
