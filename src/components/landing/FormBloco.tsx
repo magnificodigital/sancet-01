@@ -134,6 +134,7 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
               <Input placeholder="Ícone (ex: Heart)" value={card.icone} onChange={(e) => setCard(i, "icone", e.target.value)} />
               <Input placeholder="Título" value={card.titulo} onChange={(e) => setCard(i, "titulo", e.target.value)} />
               <Textarea placeholder="Descrição" rows={2} value={card.descricao} onChange={(e) => setCard(i, "descricao", e.target.value)} />
+              <Input placeholder="Link (opcional, ex: /exames)" value={card.link ?? ""} onChange={(e) => setCard(i, "link", e.target.value)} />
             </div>
           ))}
           <Button

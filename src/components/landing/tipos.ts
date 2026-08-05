@@ -17,7 +17,7 @@ export type TipoBloco =
   | "equipe"
   | "busca_exame";
 
-export type CardServico = { icone: string; titulo: string; descricao: string };
+export type CardServico = { icone: string; titulo: string; descricao: string; link?: string };
 export type Pergunta = { pergunta: string; resposta: string };
 export type Depoimento = { id: string; foto_url: string; nome: string; texto: string; estrelas: number };
 export type ItemEstatistica = { id: string; numero: string; sufixo: string; descricao: string };

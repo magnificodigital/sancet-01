@@ -124,11 +124,21 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {c.cards.map((card, i) => {
                 const IconCmp = (Icons as any)[card.icone] ?? Icons.Circle;
-                return (
-                  <div key={i} className="bg-white rounded-xl p-6 shadow-sm flex flex-col items-start gap-3">
+                const conteudo = (
+                  <>
                     <IconCmp className="h-8 w-8" style={{ color: VERMELHO }} />
                     <h3 className="text-lg font-semibold" style={{ color: AZUL }}>{card.titulo}</h3>
                     <p className="text-sm text-gray-600">{card.descricao}</p>
+                  </>
+                );
+                const base = "bg-white rounded-xl p-6 shadow-sm flex flex-col items-start gap-3";
+                return card.link ? (
+                  <a key={i} href={card.link} className={`${base} transition hover:shadow-md`}>
+                    {conteudo}
+                  </a>
+                ) : (
+                  <div key={i} className={base}>
+                    {conteudo}
                   </div>
                 );
               })}
