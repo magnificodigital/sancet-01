@@ -390,8 +390,14 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                 </CardContent>
               </Card>
 
-              {/* Sincronização do Shift (antes em "Sync Shift" no menu) */}
-              <AbaCatalogoShift />
+              {/* Sincronização do Shift (antes em "Sync Shift" no menu) — só admin */}
+              {isAdmin ? (
+                <AbaCatalogoShift />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  A sincronização com o Shift é restrita a administradores.
+                </p>
+              )}
             </>
           )}
 

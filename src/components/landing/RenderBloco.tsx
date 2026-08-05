@@ -15,6 +15,38 @@ import { FormularioContato } from "./blocos/FormularioContato";
 const VERMELHO = "#C8102E";
 const AZUL = "#1B3A6B";
 
+// Marcador da linha do tempo: bolinha (padrão) ou ícone (gota de sangue, estrela, relógio).
+const iconeMarco = (icone: string | undefined) => {
+  const cls = "h-3.5 w-3.5";
+  const st = { color: VERMELHO };
+  if (icone === "sangue") return <Icons.Droplet className={cls} style={st} />;
+  if (icone === "estrela") return <Icons.Star className={cls} style={st} />;
+  if (icone === "relogio") return <Icons.Clock className={cls} style={st} />;
+  return null;
+};
+
+const marcador = (icone: string | undefined, orient: "v" | "h") => {
+  const ic = iconeMarco(icone);
+  if (!ic) {
+    const pos = orient === "v" ? "-left-[41px] top-1" : "-top-[9px] left-0";
+    return (
+      <span
+        className={`absolute ${pos} h-4 w-4 rounded-full ring-4 ring-white`}
+        style={{ backgroundColor: VERMELHO }}
+      />
+    );
+  }
+  const pos = orient === "v" ? "-left-[44px] top-0" : "-top-[12px] left-0";
+  return (
+    <span
+      className={`absolute ${pos} flex h-6 w-6 items-center justify-center rounded-full border-2 bg-white ring-4 ring-white`}
+      style={{ borderColor: VERMELHO }}
+    >
+      {ic}
+    </span>
+  );
+};
+
 // Converte a URL do vídeo em um alvo embutível (YouTube/Vimeo → iframe; .mp4 → <video>).
 const resolverVideo = (url: string): { modo: "iframe" | "video" | "vazio"; src: string } => {
   if (!url.trim()) return { modo: "vazio", src: "" };
@@ -374,10 +406,7 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
                       className="relative w-64 shrink-0 border-t-2 pt-5"
                       style={{ borderColor: VERMELHO }}
                     >
-                      <span
-                        className="absolute -top-[9px] left-0 h-4 w-4 rounded-full ring-4 ring-white"
-                        style={{ backgroundColor: VERMELHO }}
-                      />
+                      {marcador(m.icone, "h")}
                       <div className="text-sm font-bold uppercase tracking-wide" style={{ color: VERMELHO }}>
                         {m.ano}
                       </div>
@@ -399,10 +428,7 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
               <ol className="relative border-l-2 pl-8 space-y-8 max-w-[800px] mx-auto" style={{ borderColor: VERMELHO }}>
                 {c.marcos.map((m) => (
                   <li key={m.id} className="relative">
-                    <span
-                      className="absolute -left-[41px] top-1 h-4 w-4 rounded-full ring-4 ring-white"
-                      style={{ backgroundColor: VERMELHO }}
-                    />
+                    {marcador(m.icone, "v")}
                     <div className="text-sm font-bold uppercase tracking-wide" style={{ color: VERMELHO }}>
                       {m.ano}
                     </div>

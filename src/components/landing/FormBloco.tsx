@@ -548,6 +548,18 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
                 <Input placeholder="Ano" value={m.ano} onChange={(e) => setM(i, "ano", e.target.value)} />
                 <Input className="col-span-2" placeholder="Título" value={m.titulo} onChange={(e) => setM(i, "titulo", e.target.value)} />
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Ícone</Label>
+                <Select value={m.icone ?? "bolinha"} onValueChange={(v) => setM(i, "icone", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bolinha">● Bolinha</SelectItem>
+                    <SelectItem value="sangue">🩸 Gota de sangue</SelectItem>
+                    <SelectItem value="estrela">★ Estrela</SelectItem>
+                    <SelectItem value="relogio">⏱ Relógio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Textarea placeholder="Descrição" rows={2} value={m.texto} onChange={(e) => setM(i, "texto", e.target.value)} />
             </div>
           ))}
@@ -555,7 +567,7 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => set("marcos", [...c.marcos, { id: uid(), ano: "", titulo: "", texto: "" }])}
+            onClick={() => set("marcos", [...c.marcos, { id: uid(), ano: "", titulo: "", texto: "", icone: "bolinha" }])}
           >
             <Plus className="h-3.5 w-3.5" /> Adicionar marco
           </Button>

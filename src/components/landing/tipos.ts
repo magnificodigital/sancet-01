@@ -86,7 +86,14 @@ export type ConfigColunas = {
   qtd_colunas: 2 | 3 | 4;
   colunas: ColunaItem[];
 };
-export type MarcoTempo = { id: string; ano: string; titulo: string; texto: string };
+export type IconeMarco = "bolinha" | "sangue" | "estrela" | "relogio";
+export type MarcoTempo = {
+  id: string;
+  ano: string;
+  titulo: string;
+  texto: string;
+  icone: IconeMarco;
+};
 export type ConfigLinhaTempo = {
   titulo_secao: string;
   orientacao: "vertical" | "horizontal";
@@ -303,9 +310,9 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
           titulo_secao: "Nossa história",
           orientacao: "vertical",
           marcos: [
-            { id: uid(), ano: "1980", titulo: "Fundação", texto: "Início das atividades da Sancet." },
-            { id: uid(), ano: "2005", titulo: "Acreditação", texto: "Conquista de certificações de qualidade." },
-            { id: uid(), ano: "2024", titulo: "Expansão", texto: "Novas unidades na região metropolitana." },
+            { id: uid(), ano: "1980", titulo: "Fundação", texto: "Início das atividades da Sancet.", icone: "bolinha" },
+            { id: uid(), ano: "2005", titulo: "Acreditação", texto: "Conquista de certificações de qualidade.", icone: "estrela" },
+            { id: uid(), ano: "2024", titulo: "Expansão", texto: "Novas unidades na região metropolitana.", icone: "bolinha" },
           ],
         },
       };
