@@ -19,8 +19,11 @@ const AZUL = "hsl(var(--brand-2))";
 const iconeMarco = (icone: string | undefined) => {
   const cls = "h-3.5 w-3.5";
   const st = { color: VERMELHO };
-  if (icone === "sangue") return <Icons.Droplet className={cls} style={st} />;
-  if (icone === "estrela") return <Icons.Star className={cls} style={st} />;
+  // Gota e estrela preenchidas (senão o ícone fica "vazado"); relógio fica em contorno.
+  if (icone === "sangue")
+    return <Icons.Droplet className={cls} style={st} fill="currentColor" />;
+  if (icone === "estrela")
+    return <Icons.Star className={cls} style={st} fill="currentColor" />;
   if (icone === "relogio") return <Icons.Clock className={cls} style={st} />;
   return null;
 };
@@ -398,7 +401,9 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
               </h2>
             )}
             {horizontal ? (
-              <div className="overflow-x-auto pb-4">
+              {/* pt/px extras: o container com overflow-x recorta o eixo Y, então
+                  damos folga para o marcador (que sobe acima da linha) não ser cortado. */}
+              <div className="overflow-x-auto pt-5 pb-4 px-1">
                 <ol className="flex gap-6 min-w-min">
                   {c.marcos.map((m) => (
                     <li
