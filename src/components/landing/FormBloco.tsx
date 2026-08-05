@@ -440,28 +440,73 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
         </div>
         <div className="space-y-3">
           <Label>Colunas</Label>
-          {c.colunas.map((col, i) => (
-            <div key={col.id} className="rounded-md border p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Coluna {i + 1}</span>
-                <Button size="sm" variant="ghost" onClick={() => set("colunas", c.colunas.filter((_, idx) => idx !== i))}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+          {c.colunas.map((col, i) => {
+            const tipoCol = col.tipo ?? "conteudo";
+            return (
+              <div key={col.id} className="rounded-md border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Coluna {i + 1}</span>
+                  <Button size="sm" variant="ghost" onClick={() => set("colunas", c.colunas.filter((_, idx) => idx !== i))}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Tipo de conteúdo</Label>
+                  <Select value={tipoCol} onValueChange={(v) => setCol(i, "tipo", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="conteudo">Texto / imagem + botão</SelectItem>
+                      <SelectItem value="imagem">Somente imagem</SelectItem>
+                      <SelectItem value="video">Vídeo</SelectItem>
+                      <SelectItem value="formulario">Formulário de contato</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {tipoCol === "conteudo" && (
+                  <>
+                    <UploadImagem value={col.imagem_url} onChange={(v) => setCol(i, "imagem_url", v)} pasta="landing-pages/colunas" />
+                    <Input placeholder="Título" value={col.titulo} onChange={(e) => setCol(i, "titulo", e.target.value)} />
+                    <Textarea placeholder="Texto" rows={3} value={col.texto} onChange={(e) => setCol(i, "texto", e.target.value)} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="Texto do botão" value={col.botao_texto} onChange={(e) => setCol(i, "botao_texto", e.target.value)} />
+                      <Input placeholder="Link do botão" value={col.botao_link} onChange={(e) => setCol(i, "botao_link", e.target.value)} />
+                    </div>
+                  </>
+                )}
+
+                {tipoCol === "imagem" && (
+                  <>
+                    <UploadImagem value={col.imagem_url} onChange={(v) => setCol(i, "imagem_url", v)} pasta="landing-pages/colunas" />
+                    <Input placeholder="Legenda (opcional)" value={col.titulo} onChange={(e) => setCol(i, "titulo", e.target.value)} />
+                  </>
+                )}
+
+                {tipoCol === "video" && (
+                  <>
+                    <Input placeholder="URL do vídeo (YouTube, Vimeo ou .mp4)" value={col.video_url} onChange={(e) => setCol(i, "video_url", e.target.value)} />
+                    <Input placeholder="Legenda (opcional)" value={col.titulo} onChange={(e) => setCol(i, "titulo", e.target.value)} />
+                  </>
+                )}
+
+                {tipoCol === "formulario" && (
+                  <>
+                    <Input placeholder="Título do formulário (opcional)" value={col.titulo} onChange={(e) => setCol(i, "titulo", e.target.value)} />
+                    <Input placeholder="Texto do botão (padrão: Enviar)" value={col.botao_texto} onChange={(e) => setCol(i, "botao_texto", e.target.value)} />
+                    <p className="text-xs text-muted-foreground">
+                      Campos: nome, e-mail, telefone e mensagem. Os envios chegam por e-mail aos endereços
+                      configurados em Configurações (RESEND_EMAILS_ADMIN).
+                    </p>
+                  </>
+                )}
               </div>
-              <UploadImagem value={col.imagem_url} onChange={(v) => setCol(i, "imagem_url", v)} pasta="landing-pages/colunas" />
-              <Input placeholder="Título" value={col.titulo} onChange={(e) => setCol(i, "titulo", e.target.value)} />
-              <Textarea placeholder="Texto" rows={3} value={col.texto} onChange={(e) => setCol(i, "texto", e.target.value)} />
-              <div className="grid grid-cols-2 gap-2">
-                <Input placeholder="Texto do botão" value={col.botao_texto} onChange={(e) => setCol(i, "botao_texto", e.target.value)} />
-                <Input placeholder="Link do botão" value={col.botao_link} onChange={(e) => setCol(i, "botao_link", e.target.value)} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => set("colunas", [...c.colunas, { id: uid(), imagem_url: "", titulo: "Nova coluna", texto: "", botao_texto: "", botao_link: "" }])}
+            onClick={() => set("colunas", [...c.colunas, { id: uid(), tipo: "conteudo", imagem_url: "", video_url: "", titulo: "Nova coluna", texto: "", botao_texto: "", botao_link: "" }])}
           >
             <Plus className="h-3.5 w-3.5" /> Adicionar coluna
           </Button>
@@ -479,6 +524,16 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
     return (
       <div className="space-y-4">
         <div className="space-y-2"><Label>Título da seção</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <div className="space-y-2">
+          <Label>Orientação</Label>
+          <Select value={c.orientacao ?? "vertical"} onValueChange={(v) => set("orientacao", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="vertical">Vertical (empilhada)</SelectItem>
+              <SelectItem value="horizontal">Horizontal (rolagem lateral)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-3">
           <Label>Marcos (por ano)</Label>
           {c.marcos.map((m, i) => (

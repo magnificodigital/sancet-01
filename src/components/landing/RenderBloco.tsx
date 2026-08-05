@@ -10,6 +10,7 @@ import { BlocoDepoimentos } from "./blocos/BlocoDepoimentos";
 import { BlocoEstatisticas } from "./blocos/BlocoEstatisticas";
 import { BlocoConvenios } from "./blocos/BlocoConvenios";
 import { BlocoExamesDestaque } from "./blocos/BlocoExamesDestaque";
+import { FormularioContato } from "./blocos/FormularioContato";
 
 const VERMELHO = "#C8102E";
 const AZUL = "#1B3A6B";
@@ -258,36 +259,96 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
               </h2>
             )}
             <div className={`grid grid-cols-1 ${gridCols} gap-8`}>
-              {c.colunas.map((col) => (
-                <div key={col.id} className="flex flex-col gap-3">
-                  {col.imagem_url && (
-                    <img
-                      src={col.imagem_url}
-                      alt={col.titulo}
-                      className="w-full h-auto rounded-xl object-cover"
+              {c.colunas.map((col) => {
+                const tipoCol = col.tipo ?? "conteudo";
+                if (tipoCol === "imagem") {
+                  return (
+                    <div key={col.id} className="flex flex-col gap-2">
+                      {col.imagem_url ? (
+                        <img src={col.imagem_url} alt={col.titulo} className="w-full h-auto rounded-xl" />
+                      ) : (
+                        <div className="w-full aspect-video rounded-xl bg-gray-200 flex items-center justify-center text-gray-400 text-sm">
+                          Sem imagem
+                        </div>
+                      )}
+                      {col.titulo && (
+                        <p className="text-center text-sm text-gray-500">{col.titulo}</p>
+                      )}
+                    </div>
+                  );
+                }
+                if (tipoCol === "video") {
+                  const v = resolverVideo(col.video_url ?? "");
+                  return (
+                    <div key={col.id} className="flex flex-col gap-2">
+                      <div
+                        className="relative w-full overflow-hidden rounded-xl bg-black"
+                        style={{ aspectRatio: "16 / 9" }}
+                      >
+                        {v.modo === "iframe" && (
+                          <iframe
+                            src={v.src}
+                            title={col.titulo || "Vídeo"}
+                            className="absolute inset-0 h-full w-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        )}
+                        {v.modo === "video" && (
+                          <video src={v.src} controls className="absolute inset-0 h-full w-full" />
+                        )}
+                        {v.modo === "vazio" && (
+                          <div className="absolute inset-0 flex items-center justify-center text-sm text-white/60">
+                            Adicione a URL do vídeo
+                          </div>
+                        )}
+                      </div>
+                      {col.titulo && (
+                        <p className="text-center text-sm text-gray-500">{col.titulo}</p>
+                      )}
+                    </div>
+                  );
+                }
+                if (tipoCol === "formulario") {
+                  return (
+                    <FormularioContato
+                      key={col.id}
+                      titulo={col.titulo}
+                      botaoTexto={col.botao_texto}
                     />
-                  )}
-                  {col.titulo && (
-                    <h3 className="text-lg font-semibold" style={{ color: AZUL }}>
-                      {col.titulo}
-                    </h3>
-                  )}
-                  {col.texto && (
-                    <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
-                      {col.texto}
-                    </p>
-                  )}
-                  {col.botao_texto && (
-                    <a
-                      href={col.botao_link || "#"}
-                      className="mt-1 inline-block w-fit px-4 py-2 rounded-lg text-sm font-medium text-white transition hover:opacity-90"
-                      style={{ backgroundColor: VERMELHO }}
-                    >
-                      {col.botao_texto}
-                    </a>
-                  )}
-                </div>
-              ))}
+                  );
+                }
+                return (
+                  <div key={col.id} className="flex flex-col gap-3">
+                    {col.imagem_url && (
+                      <img
+                        src={col.imagem_url}
+                        alt={col.titulo}
+                        className="w-full h-auto rounded-xl object-cover"
+                      />
+                    )}
+                    {col.titulo && (
+                      <h3 className="text-lg font-semibold" style={{ color: AZUL }}>
+                        {col.titulo}
+                      </h3>
+                    )}
+                    {col.texto && (
+                      <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                        {col.texto}
+                      </p>
+                    )}
+                    {col.botao_texto && (
+                      <a
+                        href={col.botao_link || "#"}
+                        className="mt-1 inline-block w-fit px-4 py-2 rounded-lg text-sm font-medium text-white transition hover:opacity-90"
+                        style={{ backgroundColor: VERMELHO }}
+                      >
+                        {col.botao_texto}
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -295,40 +356,70 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
     }
     case "linha_tempo": {
       const c = bloco.config;
+      const horizontal = c.orientacao === "horizontal";
       return (
         <section className="w-full py-16 px-6 bg-white">
-          <div className="max-w-[800px] mx-auto">
+          <div className="max-w-[1200px] mx-auto">
             {c.titulo_secao && (
               <h2 className="text-3xl font-bold text-center mb-10" style={{ color: AZUL }}>
                 {c.titulo_secao}
               </h2>
             )}
-            <ol className="relative border-l-2 pl-8 space-y-8" style={{ borderColor: VERMELHO }}>
-              {c.marcos.map((m) => (
-                <li key={m.id} className="relative">
-                  <span
-                    className="absolute -left-[41px] top-1 h-4 w-4 rounded-full ring-4 ring-white"
-                    style={{ backgroundColor: VERMELHO }}
-                  />
-                  <div
-                    className="text-sm font-bold uppercase tracking-wide"
-                    style={{ color: VERMELHO }}
-                  >
-                    {m.ano}
-                  </div>
-                  {m.titulo && (
-                    <h3 className="mt-0.5 text-lg font-semibold" style={{ color: AZUL }}>
-                      {m.titulo}
-                    </h3>
-                  )}
-                  {m.texto && (
-                    <p className="mt-1 text-sm text-gray-600 whitespace-pre-line leading-relaxed">
-                      {m.texto}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ol>
+            {horizontal ? (
+              <div className="overflow-x-auto pb-4">
+                <ol className="flex gap-6 min-w-min">
+                  {c.marcos.map((m) => (
+                    <li
+                      key={m.id}
+                      className="relative w-64 shrink-0 border-t-2 pt-5"
+                      style={{ borderColor: VERMELHO }}
+                    >
+                      <span
+                        className="absolute -top-[9px] left-0 h-4 w-4 rounded-full ring-4 ring-white"
+                        style={{ backgroundColor: VERMELHO }}
+                      />
+                      <div className="text-sm font-bold uppercase tracking-wide" style={{ color: VERMELHO }}>
+                        {m.ano}
+                      </div>
+                      {m.titulo && (
+                        <h3 className="mt-0.5 text-lg font-semibold" style={{ color: AZUL }}>
+                          {m.titulo}
+                        </h3>
+                      )}
+                      {m.texto && (
+                        <p className="mt-1 text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                          {m.texto}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : (
+              <ol className="relative border-l-2 pl-8 space-y-8 max-w-[800px] mx-auto" style={{ borderColor: VERMELHO }}>
+                {c.marcos.map((m) => (
+                  <li key={m.id} className="relative">
+                    <span
+                      className="absolute -left-[41px] top-1 h-4 w-4 rounded-full ring-4 ring-white"
+                      style={{ backgroundColor: VERMELHO }}
+                    />
+                    <div className="text-sm font-bold uppercase tracking-wide" style={{ color: VERMELHO }}>
+                      {m.ano}
+                    </div>
+                    {m.titulo && (
+                      <h3 className="mt-0.5 text-lg font-semibold" style={{ color: AZUL }}>
+                        {m.titulo}
+                      </h3>
+                    )}
+                    {m.texto && (
+                      <p className="mt-1 text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                        {m.texto}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
         </section>
       );

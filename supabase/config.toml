@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.sancet-primeiro-acesso]
 verify_jwt = false
+
+[functions.sancet-contato-email]
+verify_jwt = false

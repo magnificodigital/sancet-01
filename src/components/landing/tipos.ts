@@ -70,9 +70,12 @@ export type ConfigImagem = {
 };
 export type ConfigVideo = { url: string; legenda: string };
 export type ConfigEspacador = { altura: number };
+export type TipoColuna = "conteudo" | "imagem" | "video" | "formulario";
 export type ColunaItem = {
   id: string;
+  tipo: TipoColuna;
   imagem_url: string;
+  video_url: string;
   titulo: string;
   texto: string;
   botao_texto: string;
@@ -84,7 +87,11 @@ export type ConfigColunas = {
   colunas: ColunaItem[];
 };
 export type MarcoTempo = { id: string; ano: string; titulo: string; texto: string };
-export type ConfigLinhaTempo = { titulo_secao: string; marcos: MarcoTempo[] };
+export type ConfigLinhaTempo = {
+  titulo_secao: string;
+  orientacao: "vertical" | "horizontal";
+  marcos: MarcoTempo[];
+};
 export type MembroEquipe = { id: string; foto_url: string; nome: string; cargo: string };
 export type ConfigEquipe = {
   titulo_secao: string;
@@ -282,9 +289,9 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
           titulo_secao: "",
           qtd_colunas: 3,
           colunas: [
-            { id: uid(), imagem_url: "", titulo: "Coluna 1", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
-            { id: uid(), imagem_url: "", titulo: "Coluna 2", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
-            { id: uid(), imagem_url: "", titulo: "Coluna 3", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
+            { id: uid(), tipo: "conteudo", imagem_url: "", video_url: "", titulo: "Coluna 1", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
+            { id: uid(), tipo: "conteudo", imagem_url: "", video_url: "", titulo: "Coluna 2", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
+            { id: uid(), tipo: "conteudo", imagem_url: "", video_url: "", titulo: "Coluna 3", texto: "Conteúdo da coluna.", botao_texto: "", botao_link: "" },
           ],
         },
       };
@@ -294,6 +301,7 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
         tipo,
         config: {
           titulo_secao: "Nossa história",
+          orientacao: "vertical",
           marcos: [
             { id: uid(), ano: "1980", titulo: "Fundação", texto: "Início das atividades da Sancet." },
             { id: uid(), ano: "2005", titulo: "Acreditação", texto: "Conquista de certificações de qualidade." },
