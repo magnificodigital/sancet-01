@@ -224,6 +224,7 @@ const EnviarPedido = () => {
             )}
             {etapa === 3 && modalidade === "unidade" && (
               <EtapaAgendamento
+                unidade={unidade}
                 onConfirmar={(a) => {
                   setAgendamento(a);
                   setEtapa(4);

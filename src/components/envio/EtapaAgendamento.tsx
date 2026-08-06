@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { dispDoDia, temManha, temTarde, type DispDia } from "@/lib/agendamento";
+import type { Unidade } from "./ListaUnidades";
 
 export type Periodo = "manha" | "tarde";
 
@@ -16,6 +18,7 @@ export type Agendamento = {
 
 type Props = {
   onConfirmar: (a: Agendamento) => void;
+  unidade?: Unidade | null;
 };
 
 const hoje = () => {
@@ -40,21 +43,27 @@ const maxData = () => {
   return d;
 };
 
-// Sábado, domingo e feriados a unidade atende somente pela manhã (07h–11h).
-const soPeriodoManha = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
-
-export const EtapaAgendamento = ({ onConfirmar }: Props) => {
+export const EtapaAgendamento = ({ onConfirmar, unidade }: Props) => {
   const [data, setData] = useState<Date | undefined>(undefined);
   const [periodo, setPeriodo] = useState<Periodo | null>(null);
 
-  const apenasManha = data ? soPeriodoManha(data) : false;
-  const periodoInvalido = apenasManha && periodo === "tarde";
+  // Agenda da unidade escolhida (por dia da semana). Sem config → fallback padrão.
+  const dias = (unidade?.horarios?.dias ?? null) as Record<string, DispDia> | null;
+  const dispData: DispDia = data ? dispDoDia(dias, data.getDay()) : "ambos";
+  const manhaOk = temManha(dispData);
+  const tardeOk = temTarde(dispData);
+
+  const periodoInvalido =
+    (!!periodo && periodo === "manha" && !manhaOk) ||
+    (!!periodo && periodo === "tarde" && !tardeOk);
   const podeAvancar = !!data && !!periodo && !periodoInvalido;
 
   const escolherData = (d: Date | undefined) => {
     setData(d);
-    if (d && soPeriodoManha(d) && periodo === "tarde") {
-      setPeriodo(null);
+    if (d) {
+      const disp = dispDoDia(dias, d.getDay());
+      if (periodo === "tarde" && !temTarde(disp)) setPeriodo(null);
+      if (periodo === "manha" && !temManha(disp)) setPeriodo(null);
     }
   };
 
@@ -94,6 +103,7 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
                 disabled={(d) => {
                   if (d < minData()) return true; // bloqueia mesmo dia / antecedência mínima
                   if (d > maxData()) return true;
+                  if (dispDoDia(dias, d.getDay()) === "fechado") return true; // unidade fechada
                   return false;
                 }}
                 initialFocus
@@ -112,12 +122,14 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
+              disabled={!!data && !manhaOk}
               onClick={() => setPeriodo("manha")}
               className={cn(
                 "rounded-xl border p-4 text-left transition",
                 periodo === "manha"
                   ? "border-brand bg-brand/5 ring-2 ring-brand/30"
                   : "border-border hover:border-brand/40",
+                !!data && !manhaOk && "cursor-not-allowed opacity-50 hover:border-border",
               )}
             >
               <Sun className="mb-2 h-5 w-5 text-brand" />
@@ -127,14 +139,14 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
 
             <button
               type="button"
-              disabled={apenasManha}
+              disabled={!!data && !tardeOk}
               onClick={() => setPeriodo("tarde")}
               className={cn(
                 "rounded-xl border p-4 text-left transition",
                 periodo === "tarde"
                   ? "border-brand bg-brand/5 ring-2 ring-brand/30"
                   : "border-border hover:border-brand/40",
-                apenasManha && "cursor-not-allowed opacity-50 hover:border-border",
+                !!data && !tardeOk && "cursor-not-allowed opacity-50 hover:border-border",
               )}
             >
               <Sunset className="mb-2 h-5 w-5 text-brand" />
@@ -142,9 +154,14 @@ export const EtapaAgendamento = ({ onConfirmar }: Props) => {
               <p className="text-xs text-muted-foreground">12h às 16h</p>
             </button>
           </div>
-          {apenasManha && (
+          {data && !manhaOk && !tardeOk && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Aos sábados, domingos e feriados a unidade atende somente pela manhã.
+              A unidade não atende nesse dia. Escolha outra data.
+            </p>
+          )}
+          {data && (manhaOk !== tardeOk) && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Nesse dia a unidade atende somente pela {manhaOk ? "manhã" : "tarde"}.
             </p>
           )}
         </div>

@@ -19,6 +19,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { DIAS_SEMANA, AGENDA_PADRAO, type DispDia } from "@/lib/agendamento";
 
 const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -36,6 +37,7 @@ type Un = {
   telefone: string | null;
   email: string | null;
   horario: string | null;
+  dias: Record<string, DispDia> | null;
   aceita_domicilio: boolean;
   ativo: boolean;
   foto_url: string | null;
@@ -51,6 +53,7 @@ type Form = {
   telefone: string;
   email: string;
   horario: string;
+  dias: Record<string, DispDia>;
   aceita_domicilio: boolean;
   ativo: boolean;
   foto_url: string;
@@ -59,6 +62,7 @@ type Form = {
 const FORM_VAZIO: Form = {
   codigo_shift: "", nome: "", endereco: "", bairro: "",
   cidade: "", uf: "", telefone: "", email: "", horario: "",
+  dias: { ...AGENDA_PADRAO },
   aceita_domicilio: true, ativo: true, foto_url: "",
 };
 
@@ -104,6 +108,7 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
       telefone: u.telefone ?? null,
       email: u.email ?? null,
       horario: typeof u.horarios === "string" ? u.horarios : (u.horarios?.texto ?? null),
+      dias: (u.horarios && typeof u.horarios === "object" ? u.horarios.dias : null) ?? null,
       aceita_domicilio: !!u.aceita_domicilio,
       ativo: !!u.ativo,
       foto_url: u.foto_url ?? null,
@@ -131,6 +136,7 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
       telefone:        u.telefone ?? "",
       email:           u.email ?? "",
       horario:         u.horario ?? "",
+      dias:            u.dias && Object.keys(u.dias).length ? { ...u.dias } : { ...AGENDA_PADRAO },
       aceita_domicilio: u.aceita_domicilio,
       ativo:           u.ativo,
       foto_url:        u.foto_url ?? "",
@@ -158,7 +164,10 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
       uf:               form.uf || null,
       telefone:         form.telefone.trim() || null,
       email:            form.email.trim() || null,
-      horarios:         form.horario.trim() ? { texto: form.horario.trim() } : null,
+      horarios:         {
+        dias: form.dias,
+        ...(form.horario.trim() ? { texto: form.horario.trim() } : {}),
+      },
       aceita_domicilio: form.aceita_domicilio,
       ativo:            form.ativo,
       foto_url:         form.foto_url || null,
@@ -465,12 +474,40 @@ export const AbaUnidades = ({ permissoes }: Props = {}) => {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Horário de funcionamento</Label>
+              <Label>Horário de funcionamento (texto exibido no site)</Label>
               <Input
                 value={form.horario}
                 onChange={(e) => set("horario", e.target.value)}
                 placeholder="Seg–Sex 7h–17h / Sáb 7h–12h"
               />
+            </div>
+
+            <div className="space-y-2 rounded-md border p-3">
+              <Label>Agenda por dia (disponibilidade no agendamento)</Label>
+              <p className="text-xs text-muted-foreground">
+                Define quais dias/períodos ficam disponíveis quando o paciente agenda nesta unidade.
+              </p>
+              <div className="space-y-1.5">
+                {DIAS_SEMANA.map((d) => (
+                  <div key={d.n} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-secondary">{d.label}</span>
+                    <Select
+                      value={form.dias[String(d.n)] ?? "fechado"}
+                      onValueChange={(v) =>
+                        set("dias", { ...form.dias, [String(d.n)]: v as DispDia })
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fechado">Fechado</SelectItem>
+                        <SelectItem value="manha">Só manhã</SelectItem>
+                        <SelectItem value="tarde">Só tarde</SelectItem>
+                        <SelectItem value="ambos">Manhã e tarde</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-1.5">
