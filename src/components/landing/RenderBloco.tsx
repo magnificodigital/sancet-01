@@ -72,7 +72,7 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
       const alignClass = c.alinhamento === "centro" ? "text-center items-center" : "text-left items-start";
       return (
         <section
-          className="relative w-full -mt-28 min-h-[90vh] flex items-center bg-no-repeat"
+          className="relative w-full -mt-28 min-h-[88vh] flex flex-col justify-center bg-no-repeat"
           style={{
             backgroundColor: "hsl(var(--brand-2))",
             backgroundImage: c.imagem_url
@@ -82,7 +82,8 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
             backgroundPosition: "center center",
           }}
         >
-          <div className="relative z-10 w-full max-w-[1200px] mx-auto px-6 py-20 md:py-24">
+          {/* pt-28 garante que o conteúdo fique abaixo do cabeçalho (que flutua no topo) */}
+          <div className="relative z-10 w-full max-w-[1200px] mx-auto px-6 pt-28 pb-16 md:pt-32 md:pb-20">
             <div className={`flex flex-col gap-4 ${alignClass} max-w-3xl ${c.alinhamento === "centro" ? "mx-auto" : ""}`}>
               {c.selo && (
                 <span className="inline-flex w-fit items-center gap-2 rounded-pill bg-white/10 px-4 py-1.5 text-xs font-semibold text-white backdrop-blur">
