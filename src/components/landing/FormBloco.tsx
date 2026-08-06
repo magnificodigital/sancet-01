@@ -81,13 +81,27 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
 
   if (bloco.tipo === "hero") {
     const c = bloco.config;
+    const pills = c.pills ?? [];
+    const setPill = (i: number, campo: string, valor: string) =>
+      set("pills", pills.map((p, idx) => (idx === i ? { ...p, [campo]: valor } : p)));
     return (
       <div className="space-y-4">
+        <div className="space-y-2"><Label>Selo (opcional, ex: Atendimento Digital)</Label><Input value={c.selo ?? ""} onChange={(e) => set("selo", e.target.value)} /></div>
         <div className="space-y-2"><Label>Título</Label><Input value={c.titulo} onChange={(e) => set("titulo", e.target.value)} /></div>
         <div className="space-y-2"><Label>Subtítulo</Label><Textarea rows={2} value={c.subtitulo} onChange={(e) => set("subtitulo", e.target.value)} /></div>
         <div className="space-y-2"><Label>Imagem de fundo</Label><UploadImagem value={c.imagem_url} onChange={(v) => set("imagem_url", v)} /></div>
-        <div className="space-y-2"><Label>Texto do botão</Label><Input value={c.cta_texto} onChange={(e) => set("cta_texto", e.target.value)} /></div>
-        <div className="space-y-2"><Label>Link do botão</Label><Input value={c.cta_link} onChange={(e) => set("cta_link", e.target.value)} /></div>
+        <div className="flex items-center justify-between rounded-md border p-3">
+          <Label className="text-sm">Mostrar campo de busca de exame</Label>
+          <Switch checked={!!c.mostrar_busca} onCheckedChange={(v) => set("mostrar_busca", v)} />
+        </div>
+        {c.mostrar_busca ? (
+          <div className="space-y-2"><Label>Link do botão "Escanear pedido" (vazio = sem botão)</Label><Input placeholder="/enviar-pedido" value={c.escanear_link ?? ""} onChange={(e) => set("escanear_link", e.target.value)} /></div>
+        ) : (
+          <>
+            <div className="space-y-2"><Label>Texto do botão</Label><Input value={c.cta_texto} onChange={(e) => set("cta_texto", e.target.value)} /></div>
+            <div className="space-y-2"><Label>Link do botão</Label><Input value={c.cta_link} onChange={(e) => set("cta_link", e.target.value)} /></div>
+          </>
+        )}
         <div className="space-y-2">
           <Label>Alinhamento</Label>
           <Select value={c.alinhamento} onValueChange={(v) => set("alinhamento", v)}>
@@ -97,6 +111,21 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
               <SelectItem value="centro">Centro</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Selos de destaque (pills)</Label>
+          {pills.map((p, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input className="w-32" placeholder="Ícone" value={p.icone} onChange={(e) => setPill(i, "icone", e.target.value)} />
+              <Input placeholder="Texto" value={p.label} onChange={(e) => setPill(i, "label", e.target.value)} />
+              <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => set("pills", pills.filter((_, idx) => idx !== i))}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={() => set("pills", [...pills, { icone: "Check", label: "Novo selo" }])}>
+            <Plus className="h-3.5 w-3.5" /> Adicionar selo
+          </Button>
         </div>
       </div>
     );
@@ -114,13 +143,25 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
 
   if (bloco.tipo === "servicos") {
     const c = bloco.config;
-    const setCard = (i: number, campo: string, valor: string) => {
+    const setCard = (i: number, campo: string, valor: any) => {
       const novos = c.cards.map((card, idx) => (idx === i ? { ...card, [campo]: valor } : card));
       set("cards", novos);
     };
     return (
       <div className="space-y-4">
+        <div className="space-y-2"><Label>Tag (linha pequena acima do título)</Label><Input value={c.titulo_tag ?? ""} onChange={(e) => set("titulo_tag", e.target.value)} /></div>
         <div className="space-y-2"><Label>Título da seção</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <div className="space-y-2">
+          <Label>Colunas</Label>
+          <Select value={String(c.colunas ?? 3)} onValueChange={(v) => set("colunas", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">2 colunas</SelectItem>
+              <SelectItem value="3">3 colunas</SelectItem>
+              <SelectItem value="4">4 colunas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-3">
           <Label>Cards</Label>
           {c.cards.map((card, i) => (
@@ -134,7 +175,16 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
               <Input placeholder="Ícone (ex: Heart)" value={card.icone} onChange={(e) => setCard(i, "icone", e.target.value)} />
               <Input placeholder="Título" value={card.titulo} onChange={(e) => setCard(i, "titulo", e.target.value)} />
               <Textarea placeholder="Descrição" rows={2} value={card.descricao} onChange={(e) => setCard(i, "descricao", e.target.value)} />
-              <Input placeholder="Link (opcional, ex: /exames)" value={card.link ?? ""} onChange={(e) => setCard(i, "link", e.target.value)} />
+              <Input placeholder="Selo (opcional, ex: Mais procurado)" value={card.badge ?? ""} onChange={(e) => setCard(i, "badge", e.target.value)} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Texto do botão" value={card.botao_texto ?? ""} onChange={(e) => setCard(i, "botao_texto", e.target.value)} />
+                <Input placeholder="Link do botão" value={card.botao_link ?? ""} onChange={(e) => setCard(i, "botao_link", e.target.value)} />
+              </div>
+              <Input placeholder="Link do card inteiro (opcional)" value={card.link ?? ""} onChange={(e) => setCard(i, "link", e.target.value)} />
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={!!card.destaque} onCheckedChange={(v) => setCard(i, "destaque", v)} />
+                Destacar (borda colorida)
+              </label>
             </div>
           ))}
           <Button
@@ -205,6 +255,10 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
     return (
       <div className="space-y-4">
         <div className="space-y-2"><Label>Título da seção</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <label className="flex items-center gap-2 text-sm">
+          <Switch checked={c.colunas === 2} onCheckedChange={(v) => set("colunas", v ? 2 : 1)} />
+          Exibir em 2 colunas
+        </label>
         <div className="space-y-3">
           <Label>Perguntas</Label>
           {c.perguntas.map((p, i) => (
@@ -635,6 +689,57 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
             <Plus className="h-3.5 w-3.5" /> Adicionar membro
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (bloco.tipo === "passos") {
+    const c = bloco.config;
+    const setPasso = (i: number, campo: string, valor: string) =>
+      set("passos", c.passos.map((p, idx) => (idx === i ? { ...p, [campo]: valor } : p)));
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Tag</Label><Input value={c.titulo_tag} onChange={(e) => set("titulo_tag", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Título da seção</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <div className="space-y-3">
+          <Label>Passos</Label>
+          {c.passos.map((p, i) => (
+            <div key={p.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Passo {i + 1}</span>
+                <Button size="sm" variant="ghost" onClick={() => set("passos", c.passos.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <Input placeholder="Ícone (ex: Search)" value={p.icone} onChange={(e) => setPasso(i, "icone", e.target.value)} />
+              <Input placeholder="Título" value={p.titulo} onChange={(e) => setPasso(i, "titulo", e.target.value)} />
+              <Textarea placeholder="Descrição" rows={2} value={p.descricao} onChange={(e) => setPasso(i, "descricao", e.target.value)} />
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => set("passos", [...c.passos, { id: uid(), icone: "Circle", titulo: "Novo passo", descricao: "" }])}
+          >
+            <Plus className="h-3.5 w-3.5" /> Adicionar passo
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (bloco.tipo === "unidades") {
+    const c = bloco.config;
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Tag</Label><Input value={c.titulo_tag} onChange={(e) => set("titulo_tag", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Título da seção</Label><Input value={c.titulo_secao} onChange={(e) => set("titulo_secao", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Subtítulo</Label><Input value={c.subtitulo} onChange={(e) => set("subtitulo", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Quantas unidades mostrar</Label><Input type="number" min={1} max={12} value={c.limite} onChange={(e) => set("limite", parseInt(e.target.value) || 3)} /></div>
+        <p className="text-xs text-muted-foreground">
+          As unidades vêm automaticamente do cadastro (Unidades). O botão "Ver todas" leva a /unidades.
+        </p>
       </div>
     );
   }

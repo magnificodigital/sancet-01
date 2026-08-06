@@ -15,10 +15,23 @@ export type TipoBloco =
   | "colunas"
   | "linha_tempo"
   | "equipe"
-  | "busca_exame";
+  | "busca_exame"
+  | "passos"
+  | "unidades";
 
-export type CardServico = { icone: string; titulo: string; descricao: string; link?: string };
+export type CardServico = {
+  icone: string;
+  titulo: string;
+  descricao: string;
+  link?: string;
+  badge?: string;
+  botao_texto?: string;
+  botao_link?: string;
+  destaque?: boolean;
+};
 export type Pergunta = { pergunta: string; resposta: string };
+export type HeroPill = { icone: string; label: string };
+export type PassoItem = { id: string; icone: string; titulo: string; descricao: string };
 export type Depoimento = { id: string; foto_url: string; nome: string; texto: string; estrelas: number };
 export type ItemEstatistica = { id: string; numero: string; sufixo: string; descricao: string };
 export type LogoConvenio = { id: string; imagem_url: string; alt: string };
@@ -30,9 +43,29 @@ export type ConfigHero = {
   cta_texto: string;
   cta_link: string;
   alinhamento: "esquerda" | "centro";
+  selo?: string;
+  pills?: HeroPill[];
+  mostrar_busca?: boolean;
+  escanear_link?: string;
 };
 export type ConfigTexto = { titulo: string; conteudo: string };
-export type ConfigServicos = { titulo_secao: string; cards: CardServico[] };
+export type ConfigServicos = {
+  titulo_secao: string;
+  titulo_tag?: string;
+  colunas?: 2 | 3 | 4;
+  cards: CardServico[];
+};
+export type ConfigPassos = {
+  titulo_tag: string;
+  titulo_secao: string;
+  passos: PassoItem[];
+};
+export type ConfigUnidades = {
+  titulo_tag: string;
+  titulo_secao: string;
+  subtitulo: string;
+  limite: number;
+};
 export type ConfigImagemTexto = {
   titulo: string;
   texto: string;
@@ -46,7 +79,7 @@ export type ConfigCTA = {
   botao_link: string;
   cor_fundo: "vermelho" | "azul";
 };
-export type ConfigFAQ = { titulo_secao: string; perguntas: Pergunta[] };
+export type ConfigFAQ = { titulo_secao: string; perguntas: Pergunta[]; colunas?: 1 | 2 };
 export type ConfigDepoimentos = {
   titulo_secao: string;
   subtitulo_secao: string;
@@ -130,7 +163,9 @@ export type Bloco =
   | { id: string; tipo: "colunas"; config: ConfigColunas }
   | { id: string; tipo: "linha_tempo"; config: ConfigLinhaTempo }
   | { id: string; tipo: "equipe"; config: ConfigEquipe }
-  | { id: string; tipo: "busca_exame"; config: ConfigBuscaExame };
+  | { id: string; tipo: "busca_exame"; config: ConfigBuscaExame }
+  | { id: string; tipo: "passos"; config: ConfigPassos }
+  | { id: string; tipo: "unidades"; config: ConfigUnidades };
 
 export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[] = [
   { tipo: "hero", label: "Hero", descricao: "Banner principal" },
@@ -149,6 +184,8 @@ export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[]
   { tipo: "linha_tempo", label: "Linha do tempo", descricao: "Nossa história por ano" },
   { tipo: "equipe", label: "Equipe", descricao: "Cards com foto e cargo" },
   { tipo: "busca_exame", label: "Busca de exame", descricao: "Campo 'Qual exame procura?'" },
+  { tipo: "passos", label: "Como funciona", descricao: "Passos numerados" },
+  { tipo: "unidades", label: "Unidades", descricao: "Cards das unidades reais" },
   { tipo: "espacador", label: "Espaçador", descricao: "Espaço em branco" },
 ];
 
@@ -348,6 +385,32 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
           titulo: "Qual exame você procura?",
           subtitulo: "Busque pelo nome do exame e agende em poucos passos.",
           placeholder: "Digite o exame (ex: Hemograma)",
+        },
+      };
+    case "passos":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo_tag: "Como funciona",
+          titulo_secao: "Simples, rápido e seguro",
+          passos: [
+            { id: uid(), icone: "Search", titulo: "Escolha os exames ou vacinas", descricao: "Navegue pelo catálogo e adicione à sacola." },
+            { id: uid(), icone: "ClipboardList", titulo: "Informe seus dados", descricao: "Preencha um cadastro rápido em 4 etapas." },
+            { id: uid(), icone: "MapPin", titulo: "Escolha onde coletar", descricao: "Atendimento em unidade ou coleta em domicílio." },
+            { id: uid(), icone: "CheckCircle2", titulo: "Pronto!", descricao: "Receba o protocolo e acompanhe seu pedido." },
+          ],
+        },
+      };
+    case "unidades":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo_tag: "Onde nos encontrar",
+          titulo_secao: "Nossas Unidades",
+          subtitulo: "Estamos prontos para atender você com toda a comodidade.",
+          limite: 3,
         },
       };
   }

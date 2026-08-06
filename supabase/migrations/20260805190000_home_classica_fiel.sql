@@ -1,0 +1,18 @@
+-- Atualiza a "Home clássica" (slug inicio) para reproduzir fielmente a home atual,
+-- usando os blocos enriquecidos (hero completo, passos, serviços com selo, unidades, FAQ 2 colunas).
+INSERT INTO public.paginas (slug, titulo, blocos, ativa, no_menu, home)
+VALUES (
+  'inicio', 'Home clássica',
+  $json$[
+    {"id":"c-hero","tipo":"hero","config":{"selo":"Atendimento Digital","titulo":"Seus exames com a comodidade que você merece","subtitulo":"Agende online, retire resultados digitais e conte com coleta em domicílio ou em nossas unidades.","imagem_url":"","cta_texto":"","cta_link":"","alinhamento":"esquerda","mostrar_busca":true,"escanear_link":"/enviar-pedido","pills":[{"icone":"ShieldCheck","label":"Resultado digital seguro"},{"icone":"Clock","label":"Agendamento em minutos"},{"icone":"Home","label":"Coleta em domicílio"}]}},
+    {"id":"c-passos","tipo":"passos","config":{"titulo_tag":"Como funciona","titulo_secao":"Simples, rápido e seguro","passos":[{"id":"p1","icone":"Search","titulo":"Escolha os exames ou vacinas","descricao":"Navegue pelo catálogo e adicione à sacola."},{"id":"p2","icone":"ClipboardList","titulo":"Informe seus dados","descricao":"Preencha um cadastro rápido em 4 etapas."},{"id":"p3","icone":"MapPin","titulo":"Escolha onde coletar","descricao":"Atendimento em unidade ou coleta em domicílio."},{"id":"p4","icone":"CheckCircle2","titulo":"Pronto!","descricao":"Receba o protocolo e acompanhe seu pedido."}]}},
+    {"id":"c-servicos","tipo":"servicos","config":{"titulo_tag":"Nossos serviços","titulo_secao":"Tudo que você precisa em um só lugar","colunas":2,"cards":[{"icone":"FlaskConical","titulo":"Exames Laboratoriais","descricao":"Mais de 500 tipos de exames com resultado digital seguro e rápido.","badge":"Mais procurado","botao_texto":"Ver exames","botao_link":"/exames","destaque":true},{"icone":"Home","titulo":"Sancet em Casa","descricao":"Coleta domiciliar com profissionais treinados. Você agenda, nós vamos até você.","botao_texto":"Saiba mais","botao_link":"/exames"}]}},
+    {"id":"c-unidades","tipo":"unidades","config":{"titulo_tag":"Onde nos encontrar","titulo_secao":"Nossas Unidades","subtitulo":"Estamos prontos para atender você com toda a comodidade.","limite":3}},
+    {"id":"c-faq","tipo":"faq","config":{"titulo_secao":"Perguntas frequentes","colunas":2,"perguntas":[{"pergunta":"Como faço para agendar meus exames?","resposta":"Escolha os exames no catálogo, adicione à sacola, preencha seus dados e confirme. Tudo online em poucos minutos."},{"pergunta":"Preciso de pedido médico para realizar exames?","resposta":"Depende do exame. Para convênios, normalmente sim; para particular, a maioria não exige."},{"pergunta":"Como funciona a coleta em domicílio?","resposta":"Após agendar, um profissional treinado da Sancet vai até o endereço no horário escolhido."},{"pergunta":"Em quanto tempo recebo meu resultado?","resposta":"Varia por exame; a maioria fica pronta em 24 a 48 horas."},{"pergunta":"Meu convênio é aceito?","resposta":"Trabalhamos com os principais convênios; você verifica no agendamento."},{"pergunta":"Como acompanho meu pedido?","resposta":"Você recebe um protocolo e acompanha em Meus Agendamentos."}]}},
+    {"id":"c-cta","tipo":"cta","config":{"titulo":"Pronto para cuidar da sua saúde?","subtitulo":"Agende agora seus exames de forma rápida e segura.","botao_texto":"Agendar Exames","botao_link":"/exames","cor_fundo":"vermelho"}}
+  ]$json$::jsonb,
+  true, true, false
+)
+ON CONFLICT (slug) DO UPDATE
+  SET titulo = EXCLUDED.titulo, blocos = EXCLUDED.blocos, ativa = EXCLUDED.ativa,
+      no_menu = EXCLUDED.no_menu, atualizado_em = now();
