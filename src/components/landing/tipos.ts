@@ -17,7 +17,8 @@ export type TipoBloco =
   | "equipe"
   | "busca_exame"
   | "passos"
-  | "unidades";
+  | "unidades"
+  | "banner_atalhos";
 
 export type CardServico = {
   icone: string;
@@ -66,6 +67,20 @@ export type ConfigUnidades = {
   titulo_secao: string;
   subtitulo: string;
   limite: number;
+};
+export type AtalhoItem = {
+  id: string;
+  icone: string;
+  label: string;
+  link: string;
+  destaque?: boolean;
+  oculto?: boolean;
+};
+export type ConfigBannerAtalhos = {
+  titulo: string;
+  imagem_url: string;
+  watermark: string;
+  atalhos: AtalhoItem[];
 };
 export type ConfigImagemTexto = {
   titulo: string;
@@ -166,7 +181,8 @@ export type Bloco =
   | { id: string; tipo: "equipe"; config: ConfigEquipe }
   | { id: string; tipo: "busca_exame"; config: ConfigBuscaExame }
   | { id: string; tipo: "passos"; config: ConfigPassos }
-  | { id: string; tipo: "unidades"; config: ConfigUnidades };
+  | { id: string; tipo: "unidades"; config: ConfigUnidades }
+  | { id: string; tipo: "banner_atalhos"; config: ConfigBannerAtalhos };
 
 export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[] = [
   { tipo: "hero", label: "Hero", descricao: "Banner principal" },
@@ -187,6 +203,7 @@ export const BIBLIOTECA: { tipo: TipoBloco; label: string; descricao: string }[]
   { tipo: "busca_exame", label: "Busca de exame", descricao: "Campo 'Qual exame procura?'" },
   { tipo: "passos", label: "Como funciona", descricao: "Passos numerados" },
   { tipo: "unidades", label: "Unidades", descricao: "Cards das unidades reais" },
+  { tipo: "banner_atalhos", label: "Banner com atalhos", descricao: "Título + botões de atalho + imagem" },
   { tipo: "espacador", label: "Espaçador", descricao: "Espaço em branco" },
 ];
 
@@ -412,6 +429,24 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
           titulo_secao: "Nossas Unidades",
           subtitulo: "Estamos prontos para atender você com toda a comodidade.",
           limite: 3,
+        },
+      };
+    case "banner_atalhos":
+      return {
+        id: uid(),
+        tipo,
+        config: {
+          titulo: "Tenha acesso a uma solução completa em um único local.",
+          imagem_url: "",
+          watermark: "SANCET",
+          atalhos: [
+            { id: uid(), icone: "FileText", label: "Resultados de Exames", link: "/agendamentos?aba=resultados", destaque: true },
+            { id: uid(), icone: "TestTube", label: "Exames", link: "/exames" },
+            { id: uid(), icone: "Truck", label: "Coleta Domiciliar", link: "/exames" },
+            { id: uid(), icone: "MapPin", label: "Unidades", link: "/unidades" },
+            { id: uid(), icone: "MessageCircle", label: "Fale Conosco", link: "/unidades" },
+            { id: uid(), icone: "Activity", label: "Ultrassom", link: "/exames" },
+          ],
         },
       };
   }

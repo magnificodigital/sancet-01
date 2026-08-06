@@ -733,6 +733,58 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
     );
   }
 
+  if (bloco.tipo === "banner_atalhos") {
+    const c = bloco.config;
+    const setAt = (i: number, campo: string, valor: any) =>
+      set("atalhos", c.atalhos.map((a, idx) => (idx === i ? { ...a, [campo]: valor } : a)));
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Título</Label><Textarea rows={2} value={c.titulo} onChange={(e) => set("titulo", e.target.value)} /></div>
+        <div className="space-y-2"><Label>Imagem (direita, ex.: profissional)</Label><UploadImagem value={c.imagem_url} onChange={(v) => set("imagem_url", v)} /></div>
+        <div className="space-y-2"><Label>Marca d'água (texto de fundo, opcional)</Label><Input value={c.watermark} onChange={(e) => set("watermark", e.target.value)} placeholder="SANCET" /></div>
+        <div className="space-y-3">
+          <Label>Atalhos (botões)</Label>
+          {c.atalhos.map((a, i) => (
+            <div key={a.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Atalho {i + 1}</span>
+                <Button size="sm" variant="ghost" onClick={() => set("atalhos", c.atalhos.filter((_, idx) => idx !== i))}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Ícone (ex: TestTube)" value={a.icone} onChange={(e) => setAt(i, "icone", e.target.value)} />
+                <Input placeholder="Link (ex: /exames)" value={a.link} onChange={(e) => setAt(i, "link", e.target.value)} />
+              </div>
+              <Input placeholder="Texto do botão" value={a.label} onChange={(e) => setAt(i, "label", e.target.value)} />
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch checked={!!a.destaque} onCheckedChange={(v) => setAt(i, "destaque", v)} />
+                  Destacar (cor cheia)
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch checked={!!a.oculto} onCheckedChange={(v) => setAt(i, "oculto", v)} />
+                  Ocultar
+                </label>
+              </div>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => set("atalhos", [...c.atalhos, { id: uid(), icone: "Circle", label: "Novo atalho", link: "/" }])}
+          >
+            <Plus className="h-3.5 w-3.5" /> Adicionar atalho
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Nomes dos ícones em PascalCase (lucide.dev). Ex: FileText, TestTube, Truck, MapPin, MessageCircle, Activity.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (bloco.tipo === "unidades") {
     const c = bloco.config;
     return (

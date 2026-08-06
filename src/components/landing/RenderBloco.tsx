@@ -631,5 +631,78 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
     }
     case "unidades":
       return <BlocoUnidades config={bloco.config} />;
+    case "banner_atalhos": {
+      const c = bloco.config;
+      const grad = "linear-gradient(120deg, hsl(var(--brand)) 0%, #7A1FA2 100%)";
+      return (
+        <section className="w-full overflow-hidden" style={{ backgroundColor: "#f7f7fa" }}>
+          <div className="max-w-[1200px] mx-auto px-6 py-12 md:py-16 grid md:grid-cols-2 gap-8 items-center">
+            <div>
+              <h1
+                className="text-4xl md:text-5xl font-extrabold leading-tight mb-8 max-w-xl"
+                style={{
+                  backgroundImage: grad,
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  color: "transparent",
+                }}
+              >
+                {c.titulo}
+              </h1>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 max-w-lg">
+                {c.atalhos
+                  .filter((a) => !a.oculto)
+                  .map((a) => {
+                    const Icon = (Icons as any)[a.icone] ?? Icons.Circle;
+                    return (
+                      <a
+                        key={a.id}
+                        href={a.link || "#"}
+                        className="rounded-2xl p-4 flex flex-col justify-between gap-4 min-h-[118px] shadow-sm transition hover:shadow-md hover:-translate-y-0.5"
+                        style={
+                          a.destaque
+                            ? { backgroundImage: grad, color: "#fff" }
+                            : { backgroundColor: "#fff", color: "#374151" }
+                        }
+                      >
+                        <Icon
+                          className="h-7 w-7"
+                          style={{ color: a.destaque ? "#fff" : "hsl(var(--brand))" }}
+                        />
+                        <span className="text-sm font-semibold leading-tight">{a.label}</span>
+                      </a>
+                    );
+                  })}
+              </div>
+            </div>
+
+            <div className="relative hidden md:flex items-end justify-center min-h-[420px]">
+              {c.watermark && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 flex flex-col items-end justify-center gap-0 overflow-hidden text-right font-extrabold uppercase leading-[0.9] tracking-tight select-none"
+                  style={{ color: "rgba(0,0,0,0.05)", fontSize: "72px" }}
+                >
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <span key={i}>{c.watermark}</span>
+                  ))}
+                </div>
+              )}
+              {c.imagem_url ? (
+                <img
+                  src={c.imagem_url}
+                  alt=""
+                  className="relative z-10 max-h-[460px] w-auto object-contain"
+                />
+              ) : (
+                <div className="relative z-10 aspect-[3/4] w-64 rounded-xl bg-gray-200 flex items-center justify-center text-gray-400">
+                  Imagem
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      );
+    }
   }
 };
