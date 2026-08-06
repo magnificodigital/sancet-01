@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AbaCatalogoShift } from "./AbaCatalogoShift";
-import { aplicarTema, aplicarFavicon, setLogos, TEMA_PADRAO } from "@/lib/tema";
+import { aplicarTema, aplicarFavicon, setLogos, setFooter, parseFooterLinks, TEMA_PADRAO } from "@/lib/tema";
+import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,8 @@ const CHAVES = [
   "LOGO_CLARO",
   "LOGO_ESCURO",
   "FAVICON",
+  "FOOTER_TEXTO",
+  "FOOTER_LINKS",
 ];
 
 const SENSIVEIS = new Set([
@@ -416,6 +419,19 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
     aplicarFavicon(url);
   };
 
+  // ---- Rodapé (texto + links) ----
+  const footerLinks = parseFooterLinks(configs.FOOTER_LINKS);
+  const setFooterTexto = (v: string) => {
+    const novos = { ...configs, FOOTER_TEXTO: v };
+    setConfigs(novos);
+    setFooter({ texto: v, links: parseFooterLinks(novos.FOOTER_LINKS) });
+  };
+  const setFooterLinksList = (links: { label: string; url: string }[]) => {
+    const novos = { ...configs, FOOTER_LINKS: JSON.stringify(links) };
+    setConfigs(novos);
+    setFooter({ texto: novos.FOOTER_TEXTO || "", links });
+  };
+
   const corField = (chave: string, label: string, helper?: string) => {
     const valor = configs[chave] || TEMA_PADRAO[chave] || "#000000";
     return (
@@ -607,6 +623,68 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                   <p className="text-xs text-muted-foreground">
                     Favicon: imagem quadrada (ex.: 32×32 ou 64×64), PNG ou ICO.
                   </p>
+                </div>
+
+                <div className="space-y-4 border-t pt-5">
+                  <div>
+                    <p className="text-sm font-medium">Rodapé</p>
+                    <p className="text-xs text-muted-foreground">
+                      Texto e links exibidos no rodapé do site. Deixe o texto vazio para usar o padrão.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Texto do rodapé</Label>
+                    <Textarea
+                      rows={2}
+                      value={configs.FOOTER_TEXTO ?? ""}
+                      onChange={(e) => setFooterTexto(e.target.value)}
+                      disabled={!podeEditar}
+                      placeholder="Ex.: Sancet Medicina Diagnóstica © 2026 — Todos os direitos reservados"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Links do rodapé</Label>
+                    {footerLinks.map((l, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input
+                          className="flex-1"
+                          placeholder="Texto (ex: Política de Privacidade)"
+                          value={l.label}
+                          disabled={!podeEditar}
+                          onChange={(e) =>
+                            setFooterLinksList(footerLinks.map((x, idx) => (idx === i ? { ...x, label: e.target.value } : x)))
+                          }
+                        />
+                        <Input
+                          className="flex-1"
+                          placeholder="URL (ex: /termos-de-uso ou https://...)"
+                          value={l.url}
+                          disabled={!podeEditar}
+                          onChange={(e) =>
+                            setFooterLinksList(footerLinks.map((x, idx) => (idx === i ? { ...x, url: e.target.value } : x)))
+                          }
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 shrink-0"
+                          disabled={!podeEditar}
+                          onClick={() => setFooterLinksList(footerLinks.filter((_, idx) => idx !== i))}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!podeEditar}
+                      onClick={() => setFooterLinksList([...footerLinks, { label: "Novo link", url: "/" }])}
+                    >
+                      + Adicionar link
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

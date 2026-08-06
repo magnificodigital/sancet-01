@@ -14,6 +14,41 @@ export function setLogos(next: Logos) {
   logoSubs.forEach((cb) => cb());
 }
 
+// ---- Rodapé (texto + links; controlável em Configurações → Aparência) ----
+export type FooterLink = { label: string; url: string };
+export type FooterConfig = { texto: string; links: FooterLink[] };
+let footerAtual: FooterConfig = { texto: "", links: [] };
+const footerSubs = new Set<() => void>();
+
+export function setFooter(f: FooterConfig) {
+  footerAtual = f;
+  footerSubs.forEach((cb) => cb());
+}
+
+export function parseFooterLinks(raw: string | undefined): FooterLink[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr)
+      ? arr.filter((x) => x && typeof x.label === "string" && typeof x.url === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function useFooter(): FooterConfig {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const cb = () => force((x) => x + 1);
+    footerSubs.add(cb);
+    return () => {
+      footerSubs.delete(cb);
+    };
+  }, []);
+  return footerAtual;
+}
+
 /** Atualiza o favicon da aba do navegador em runtime (vazio → volta ao padrão). */
 export function aplicarFavicon(url: string) {
   let link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
@@ -130,6 +165,10 @@ export async function carregarTema() {
       escuro: cores.LOGO_ESCURO || null,
     });
     if (cores.FAVICON) aplicarFavicon(cores.FAVICON);
+    setFooter({
+      texto: cores.FOOTER_TEXTO || "",
+      links: parseFooterLinks(cores.FOOTER_LINKS),
+    });
   } catch {
     /* silencioso — mantém as cores padrão do CSS */
   }
