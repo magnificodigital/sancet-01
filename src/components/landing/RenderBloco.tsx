@@ -637,8 +637,8 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
       const alturaImg = c.altura_imagem ?? 460;
       return (
         <section className="w-full" style={{ backgroundColor: c.cor_fundo || "#f7f7fa" }}>
-          <div className="max-w-[1200px] mx-auto px-6 py-12 md:py-16 grid md:grid-cols-2 gap-8 items-center">
-            <div>
+          <div className="max-w-[1200px] mx-auto px-6 grid md:grid-cols-2 gap-8 items-end">
+            <div className="py-12 md:py-16">
               <h1
                 className="text-4xl md:text-5xl font-extrabold leading-tight mb-8 max-w-xl"
                 style={{
@@ -678,13 +678,13 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
             </div>
 
             <div
-              className="relative hidden md:flex items-end justify-center"
+              className="relative hidden md:flex items-end justify-center self-end"
               style={{ minHeight: alturaImg }}
             >
               {c.watermark && (
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 flex flex-col items-end justify-center gap-0 overflow-hidden text-right font-extrabold uppercase leading-[0.9] tracking-tight select-none"
+                  className="pointer-events-none absolute inset-0 bottom-8 flex flex-col items-end justify-center gap-0 overflow-hidden text-right font-extrabold uppercase leading-[0.9] tracking-tight select-none"
                   style={{ color: "rgba(0,0,0,0.05)", fontSize: "72px" }}
                 >
                   {Array.from({ length: 7 }).map((_, i) => (
@@ -696,7 +696,7 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
                 <img
                   src={c.imagem_url}
                   alt=""
-                  className="relative z-10 w-auto object-contain"
+                  className="relative z-10 block w-auto object-contain"
                   style={{ maxHeight: alturaImg }}
                 />
               ) : (
