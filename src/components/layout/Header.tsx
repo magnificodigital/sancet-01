@@ -23,6 +23,7 @@ import {
 import { useSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
 import { useLogos } from "@/lib/tema";
+import { useSobreHero } from "@/lib/headerHero";
 
 const Logo = ({ dark }: { dark: boolean }) => {
   const { claro, escuro } = useLogos();
@@ -63,8 +64,9 @@ export const Header = () => {
   const { paciente, logado, logout } = usePaciente();
   const paginasMenu = usePaginasMenu();
   const { pathname } = useLocation();
-  // Páginas com hero/fundo escuro usam tema claro no header.
-  const dark = pathname === "/";
+  const sobreHero = useSobreHero();
+  // Header branco na home OU sobre qualquer página com hero no topo (fundo escuro).
+  const dark = pathname === "/" || sobreHero;
   const navLinkClass = makeNavLinkClass(dark);
   const iniciais = (paciente?.nome ?? "")
     .trim()

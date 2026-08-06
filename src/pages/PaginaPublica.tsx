@@ -7,6 +7,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { RenderBloco } from "@/components/landing/RenderBloco";
 import type { Bloco } from "@/components/landing/tipos";
+import { setSobreHero } from "@/lib/headerHero";
 import NotFound from "./NotFound";
 
 type Pagina = {
@@ -41,16 +42,16 @@ const PaginaPublica = () => {
         setEstado({ tipo: "404" });
         return;
       }
+      const blocos = ((data as any).blocos as Bloco[]) ?? [];
       setEstado({
         tipo: "ok",
-        pagina: {
-          ...(data as any),
-          blocos: ((data as any).blocos as Bloco[]) ?? [],
-        },
+        pagina: { ...(data as any), blocos },
       });
+      setSobreHero(blocos[0]?.tipo === "hero");
     })();
     return () => {
       ativo = false;
+      setSobreHero(false);
     };
   }, [slug, preview]);
 
@@ -81,7 +82,7 @@ const PaginaPublica = () => {
         <meta property="og:url" content={url} />
       </Helmet>
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 pt-28">
         {temBlocos ? (
           <article style={{ fontFamily: "Inter, sans-serif" }}>
             {pagina.blocos.map((b) => (
@@ -89,7 +90,7 @@ const PaginaPublica = () => {
             ))}
           </article>
         ) : (
-          <div className="pt-24 pb-16">
+          <div className="pb-16">
             <article className="container max-w-4xl mx-auto px-4">
               <h1 className="text-4xl font-bold text-secondary mb-8">{pagina.titulo}</h1>
               <div

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageShell } from "@/components/layout/PageShell";
 import { RenderBloco } from "@/components/landing/RenderBloco";
 import type { Bloco } from "@/components/landing/tipos";
+import { setSobreHero } from "@/lib/headerHero";
 import Index from "./Index";
 
 type Estado =
@@ -33,12 +34,15 @@ const Home = () => {
       const blocos = (data?.blocos as Bloco[] | undefined) ?? [];
       if (data && Array.isArray(blocos) && blocos.length > 0) {
         setEstado({ tipo: "cms", blocos });
+        setSobreHero(blocos[0]?.tipo === "hero");
       } else {
-        setEstado({ tipo: "fallback" });
+        setEstado({ tipo: "fallback" }); // Index tem hero próprio
+        setSobreHero(true);
       }
     })();
     return () => {
       ativo = false;
+      setSobreHero(false);
     };
   }, []);
 
