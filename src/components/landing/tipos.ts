@@ -28,6 +28,7 @@ export type CardServico = {
   botao_texto?: string;
   botao_link?: string;
   destaque?: boolean;
+  oculto?: boolean;
 };
 export type Pergunta = { pergunta: string; resposta: string };
 export type HeroPill = { icone: string; label: string };

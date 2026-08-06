@@ -185,6 +185,10 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
                 <Switch checked={!!card.destaque} onCheckedChange={(v) => setCard(i, "destaque", v)} />
                 Destacar (borda colorida)
               </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={!!card.oculto} onCheckedChange={(v) => setCard(i, "oculto", v)} />
+                Ocultar card (não aparece no site)
+              </label>
             </div>
           ))}
           <Button

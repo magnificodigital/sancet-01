@@ -163,7 +163,7 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
               </h2>
             )}
             <div className={`grid grid-cols-1 ${cols} gap-6`}>
-              {c.cards.map((card, i) => {
+              {c.cards.filter((card) => !card.oculto).map((card, i) => {
                 const IconCmp = (Icons as any)[card.icone] ?? Icons.Circle;
                 const conteudo = (
                   <>
