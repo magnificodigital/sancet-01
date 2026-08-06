@@ -634,8 +634,9 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
     case "banner_atalhos": {
       const c = bloco.config;
       const grad = "linear-gradient(120deg, hsl(var(--brand)) 0%, #7A1FA2 100%)";
+      const alturaImg = c.altura_imagem ?? 460;
       return (
-        <section className="w-full overflow-hidden" style={{ backgroundColor: "#f7f7fa" }}>
+        <section className="w-full" style={{ backgroundColor: c.cor_fundo || "#f7f7fa" }}>
           <div className="max-w-[1200px] mx-auto px-6 py-12 md:py-16 grid md:grid-cols-2 gap-8 items-center">
             <div>
               <h1
@@ -676,7 +677,10 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
               </div>
             </div>
 
-            <div className="relative hidden md:flex items-end justify-center min-h-[420px]">
+            <div
+              className="relative hidden md:flex items-end justify-center"
+              style={{ minHeight: alturaImg }}
+            >
               {c.watermark && (
                 <div
                   aria-hidden
@@ -692,10 +696,14 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
                 <img
                   src={c.imagem_url}
                   alt=""
-                  className="relative z-10 max-h-[460px] w-auto object-contain"
+                  className="relative z-10 w-auto object-contain"
+                  style={{ maxHeight: alturaImg }}
                 />
               ) : (
-                <div className="relative z-10 aspect-[3/4] w-64 rounded-xl bg-gray-200 flex items-center justify-center text-gray-400">
+                <div
+                  className="relative z-10 aspect-[3/4] w-64 rounded-xl bg-gray-200 flex items-center justify-center text-gray-400"
+                  style={{ maxHeight: alturaImg }}
+                >
                   Imagem
                 </div>
               )}

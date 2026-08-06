@@ -741,6 +741,24 @@ export const FormBloco = ({ bloco, onChange }: Props) => {
       <div className="space-y-4">
         <div className="space-y-2"><Label>Título</Label><Textarea rows={2} value={c.titulo} onChange={(e) => set("titulo", e.target.value)} /></div>
         <div className="space-y-2"><Label>Imagem (direita, ex.: profissional)</Label><UploadImagem value={c.imagem_url} onChange={(v) => set("imagem_url", v)} /></div>
+        <div className="space-y-2">
+          <Label>Altura da imagem: {c.altura_imagem ?? 460}px</Label>
+          <Slider min={240} max={680} step={10} value={[c.altura_imagem ?? 460]} onValueChange={(v) => set("altura_imagem", v[0])} />
+          <p className="text-xs text-muted-foreground">Aumente/diminua se a imagem estiver cortando.</p>
+        </div>
+        <div className="space-y-2">
+          <Label>Cor de fundo do banner</Label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={c.cor_fundo || "#f7f7fa"}
+              onChange={(e) => set("cor_fundo", e.target.value)}
+              className="h-9 w-12 cursor-pointer rounded border bg-background p-1"
+              aria-label="Cor de fundo do banner"
+            />
+            <Input value={c.cor_fundo ?? ""} onChange={(e) => set("cor_fundo", e.target.value)} placeholder="#f7f7fa" className="w-32 font-mono text-sm" />
+          </div>
+        </div>
         <div className="space-y-2"><Label>Marca d'água (texto de fundo, opcional)</Label><Input value={c.watermark} onChange={(e) => set("watermark", e.target.value)} placeholder="SANCET" /></div>
         <div className="space-y-3">
           <Label>Atalhos (botões)</Label>

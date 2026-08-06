@@ -81,6 +81,8 @@ export type ConfigBannerAtalhos = {
   imagem_url: string;
   watermark: string;
   atalhos: AtalhoItem[];
+  cor_fundo?: string;
+  altura_imagem?: number;
 };
 export type ConfigImagemTexto = {
   titulo: string;
@@ -439,6 +441,8 @@ export const criarBloco = (tipo: TipoBloco): Bloco => {
           titulo: "Tenha acesso a uma solução completa em um único local.",
           imagem_url: "",
           watermark: "SANCET",
+          cor_fundo: "#f7f7fa",
+          altura_imagem: 460,
           atalhos: [
             { id: uid(), icone: "FileText", label: "Resultados de Exames", link: "/agendamentos?aba=resultados", destaque: true },
             { id: uid(), icone: "TestTube", label: "Exames", link: "/exames" },
