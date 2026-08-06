@@ -63,10 +63,11 @@ export const Header = () => {
   const quantidade = useSacola((s) => s.quantidade());
   const { paciente, logado, logout } = usePaciente();
   const paginasMenu = usePaginasMenu();
-  const { pathname } = useLocation();
+  useLocation(); // re-renderiza ao trocar de rota
   const sobreHero = useSobreHero();
-  // Header branco na home OU sobre qualquer página com hero no topo (fundo escuro).
-  const dark = pathname === "/" || sobreHero;
+  // Header branco APENAS sobre um hero de fundo escuro no topo da página.
+  // (Não depende da URL: a home pode ter um banner de fundo claro.)
+  const dark = sobreHero;
   const navLinkClass = makeNavLinkClass(dark);
   const iniciais = (paciente?.nome ?? "")
     .trim()
