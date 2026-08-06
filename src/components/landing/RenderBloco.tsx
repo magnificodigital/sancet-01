@@ -72,30 +72,25 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
       const alignClass = c.alinhamento === "centro" ? "text-center items-center" : "text-left items-start";
       return (
         <section
-          className="relative w-full h-[500px] flex"
+          className="relative w-full -mt-28 min-h-[90vh] flex items-center bg-no-repeat"
           style={{
             backgroundColor: "hsl(var(--brand-2))",
-            backgroundImage: c.imagem_url ? `url(${c.imagem_url})` : undefined,
+            backgroundImage: c.imagem_url
+              ? `linear-gradient(90deg, rgba(15,35,71,0.85) 0%, rgba(15,35,71,0.55) 40%, rgba(15,35,71,0.1) 70%, rgba(15,35,71,0) 100%), url(${c.imagem_url})`
+              : undefined,
             backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundPosition: "center center",
           }}
         >
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(90deg, rgba(11,31,58,0.9) 0%, rgba(11,31,58,0.6) 55%, rgba(11,31,58,0.15) 100%)",
-            }}
-          />
-          <div className="relative z-10 w-full max-w-[1200px] mx-auto px-6 py-16 flex flex-col justify-center">
-            <div className={`flex flex-col gap-4 ${alignClass} max-w-2xl ${c.alinhamento === "centro" ? "mx-auto" : ""}`}>
+          <div className="relative z-10 w-full max-w-[1200px] mx-auto px-6 py-20 md:py-24">
+            <div className={`flex flex-col gap-4 ${alignClass} max-w-3xl ${c.alinhamento === "centro" ? "mx-auto" : ""}`}>
               {c.selo && (
-                <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
-                  <Icons.FlaskConical className="h-3.5 w-3.5" /> {c.selo}
+                <span className="inline-flex w-fit items-center gap-2 rounded-pill bg-white/10 px-4 py-1.5 text-xs font-semibold text-white backdrop-blur">
+                  <Icons.FlaskConical className="h-4 w-4" /> {c.selo}
                 </span>
               )}
-              <h1 className="text-4xl md:text-5xl font-bold text-white">{c.titulo}</h1>
-              {c.subtitulo && <p className="text-lg text-white/90">{c.subtitulo}</p>}
+              <h1 className="font-bold tracking-tight text-white text-[36px] md:text-[56px] leading-[1.1]">{c.titulo}</h1>
+              {c.subtitulo && <p className="text-lg md:text-xl text-white/70 max-w-2xl">{c.subtitulo}</p>}
               {c.mostrar_busca ? (
                 <div className={`flex w-full flex-col gap-3 sm:flex-row ${c.alinhamento === "centro" ? "justify-center" : ""}`}>
                   <div className="max-w-md flex-1">
@@ -125,7 +120,7 @@ export const RenderBloco = ({ bloco }: { bloco: Bloco }) => {
                   {c.pills.map((p, i) => {
                     const PillIcon = (Icons as any)[p.icone] ?? Icons.Check;
                     return (
-                      <span key={i} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white">
+                      <span key={i} className="inline-flex items-center gap-2 rounded-pill bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur">
                         <PillIcon className="h-4 w-4" /> {p.label}
                       </span>
                     );
