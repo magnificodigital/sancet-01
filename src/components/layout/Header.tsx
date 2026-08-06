@@ -76,11 +76,11 @@ export const Header = () => {
 
   return (
     <header className="absolute top-0 left-0 right-0 z-50 w-full bg-transparent">
-      <div className="container flex h-16 items-center gap-6">
+      <div className="container flex h-20 items-center gap-8">
         <Logo dark={dark} />
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1 ml-auto">
+        <nav className="hidden md:flex items-center gap-2 ml-auto">
           <NavLink to="/exames" className={navLinkClass}>
             Exames
           </NavLink>
