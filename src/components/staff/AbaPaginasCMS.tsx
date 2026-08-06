@@ -69,10 +69,22 @@ export const AbaPaginasCMS = () => {
 
   const carregar = async () => {
     setCarregando(true);
-    const { data, error } = await (supabase as any)
+    const COLS_HOME = "id, slug, titulo, meta_description, ativa, no_menu, ordem_menu, home";
+    const COLS_BASE = "id, slug, titulo, meta_description, ativa, no_menu, ordem_menu";
+    let { data, error } = await (supabase as any)
       .from("paginas")
-      .select("id, slug, titulo, meta_description, ativa, no_menu, ordem_menu, home")
+      .select(COLS_HOME)
       .order("titulo", { ascending: true });
+    // Se a coluna "home" ainda não existir no banco (migração não aplicada),
+    // recarrega sem ela para não sumir com a lista.
+    if (error) {
+      const r = await supabase
+        .from("paginas")
+        .select(COLS_BASE)
+        .order("titulo", { ascending: true });
+      data = r.data as any;
+      error = r.error as any;
+    }
     if (error) toast.error(error.message);
     setPaginas((data as any) ?? []);
     setCarregando(false);
