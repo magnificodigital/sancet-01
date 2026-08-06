@@ -16,6 +16,9 @@ export function useSobreHero(): boolean {
   useEffect(() => {
     const cb = () => force((x) => x + 1);
     subs.add(cb);
+    // Relê o valor atual ao assinar: evita perder uma mudança que ocorreu
+    // entre o render e a assinatura (ex.: ao trocar de rota).
+    cb();
     return () => {
       subs.delete(cb);
     };

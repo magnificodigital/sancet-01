@@ -40,8 +40,17 @@ const PrimeiroAcesso = () => {
     });
     if (error || (resp as any)?.error) {
       setCarregando(false);
-      const msg = (resp as any)?.error || error?.message || "Não foi possível concluir.";
-      toast.error(msg);
+      // Lê a mensagem amigável do corpo da resposta da função (não o erro genérico).
+      let msg = (resp as any)?.error as string | undefined;
+      if (!msg && error) {
+        try {
+          const body = await (error as any).context?.json?.();
+          msg = body?.error;
+        } catch {
+          /* ignora */
+        }
+      }
+      toast.error(msg || error?.message || "Não foi possível concluir.");
       return;
     }
     // Já cria conta e faz login automático
