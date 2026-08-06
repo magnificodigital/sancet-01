@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ExternalLink, FileText, Link2, Pencil, Plus, Star, Trash2 } from "lucide-react";
+import { ExternalLink, FileText, Link2, Pencil, Plus, Settings2, Star, Trash2 } from "lucide-react";
 
 type Pagina = {
   id: string;
@@ -66,6 +66,48 @@ export const AbaPaginasCMS = () => {
   const [slugManual, setSlugManual] = useState(false);
   const [metaDescription, setMetaDescription] = useState("");
   const [paraExcluir, setParaExcluir] = useState<Pagina | null>(null);
+
+  // Edição de dados da página (título, slug, menu, ordem)
+  const [editando, setEditando] = useState<Pagina | null>(null);
+  const [eTitulo, setETitulo] = useState("");
+  const [eSlug, setESlug] = useState("");
+  const [eNoMenu, setENoMenu] = useState(false);
+  const [eOrdem, setEOrdem] = useState(0);
+  const [eSalvando, setESalvando] = useState(false);
+
+  const abrirEditar = (p: Pagina) => {
+    setEditando(p);
+    setETitulo(p.titulo);
+    setESlug(p.slug);
+    setENoMenu(p.no_menu);
+    setEOrdem(p.ordem_menu ?? 0);
+  };
+
+  const salvarEdicao = async () => {
+    if (!editando) return;
+    if (!eTitulo.trim() || !eSlug.trim()) {
+      toast.error("Preencha título e slug");
+      return;
+    }
+    setESalvando(true);
+    const { error } = await supabase
+      .from("paginas")
+      .update({
+        titulo: eTitulo.trim(),
+        slug: slugify(eSlug),
+        no_menu: eNoMenu,
+        ordem_menu: eOrdem,
+      })
+      .eq("id", editando.id);
+    setESalvando(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Página atualizada");
+    setEditando(null);
+    carregar();
+  };
 
   const carregar = async () => {
     setCarregando(true);
@@ -308,6 +350,15 @@ export const AbaPaginasCMS = () => {
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() => abrirEditar(p)}
+                      className="gap-1"
+                      title="Editar título, slug, menu e ordem"
+                    >
+                      <Settings2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => setParaExcluir(p)}
                       className="gap-1 text-destructive hover:text-destructive"
                       title="Excluir"
@@ -377,6 +428,55 @@ export const AbaPaginasCMS = () => {
               className="bg-brand hover:bg-[#a30d25] text-white"
             >
               {salvando ? "Criando..." : "Criar e editar"}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={!!editando} onOpenChange={(o) => !o && setEditando(null)}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Editar página</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Título (aparece no menu)</Label>
+              <Input value={eTitulo} onChange={(e) => setETitulo(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Slug (URL)</Label>
+              <Input value={eSlug} onChange={(e) => setESlug(slugify(e.target.value))} />
+              <p className="text-xs text-muted-foreground">
+                A página ficará em <code>/{eSlug || "seu-slug"}</code>. Trocar o slug muda a URL pública.
+              </p>
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <Label className="text-sm">Mostrar no menu</Label>
+                <p className="text-xs text-muted-foreground">Exibe este link no topo do site.</p>
+              </div>
+              <Switch checked={eNoMenu} onCheckedChange={setENoMenu} />
+            </div>
+            {eNoMenu && (
+              <div className="space-y-2">
+                <Label>Ordem no menu</Label>
+                <Input
+                  type="number"
+                  value={eOrdem}
+                  onChange={(e) => setEOrdem(parseInt(e.target.value) || 0)}
+                />
+                <p className="text-xs text-muted-foreground">Menor número aparece primeiro.</p>
+              </div>
+            )}
+          </div>
+          <SheetFooter>
+            <Button variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>
+            <Button
+              onClick={salvarEdicao}
+              disabled={eSalvando}
+              className="bg-brand hover:bg-[#a30d25] text-white"
+            >
+              {eSalvando ? "Salvando..." : "Salvar"}
             </Button>
           </SheetFooter>
         </SheetContent>
