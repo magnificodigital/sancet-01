@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.sancet-contato-email]
 verify_jwt = false
+
+[functions.sancet-denuncia]
+verify_jwt = false

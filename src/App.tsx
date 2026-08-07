@@ -33,6 +33,7 @@ import StaffPaginaEditor from "./pages/StaffPaginaEditor.tsx";
 import LandingPublica from "./pages/LandingPublica.tsx";
 import PaginaPublica from "./pages/PaginaPublica.tsx";
 import Preparos from "./pages/Preparos.tsx";
+import Denuncias from "./pages/Denuncias.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { BarraCheckoutFlutuante } from "./components/catalogo/BarraCheckoutFlutuante";
 
@@ -77,6 +78,7 @@ const App = () => {
           <Route path="/staff/paginas/:id" element={<StaffPaginaEditor kind="landing" />} />
           <Route path="/staff/paginas-cms/:id" element={<StaffPaginaEditor kind="cms" />} />
           <Route path="/preparos" element={<Preparos />} />
+          <Route path="/denuncias" element={<Denuncias />} />
           <Route path="/p/:slug" element={<LandingPublica />} />
           {/* Catch-all dinâmico para páginas do CMS (deve ser o último antes do 404) */}
           <Route path="/:slug" element={<PaginaPublica />} />

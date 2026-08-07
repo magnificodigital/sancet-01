@@ -23,6 +23,7 @@ export const Footer = () => {
       : [
           { label: "Política de Privacidade", url: "/politica-de-privacidade" },
           { label: "Termos de Uso", url: "/termos-de-uso" },
+          { label: "Denúncias", url: "/denuncias" },
         ];
 
   return (
