@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { KeyRound, Pencil, Search, Trash2, UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { registrarAcesso } from "@/lib/auditoria";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,6 +128,7 @@ export const AbaPacientes = ({ permissoes }: Props = {}) => {
   };
 
   const abrirEditar = (p: Pac) => {
+    registrarAcesso(p.id, "ver_paciente");
     setPacienteEditando(p);
     setNovaSenha("");
     setForm({

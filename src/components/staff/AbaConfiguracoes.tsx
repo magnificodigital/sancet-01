@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   CircleDashed,
   Palette,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AbaCatalogoShift } from "./AbaCatalogoShift";
+import { AbaAuditoria } from "./AbaAuditoria";
 import { aplicarTema, aplicarFavicon, setLogos, setFooter, parseFooterLinks, TEMA_PADRAO } from "@/lib/tema";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -87,7 +89,7 @@ const SENSIVEIS = new Set([
   "RESEND_API_KEY",
 ]);
 
-type SecaoId = "shift" | "ia" | "pagamento" | "email" | "aparencia" | "risco";
+type SecaoId = "shift" | "ia" | "pagamento" | "email" | "aparencia" | "auditoria" | "risco";
 
 type Secao = {
   id: SecaoId;
@@ -138,6 +140,13 @@ const SECOES: Secao[] = [
     titulo: "Aparência",
     descricao: "Cores do site e do painel",
     icone: Palette,
+  },
+  {
+    id: "auditoria",
+    titulo: "Auditoria (LGPD)",
+    descricao: "Quem acessou dados de paciente",
+    icone: ShieldAlert,
+    adminOnly: true,
   },
   {
     id: "risco",
@@ -686,6 +695,19 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                     </Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {secaoAtiva === "auditoria" && isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-secondary" /> Auditoria de acesso (LGPD)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AbaAuditoria />
               </CardContent>
             </Card>
           )}

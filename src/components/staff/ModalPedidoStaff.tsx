@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { registrarAcesso } from "@/lib/auditoria";
 import { toast } from "sonner";
 import { ExternalLink, Upload, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,6 +112,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     setNovoStatus(pedido.status);
     setPaciente(null);
     setResultados([]);
+    registrarAcesso(pedido.paciente_id ?? null, "ver_pedido", pedido.protocolo);
     carregarResultados(pedido.protocolo);
     if (pedido.paciente_id) {
       supabase
