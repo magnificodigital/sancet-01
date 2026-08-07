@@ -47,14 +47,30 @@ Deno.serve(async (req) => {
     let page = 1;
     let importados = 0;
     const perPage = 50;
+    const fetchHeaders = {
+      Accept: "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    };
 
     while (true) {
       const url = `${FONTE}/posts?per_page=${perPage}&page=${page}&_embed=1`;
-      const r = await fetch(url, { headers: { Accept: "application/json" } });
+      const r = await fetch(url, { headers: fetchHeaders });
       if (r.status === 400) break; // acabou as páginas
-      if (!r.ok) return json(502, { ok: false, reason: `WP respondeu ${r.status}` });
-      const posts = await r.json();
-      if (!Array.isArray(posts) || posts.length === 0) break;
+      if (!r.ok) {
+        const corpo = await r.text().catch(() => "");
+        return json(502, {
+          ok: false,
+          reason: `A fonte respondeu ${r.status} ao buscar os posts.`,
+          detalhe: corpo.slice(0, 300),
+          importados,
+        });
+      }
+      const posts = await r.json().catch(() => null);
+      if (!Array.isArray(posts)) {
+        return json(502, { ok: false, reason: "Resposta inválida da fonte (não é lista de posts).", importados });
+      }
+      if (posts.length === 0) break;
 
       const rows = posts.map((p: any) => {
         const emb = p._embedded ?? {};
@@ -78,7 +94,8 @@ Deno.serve(async (req) => {
         };
       });
 
-      const { error } = await supabase.from("posts").upsert(rows, { onConflict: "wp_id" });
+      // Conflita por slug (unique garantido na tabela) — evita depender do índice de wp_id.
+      const { error } = await supabase.from("posts").upsert(rows, { onConflict: "slug" });
       if (error) return json(500, { ok: false, reason: error.message, importados });
       importados += rows.length;
 
