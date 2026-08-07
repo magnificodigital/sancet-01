@@ -13,7 +13,9 @@ create table if not exists public.posts (
   publicado_em timestamptz not null default now(),
   criado_em timestamptz not null default now()
 );
-create unique index if not exists idx_posts_wp_id on public.posts (wp_id) where wp_id is not null;
+-- Índice UNIQUE simples (não parcial) para o ON CONFLICT (wp_id) do importador.
+-- Múltiplos NULL são permitidos (posts criados manualmente sem wp_id).
+create unique index if not exists idx_posts_wp_id on public.posts (wp_id);
 create index if not exists idx_posts_publicado_em on public.posts (publicado_em desc);
 create index if not exists idx_posts_categoria on public.posts (categoria);
 
