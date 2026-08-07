@@ -23,10 +23,10 @@ Deno.serve(async (req) => {
     } = body ?? {};
 
     if (!cpf || !data_nascimento || !nome || !email || !senha) {
-      return json({ error: "Dados incompletos." }, 400);
+      return json({ error: "Dados incompletos." }, 200);
     }
     if (String(senha).length < 8) {
-      return json({ error: "A senha precisa ter pelo menos 8 caracteres." }, 400);
+      return json({ error: "A senha precisa ter pelo menos 8 caracteres." }, 200);
     }
 
     const admin = createClient(
@@ -35,16 +35,21 @@ Deno.serve(async (req) => {
     );
 
     const emailLower = String(email).trim().toLowerCase();
+    const cpfClean = String(cpf).replace(/\D/g, "");
+    const cpfFmt =
+      cpfClean.length === 11
+        ? `${cpfClean.slice(0, 3)}.${cpfClean.slice(3, 6)}.${cpfClean.slice(6, 9)}-${cpfClean.slice(9)}`
+        : cpfClean;
 
-    // Verifica se já existe paciente com esse CPF já vinculado
+    // Verifica se já existe paciente com esse CPF (com ou sem máscara)
     const { data: existente } = await admin
       .from("pacientes")
       .select("id, auth_user_id")
-      .eq("cpf", String(cpf))
+      .or(`cpf.eq.${cpfClean},cpf.eq.${cpfFmt}`)
       .maybeSingle();
 
     if (existente?.auth_user_id) {
-      return json({ error: "Este CPF já possui cadastro. Use 'Entrar' ou 'Esqueci minha senha'." }, 409);
+      return json({ error: "Este CPF já possui cadastro. Use 'Entrar' ou 'Esqueci minha senha'." }, 200);
     }
 
     // Cria usuário no Auth com email já confirmado (não dispara email → sem rate limit)
@@ -62,9 +67,9 @@ Deno.serve(async (req) => {
     if (userErr || !userResp?.user) {
       const msg = userErr?.message || "Não foi possível criar a conta.";
       if (/already/i.test(msg)) {
-        return json({ error: "Este e-mail já está em uso." }, 409);
+        return json({ error: "Este e-mail já está em uso." }, 200);
       }
-      return json({ error: msg }, 400);
+      return json({ error: msg }, 200);
     }
 
     const authUserId = userResp.user.id;
@@ -91,7 +96,7 @@ Deno.serve(async (req) => {
       const { error: updErr } = await admin.from("pacientes").update(patch).eq("id", existente.id);
       if (updErr) {
         await admin.auth.admin.deleteUser(authUserId);
-        return json({ error: updErr.message }, 500);
+        return json({ error: updErr.message }, 200);
       }
     } else {
       // pode ter sido criado pelo trigger; tenta update por auth_user_id, senão insert
@@ -105,13 +110,13 @@ Deno.serve(async (req) => {
         const { error: updErr } = await admin.from("pacientes").update(patch).eq("id", byAuth.id);
         if (updErr) {
           await admin.auth.admin.deleteUser(authUserId);
-          return json({ error: updErr.message }, 500);
+          return json({ error: updErr.message }, 200);
         }
       } else {
         const { error: insErr } = await admin.from("pacientes").insert(patch);
         if (insErr) {
           await admin.auth.admin.deleteUser(authUserId);
-          return json({ error: insErr.message }, 500);
+          return json({ error: insErr.message }, 200);
         }
       }
     }
@@ -127,6 +132,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, session: signIn.session });
   } catch (e) {
-    return json({ error: (e as Error).message }, 500);
+    return json({ error: (e as Error).message }, 200);
   }
 });
