@@ -38,7 +38,12 @@ VALUES (
 <p>Para exercer seus direitos, entre em contato pelo e-mail <strong>matriz@sancet.com.br</strong>.</p>
 
 <h2>7. Retenção e eliminação</h2>
-<p>Mantemos os dados pelo tempo necessário às finalidades acima e ao cumprimento de obrigações legais e regulatórias. Encerrado esse prazo, os dados são eliminados de forma segura, salvo hipóteses de guarda obrigatória.</p>
+<p>Mantemos os dados pelo tempo necessário às finalidades desta política e ao cumprimento de obrigações legais e regulatórias, aplicando o princípio da necessidade (art. 6 da LGPD):</p>
+<ul>
+  <li><strong>Resultados de exames e prontuário:</strong> mantidos pelo prazo mínimo exigido pela legislação de saúde (Resolução CFM nº 1.821/2007 — <strong>mínimo de 20 anos</strong>). Nesse período, a guarda é obrigatória e prevalece sobre pedidos de exclusão.</li>
+  <li><strong>Documentos de apoio ao atendimento</strong> (documento de identidade, carteirinha, pedido médico e correlatos): mantidos enquanto necessários ao atendimento e eliminados quando deixam de ser necessários, mediante descarte seguro.</li>
+</ul>
+<p>Você pode solicitar a exclusão dos seus dados a qualquer momento; atenderemos ao pedido, ressalvadas as hipóteses de guarda obrigatória acima. A eliminação é feita de forma segura.</p>
 
 <h2>8. Contato / Encarregado (DPO)</h2>
 <p>Dúvidas ou solicitações sobre esta política e sobre seus dados:</p>

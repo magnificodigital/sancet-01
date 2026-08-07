@@ -53,9 +53,25 @@ type PacienteFull = {
   uf: string | null;
 };
 
-const DocLink = ({ label, url }: { label: string; url: string | null }) => {
+const DocLink = ({
+  label,
+  url,
+  campo,
+  pedidoId,
+  pacienteId,
+  podeExcluir,
+}: {
+  label: string;
+  url: string | null;
+  campo?: string;
+  pedidoId?: string;
+  pacienteId?: string | null;
+  podeExcluir?: boolean;
+}) => {
   const [open, setOpen] = useState(false);
-  if (!url) return null;
+  const [excluindo, setExcluindo] = useState(false);
+  const [excluido, setExcluido] = useState(false);
+  if (!url || excluido) return null;
   const abrir = async () => {
     setOpen(true);
     try {
@@ -75,11 +91,47 @@ const DocLink = ({ label, url }: { label: string; url: string | null }) => {
       setOpen(false);
     }
   };
+  const excluir = async () => {
+    if (!campo || !pedidoId) return;
+    if (!window.confirm(`Excluir "${label}" permanentemente? Esta ação não pode ser desfeita.`)) return;
+    setExcluindo(true);
+    try {
+      if (!url.startsWith("http")) {
+        await supabase.storage.from("documentos-pedidos").remove([url]);
+      }
+      const { error } = await supabase
+        .from("pedidos")
+        .update({ [campo]: null } as any)
+        .eq("id", pedidoId);
+      if (error) throw error;
+      registrarAcesso(pacienteId ?? null, "excluir_documento", `${campo}`);
+      toast.success("Documento excluído.");
+      setExcluido(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao excluir o documento.");
+    } finally {
+      setExcluindo(false);
+    }
+  };
   return (
-    <Button variant="outline" onClick={abrir} disabled={open} className="w-full justify-between">
-      {label}
-      <ExternalLink className="h-4 w-4" />
-    </Button>
+    <div className="flex items-center gap-2">
+      <Button variant="outline" onClick={abrir} disabled={open} className="flex-1 justify-between">
+        {label}
+        <ExternalLink className="h-4 w-4" />
+      </Button>
+      {podeExcluir && campo && pedidoId && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={excluir}
+          disabled={excluindo}
+          className="shrink-0 text-red-600 hover:text-red-700"
+          title="Excluir documento"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
   );
 };
 
@@ -572,17 +624,32 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                 <p className="text-sm text-muted-foreground">Nenhum documento enviado</p>
               ) : (
                 <>
-                  <DocLink label="RG — Frente" url={pedido.url_rg_frente ?? null} />
-                  <DocLink label="RG — Verso" url={pedido.url_rg_verso ?? null} />
-                  <DocLink
-                    label="Certidão de Nascimento"
-                    url={pedido.url_certidao_nascimento ?? null}
-                  />
-                  <DocLink label="Pedido médico" url={pedido.url_pedido_medico} />
-                  <DocLink label="Relatório médico" url={pedido.url_relatorio_medico ?? null} />
-                  <DocLink label="Carteirinha do convênio" url={pedido.url_carteirinha} />
-                  <DocLink label="Receita" url={pedido.url_receita} />
-                  <DocLink label="Identidade (legado)" url={pedido.url_identidade} />
+                  {[
+                    { label: "RG — Frente", campo: "url_rg_frente" },
+                    { label: "RG — Verso", campo: "url_rg_verso" },
+                    { label: "Certidão de Nascimento", campo: "url_certidao_nascimento" },
+                    { label: "Pedido médico", campo: "url_pedido_medico" },
+                    { label: "Relatório médico", campo: "url_relatorio_medico" },
+                    { label: "Carteirinha do convênio", campo: "url_carteirinha" },
+                    { label: "Receita", campo: "url_receita" },
+                    { label: "Identidade (legado)", campo: "url_identidade" },
+                  ].map((d) => (
+                    <DocLink
+                      key={d.campo}
+                      label={d.label}
+                      url={(pedido as any)[d.campo] ?? null}
+                      campo={d.campo}
+                      pedidoId={pedido.id}
+                      pacienteId={pedido.paciente_id ?? null}
+                      podeExcluir={isAdmin}
+                    />
+                  ))}
+                  {isAdmin && (
+                    <p className="pt-1 text-xs text-muted-foreground">
+                      Excluir remove o arquivo permanentemente e registra a ação na auditoria.
+                      Obs.: resultados de exame têm guarda obrigatória (CFM, 20 anos) e ficam na aba Resultados.
+                    </p>
+                  )}
                 </>
               )}
           </TabsContent>
