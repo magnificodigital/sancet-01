@@ -92,6 +92,10 @@ export const Header = () => {
             Resultados
           </NavLink>
 
+          <NavLink to="/blog" className={navLinkClass}>
+            Blog
+          </NavLink>
+
           {paginasMenu.map((p) => (
             <NavLink key={p.to} to={p.to} className={navLinkClass}>
               {p.titulo}
@@ -200,6 +204,12 @@ export const Header = () => {
                   className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
                 >
                   Resultados
+                </Link>
+                <Link
+                  to="/blog"
+                  className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
+                >
+                  Blog
                 </Link>
                 {paginasMenu.map((p) => (
                   <Link

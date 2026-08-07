@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AbaPaginasCMS } from "./AbaPaginasCMS";
 import { AbaPaginas } from "./AbaPaginas";
+import { AbaBlog } from "./AbaBlog";
 
 export const AbaSites = () => {
   return (
@@ -15,12 +16,16 @@ export const AbaSites = () => {
         <TabsList>
           <TabsTrigger value="site">Páginas do site</TabsTrigger>
           <TabsTrigger value="landing">Landing pages</TabsTrigger>
+          <TabsTrigger value="blog">Blog</TabsTrigger>
         </TabsList>
         <TabsContent value="site" className="pt-4">
           <AbaPaginasCMS />
         </TabsContent>
         <TabsContent value="landing" className="pt-4">
           <AbaPaginas />
+        </TabsContent>
+        <TabsContent value="blog" className="pt-4">
+          <AbaBlog />
         </TabsContent>
       </Tabs>
     </div>
