@@ -92,9 +92,8 @@ export const Header = () => {
             Resultados
           </NavLink>
 
-          <NavLink to="/blog" className={navLinkClass}>
-            Blog
-          </NavLink>
+          {/* Blog pausado (conteúdo pendente) — religar quando retomarmos:
+          <NavLink to="/blog" className={navLinkClass}>Blog</NavLink> */}
 
           {paginasMenu.map((p) => (
             <NavLink key={p.to} to={p.to} className={navLinkClass}>
@@ -205,12 +204,7 @@ export const Header = () => {
                 >
                   Resultados
                 </Link>
-                <Link
-                  to="/blog"
-                  className="px-3 py-3 rounded-md font-semibold text-secondary hover:bg-muted"
-                >
-                  Blog
-                </Link>
+                {/* Blog pausado (conteúdo pendente) */}
                 {paginasMenu.map((p) => (
                   <Link
                     key={p.to}
