@@ -18,11 +18,14 @@ Deno.serve(async (req) => {
 
   try {
     const { cpf, data_nascimento, email, senha } = await req.json();
-    if (!cpf || !data_nascimento || !email || !senha) {
-      return json({ error: "Dados incompletos." }, 400);
+    const cpfClean = String(cpf ?? "").replace(/\D/g, "");
+    // Retornamos SEMPRE 200 nos erros de negócio (com { error }), para a mensagem
+    // amigável chegar ao front sem o genérico "Edge Function returned non-2xx".
+    if (!cpfClean || !data_nascimento || !email || !senha) {
+      return json({ error: "Dados incompletos." }, 200);
     }
     if (String(senha).length < 8) {
-      return json({ error: "A senha precisa ter pelo menos 8 caracteres." }, 400);
+      return json({ error: "A senha precisa ter pelo menos 8 caracteres." }, 200);
     }
 
     const admin = createClient(
@@ -30,25 +33,34 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // 1) Localiza paciente por CPF + data_nasc
+    // CPF pode estar salvo com ou sem máscara — busca as duas formas.
+    const cpfFmt =
+      cpfClean.length === 11
+        ? `${cpfClean.slice(0, 3)}.${cpfClean.slice(3, 6)}.${cpfClean.slice(6, 9)}-${cpfClean.slice(9)}`
+        : cpfClean;
+
+    // 1) Localiza paciente por CPF (com/sem máscara) + data_nasc
     const { data: paciente, error: pacErr } = await admin
       .from("pacientes")
       .select("id, auth_user_id, email")
-      .eq("cpf", String(cpf))
+      .or(`cpf.eq.${cpfClean},cpf.eq.${cpfFmt}`)
       .eq("data_nascimento", String(data_nascimento))
       .maybeSingle();
 
-    if (pacErr) return json({ error: pacErr.message }, 500);
+    if (pacErr) return json({ error: pacErr.message }, 200);
     if (!paciente) {
       return json(
-        { error: "Não encontramos um cadastro com esse CPF e data de nascimento." },
-        404,
+        {
+          error:
+            "Não encontramos um cadastro com esse CPF e data de nascimento. Se ainda não é paciente, use 'Fazer cadastro'.",
+        },
+        200,
       );
     }
     if (paciente.auth_user_id) {
       return json(
         { error: "Este paciente já tem acesso. Use 'Entrar' ou 'Esqueci minha senha'." },
-        409,
+        200,
       );
     }
 
@@ -57,17 +69,17 @@ Deno.serve(async (req) => {
       email: String(email).trim().toLowerCase(),
       password: String(senha),
       email_confirm: true,
-      user_metadata: { cpf: String(cpf), is_primeiro_acesso: true },
+      user_metadata: { cpf: cpfClean, is_primeiro_acesso: true },
     });
     if (userErr || !userResp?.user) {
       const msg = userErr?.message || "Não foi possível criar a conta.";
       if (/already/i.test(msg)) {
         return json(
           { error: "Este e-mail já está em uso. Use 'Esqueci minha senha' para recuperar o acesso." },
-          409,
+          200,
         );
       }
-      return json({ error: msg }, 400);
+      return json({ error: msg }, 200);
     }
 
     // 3) Vincula o auth_user_id ao paciente (o trigger não roda pra vincular esse específico)
