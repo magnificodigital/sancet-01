@@ -77,8 +77,8 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
     const { data, error } = await (supabase as any)
       .from("tutoriais")
       .select(SELECT_COLS)
-      .order("categoria", { ascending: true })
       .order("ordem", { ascending: true })
+      .order("categoria", { ascending: true })
       .order("titulo", { ascending: true });
     if (error) toast.error(error.message);
     setTutoriais((data as Tutorial[]) ?? []);
