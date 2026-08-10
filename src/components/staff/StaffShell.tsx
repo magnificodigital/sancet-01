@@ -8,6 +8,7 @@ import {
   FlaskConical,
   KeyRound,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Menu,
   QrCode,
@@ -42,7 +43,8 @@ export type StaffTab =
   | "shift"
   | "config"
   | "sites"
-  | "equipe";
+  | "equipe"
+  | "ajuda";
 
 const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "visao", label: "Visão Geral", icon: LayoutDashboard },
@@ -54,6 +56,7 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "config", label: "Configurações", icon: Settings2 },
   { id: "sites", label: "Sites", icon: FileText },
   { id: "equipe", label: "Equipe", icon: UserCog },
+  { id: "ajuda", label: "Ajuda", icon: LifeBuoy },
 ];
 
 const SIDEBAR_BG = "hsl(var(--brand-sidebar))";

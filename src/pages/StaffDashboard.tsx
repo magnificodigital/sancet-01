@@ -12,6 +12,7 @@ import { AbaConvenios } from "@/components/staff/AbaConvenios";
 import { AbaConfiguracoes } from "@/components/staff/AbaConfiguracoes";
 import { AbaEquipe } from "@/components/staff/AbaEquipe";
 import { AbaSites } from "@/components/staff/AbaSites";
+import { AbaAjuda } from "@/components/staff/AbaAjuda";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 
 const StaffDashboard = () => {
@@ -74,6 +75,7 @@ const StaffDashboard = () => {
       {aba === "config" && <AbaConfiguracoes permissoes={staffPerfil.permissoes} isAdmin={staffPerfil.isAdmin} />}
       {aba === "sites" && <AbaSites />}
       {aba === "equipe" && <AbaEquipe />}
+      {aba === "ajuda" && <AbaAjuda isAdmin={staffPerfil.isAdmin} />}
     </StaffShell>
   );
 };
