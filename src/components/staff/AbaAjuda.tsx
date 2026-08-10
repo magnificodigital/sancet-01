@@ -17,13 +17,28 @@ import {
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  BookOpen,
+  Building2,
   ChevronRight,
+  ClipboardList,
+  FileText,
+  FlaskConical,
+  LayoutDashboard,
   LifeBuoy,
   Loader2,
   Pencil,
+  Plug,
   Plus,
+  QrCode,
   Search,
+  Settings2,
+  Shield,
+  ShieldAlert,
+  Rocket,
   Trash2,
+  UserCog,
+  Users,
+  type LucideIcon,
 } from "lucide-react";
 
 type Tutorial = {
@@ -37,16 +52,41 @@ type Tutorial = {
   publicado: boolean;
 };
 
+const SEM_CATEGORIA = "Outros";
+
 const CATEGORIAS_SUGERIDAS = [
   "Primeiros passos",
-  "Site & páginas",
+  "Visão Geral",
   "Pedidos & CRM",
   "Check-in",
-  "Integrações",
+  "Pacientes",
+  "Catálogo",
+  "Unidades",
+  "Convênios",
+  "Site & páginas",
   "Configurações",
+  "Integrações",
+  "Equipe",
+  "Segurança & LGPD",
 ];
 
-const SEM_CATEGORIA = "Outros";
+// Ícone por categoria — espelha os ícones do menu lateral para leitura rápida.
+const ICONE_CATEGORIA: Record<string, LucideIcon> = {
+  "Primeiros passos": Rocket,
+  "Visão Geral": LayoutDashboard,
+  "Pedidos & CRM": ClipboardList,
+  "Check-in": QrCode,
+  Pacientes: Users,
+  Catálogo: FlaskConical,
+  Unidades: Building2,
+  Convênios: Shield,
+  "Site & páginas": FileText,
+  Configurações: Settings2,
+  Integrações: Plug,
+  Equipe: UserCog,
+  "Segurança & LGPD": ShieldAlert,
+};
+const iconeDe = (cat: string): LucideIcon => ICONE_CATEGORIA[cat] ?? BookOpen;
 
 const slugify = (s: string) =>
   s
@@ -66,6 +106,7 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
   const [tutoriais, setTutoriais] = useState<Tutorial[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
+  const [categoriaAberta, setCategoriaAberta] = useState<string | null>(null);
   const [lendo, setLendo] = useState<Tutorial | null>(null);
   const [editando, setEditando] = useState<Tutorial | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -104,9 +145,20 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
     [tutoriais, isAdmin],
   );
 
-  const filtrados = useMemo(() => {
+  // Categorias na ordem de aparição (que já vem por "ordem"), com contagem.
+  const categorias = useMemo(() => {
+    const mapa = new Map<string, Tutorial[]>();
+    for (const t of visiveis) {
+      const cat = t.categoria?.trim() || SEM_CATEGORIA;
+      if (!mapa.has(cat)) mapa.set(cat, []);
+      mapa.get(cat)!.push(t);
+    }
+    return Array.from(mapa.entries()).map(([nome, itens]) => ({ nome, itens }));
+  }, [visiveis]);
+
+  const resultadosBusca = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    if (!q) return visiveis;
+    if (!q) return null;
     return visiveis.filter((t) =>
       [t.titulo, t.resumo ?? "", t.categoria ?? ""]
         .join(" ")
@@ -115,22 +167,17 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
     );
   }, [visiveis, busca]);
 
-  const grupos = useMemo(() => {
-    const mapa = new Map<string, Tutorial[]>();
-    for (const t of filtrados) {
-      const cat = t.categoria?.trim() || SEM_CATEGORIA;
-      if (!mapa.has(cat)) mapa.set(cat, []);
-      mapa.get(cat)!.push(t);
-    }
-    return Array.from(mapa.entries());
-  }, [filtrados]);
+  const itensCategoriaAberta = useMemo(
+    () => categorias.find((c) => c.nome === categoriaAberta)?.itens ?? [],
+    [categorias, categoriaAberta],
+  );
 
-  const novo = () =>
+  const novo = (categoria = "") =>
     setEditando({
       id: "",
       slug: "",
       titulo: "",
-      categoria: "",
+      categoria,
       ordem: 0,
       resumo: "",
       conteudo_html: "",
@@ -193,6 +240,65 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
     setSearchParams(p, { replace: true });
   };
 
+  // ---- Cartão de tutorial (reutilizado na busca e dentro da categoria) ----
+  const CardTutorial = ({
+    t,
+    mostrarCategoria = false,
+  }: {
+    t: Tutorial;
+    mostrarCategoria?: boolean;
+  }) => (
+    <div className="group relative flex items-start gap-3 rounded-lg border bg-white p-4 transition hover:border-brand/40 hover:shadow-sm">
+      <button
+        onClick={() => abrirLeitura(t)}
+        className="min-w-0 flex-1 text-left"
+      >
+        {mostrarCategoria && t.categoria && (
+          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t.categoria}
+          </span>
+        )}
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-foreground">{t.titulo}</span>
+          {isAdmin && !t.publicado && (
+            <Badge variant="outline" className="text-[10px]">
+              Rascunho
+            </Badge>
+          )}
+        </div>
+        {t.resumo && (
+          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+            {t.resumo}
+          </p>
+        )}
+      </button>
+      {isAdmin ? (
+        <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => setEditando(t)}
+            aria-label="Editar tutorial"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-destructive"
+            onClick={() => setParaExcluir(t)}
+            aria-label="Excluir tutorial"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ) : (
+        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-brand" />
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -207,7 +313,7 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
         </div>
         {isAdmin && (
           <Button
-            onClick={novo}
+            onClick={() => novo(categoriaAberta ?? "")}
             className="gap-1.5 bg-brand hover:bg-brand-hover text-white"
           >
             <Plus className="h-4 w-4" /> Novo tutorial
@@ -229,74 +335,91 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
         <div className="flex min-h-[30vh] items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
-      ) : grupos.length === 0 ? (
+      ) : resultadosBusca ? (
+        /* ---- Resultados de busca (achatado) ---- */
+        resultadosBusca.length === 0 ? (
+          <div className="rounded-md border bg-white py-14 text-center text-muted-foreground">
+            Nenhum tutorial encontrado para “{busca}”.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {resultadosBusca.length}{" "}
+              {resultadosBusca.length === 1
+                ? "resultado"
+                : "resultados"}{" "}
+              para “{busca}”
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {resultadosBusca.map((t) => (
+                <CardTutorial key={t.id} t={t} mostrarCategoria />
+              ))}
+            </div>
+          </div>
+        )
+      ) : categoriaAberta ? (
+        /* ---- Dentro de uma categoria ---- */
+        <div className="space-y-4">
+          <button
+            onClick={() => setCategoriaAberta(null)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" /> Todas as categorias
+          </button>
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/10 text-brand">
+              {(() => {
+                const Icon = iconeDe(categoriaAberta);
+                return <Icon className="h-5 w-5" />;
+              })()}
+            </span>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                {categoriaAberta}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {itensCategoriaAberta.length}{" "}
+                {itensCategoriaAberta.length === 1 ? "tutorial" : "tutoriais"}
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {itensCategoriaAberta.map((t) => (
+              <CardTutorial key={t.id} t={t} />
+            ))}
+          </div>
+        </div>
+      ) : categorias.length === 0 ? (
         <div className="rounded-md border bg-white py-14 text-center text-muted-foreground">
-          {busca
-            ? "Nenhum tutorial encontrado para essa busca."
-            : "Nenhum tutorial ainda."}
+          Nenhum tutorial ainda.
         </div>
       ) : (
-        <div className="space-y-7">
-          {grupos.map(([categoria, itens]) => (
-            <section key={categoria} className="space-y-2.5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {categoria}
-              </h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {itens.map((t) => (
-                  <div
-                    key={t.id}
-                    className="group flex items-start gap-3 rounded-lg border bg-white p-4 transition hover:border-brand/40 hover:shadow-sm"
-                  >
-                    <button
-                      onClick={() => abrirLeitura(t)}
-                      className="flex-1 text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          {t.titulo}
-                        </span>
-                        {isAdmin && !t.publicado && (
-                          <Badge variant="outline" className="text-[10px]">
-                            Rascunho
-                          </Badge>
-                        )}
-                      </div>
-                      {t.resumo && (
-                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                          {t.resumo}
-                        </p>
-                      )}
-                    </button>
-                    {isAdmin ? (
-                      <div className="flex shrink-0 gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => setEditando(t)}
-                          aria-label="Editar"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => setParaExcluir(t)}
-                          aria-label="Excluir"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-brand" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
+        /* ---- Índice de categorias ---- */
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {categorias.map(({ nome, itens }) => {
+            const Icon = iconeDe(nome);
+            return (
+              <button
+                key={nome}
+                onClick={() => setCategoriaAberta(nome)}
+                className="group flex items-center gap-4 rounded-xl border bg-white p-5 text-left transition hover:border-brand/40 hover:shadow-sm"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-foreground">
+                    {nome}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {itens.length}{" "}
+                    {itens.length === 1 ? "tutorial" : "tutoriais"}
+                  </span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-brand" />
+              </button>
+            );
+          })}
         </div>
       )}
 
