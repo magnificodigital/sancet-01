@@ -106,7 +106,6 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
   const [tutoriais, setTutoriais] = useState<Tutorial[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
-  const [categoriaAberta, setCategoriaAberta] = useState<string | null>(null);
   const [lendo, setLendo] = useState<Tutorial | null>(null);
   const [editando, setEditando] = useState<Tutorial | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -145,7 +144,7 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
     [tutoriais, isAdmin],
   );
 
-  // Categorias na ordem de aparição (que já vem por "ordem"), com contagem.
+  // Categorias na ordem de aparição (já vem por "ordem"), com seus tutoriais.
   const categorias = useMemo(() => {
     const mapa = new Map<string, Tutorial[]>();
     for (const t of visiveis) {
@@ -166,11 +165,6 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
         .includes(q),
     );
   }, [visiveis, busca]);
-
-  const itensCategoriaAberta = useMemo(
-    () => categorias.find((c) => c.nome === categoriaAberta)?.itens ?? [],
-    [categorias, categoriaAberta],
-  );
 
   const novo = (categoria = "") =>
     setEditando({
@@ -222,6 +216,7 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
       .eq("id", paraExcluir.id);
     if (error) return toast.error(error.message);
     toast.success("Tutorial excluído.");
+    if (lendo?.id === paraExcluir.id) fecharLeitura();
     setParaExcluir(null);
     carregar();
   };
@@ -231,6 +226,7 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
     const p = new URLSearchParams(searchParams);
     p.set("artigo", t.slug);
     setSearchParams(p, { replace: true });
+    window.scrollTo({ top: 0 });
   };
 
   const fecharLeitura = () => {
@@ -240,235 +236,215 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
     setSearchParams(p, { replace: true });
   };
 
-  // ---- Cartão de tutorial (reutilizado na busca e dentro da categoria) ----
-  const CardTutorial = ({
-    t,
-    mostrarCategoria = false,
-  }: {
-    t: Tutorial;
-    mostrarCategoria?: boolean;
-  }) => (
-    <div className="group relative flex items-start gap-3 rounded-lg border bg-white p-4 transition hover:border-brand/40 hover:shadow-sm">
-      <button
-        onClick={() => abrirLeitura(t)}
-        className="min-w-0 flex-1 text-left"
-      >
-        {mostrarCategoria && t.categoria && (
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {t.categoria}
-          </span>
-        )}
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground">{t.titulo}</span>
-          {isAdmin && !t.publicado && (
-            <Badge variant="outline" className="text-[10px]">
-              Rascunho
-            </Badge>
+  // ---------- LEITURA DO ARTIGO (página inteira, estilo documentação) ----------
+  if (lendo) {
+    const Icon = iconeDe(lendo.categoria?.trim() || SEM_CATEGORIA);
+    return (
+      <>
+        <div className="mx-auto max-w-3xl">
+          <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <button
+              onClick={fecharLeitura}
+              className="inline-flex items-center gap-1 hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" /> Central de Ajuda
+            </button>
+            {lendo.categoria && (
+              <>
+                <ChevronRight className="h-3.5 w-3.5" />
+                <span className="text-foreground/70">{lendo.categoria}</span>
+              </>
+            )}
+          </nav>
+
+          <div className="mb-2 flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand">
+              <Icon className="h-5 w-5" />
+            </span>
+            {isAdmin && !lendo.publicado && (
+              <Badge variant="outline" className="text-[10px]">
+                Rascunho
+              </Badge>
+            )}
+          </div>
+          <h1 className="text-3xl font-bold leading-tight text-foreground">
+            {lendo.titulo}
+          </h1>
+          {lendo.resumo && (
+            <p className="mt-2 text-lg text-muted-foreground">{lendo.resumo}</p>
+          )}
+
+          <div
+            className="prose prose-slate mt-6 max-w-none prose-headings:text-secondary prose-a:text-brand prose-img:rounded-lg prose-li:marker:text-brand"
+            dangerouslySetInnerHTML={{ __html: lendo.conteudo_html }}
+          />
+
+          {isAdmin && (
+            <div className="mt-10 flex items-center gap-2 border-t pt-5">
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setEditando(lendo)}
+              >
+                <Pencil className="h-3.5 w-3.5" /> Editar
+              </Button>
+              <Button
+                variant="ghost"
+                className="gap-1.5 text-destructive hover:text-destructive"
+                onClick={() => setParaExcluir(lendo)}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Excluir
+              </Button>
+            </div>
           )}
         </div>
-        {t.resumo && (
-          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-            {t.resumo}
-          </p>
-        )}
-      </button>
-      {isAdmin ? (
-        <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8"
-            onClick={() => setEditando(t)}
-            aria-label="Editar tutorial"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 text-destructive"
-            onClick={() => setParaExcluir(t)}
-            aria-label="Excluir tutorial"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      ) : (
-        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-brand" />
-      )}
-    </div>
-  );
 
+        {renderEditor()}
+        {renderExcluir()}
+      </>
+    );
+  }
+
+  // ---------- HOME (banner de busca + diretório) ----------
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-xl font-semibold">
-            <LifeBuoy className="h-5 w-5 text-brand" /> Central de Ajuda
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Tutoriais de uso da plataforma para a equipe.
-            {isAdmin && " Você pode criar e editar (somente administradores)."}
-          </p>
-        </div>
+    <div className="space-y-6">
+      {/* Banner com busca */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-brand-hover px-6 py-11 text-center shadow-sm">
         {isAdmin && (
           <Button
-            onClick={() => novo(categoriaAberta ?? "")}
-            className="gap-1.5 bg-brand hover:bg-brand-hover text-white"
+            onClick={() => novo()}
+            size="sm"
+            className="absolute right-4 top-4 gap-1.5 border border-white/30 bg-white/15 text-white hover:bg-white/25"
           >
             <Plus className="h-4 w-4" /> Novo tutorial
           </Button>
         )}
-      </div>
-
-      <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar tutorial..."
-          className="pl-9"
-        />
+        <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+          <LifeBuoy className="h-3.5 w-3.5" /> Central de Ajuda
+        </p>
+        <h2 className="mt-2 text-2xl font-bold text-white md:text-3xl">
+          Como podemos ajudar?
+        </h2>
+        <p className="mt-1.5 text-sm text-white/85">
+          Guias de uso da plataforma para a equipe da Sancet.
+        </p>
+        <div className="relative mx-auto mt-6 max-w-xl">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por um tutorial..."
+            className="h-12 rounded-xl border-0 bg-white pl-12 text-base text-foreground shadow-lg focus-visible:ring-2 focus-visible:ring-white/60"
+          />
+        </div>
       </div>
 
       {carregando ? (
-        <div className="flex min-h-[30vh] items-center justify-center">
+        <div className="flex min-h-[24vh] items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : resultadosBusca ? (
-        /* ---- Resultados de busca (achatado) ---- */
-        resultadosBusca.length === 0 ? (
-          <div className="rounded-md border bg-white py-14 text-center text-muted-foreground">
-            Nenhum tutorial encontrado para “{busca}”.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {resultadosBusca.length}{" "}
-              {resultadosBusca.length === 1
-                ? "resultado"
-                : "resultados"}{" "}
-              para “{busca}”
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
+        /* ---- Resultados de busca ---- */
+        <div className="mx-auto max-w-3xl space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {resultadosBusca.length}{" "}
+            {resultadosBusca.length === 1 ? "resultado" : "resultados"} para “
+            {busca}”
+          </p>
+          {resultadosBusca.length === 0 ? (
+            <div className="rounded-xl border bg-white py-14 text-center text-muted-foreground">
+              Nenhum tutorial encontrado. Tente outras palavras.
+            </div>
+          ) : (
+            <div className="divide-y rounded-xl border bg-white">
               {resultadosBusca.map((t) => (
-                <CardTutorial key={t.id} t={t} mostrarCategoria />
+                <button
+                  key={t.id}
+                  onClick={() => abrirLeitura(t)}
+                  className="group flex w-full items-start gap-3 px-5 py-4 text-left transition hover:bg-muted/50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t.categoria ?? SEM_CATEGORIA}
+                    </span>
+                    <div className="font-medium text-foreground">
+                      {t.titulo}
+                    </div>
+                    {t.resumo && (
+                      <p className="mt-0.5 text-sm text-muted-foreground line-clamp-1">
+                        {t.resumo}
+                      </p>
+                    )}
+                  </div>
+                  <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-brand" />
+                </button>
               ))}
             </div>
-          </div>
-        )
-      ) : categoriaAberta ? (
-        /* ---- Dentro de uma categoria ---- */
-        <div className="space-y-4">
-          <button
-            onClick={() => setCategoriaAberta(null)}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" /> Todas as categorias
-          </button>
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/10 text-brand">
-              {(() => {
-                const Icon = iconeDe(categoriaAberta);
-                return <Icon className="h-5 w-5" />;
-              })()}
-            </span>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">
-                {categoriaAberta}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {itensCategoriaAberta.length}{" "}
-                {itensCategoriaAberta.length === 1 ? "tutorial" : "tutoriais"}
-              </p>
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {itensCategoriaAberta.map((t) => (
-              <CardTutorial key={t.id} t={t} />
-            ))}
-          </div>
+          )}
         </div>
       ) : categorias.length === 0 ? (
-        <div className="rounded-md border bg-white py-14 text-center text-muted-foreground">
+        <div className="rounded-xl border bg-white py-14 text-center text-muted-foreground">
           Nenhum tutorial ainda.
         </div>
       ) : (
-        /* ---- Índice de categorias ---- */
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        /* ---- Diretório: categorias com seus artigos ---- */
+        <div className="grid items-start gap-4 md:grid-cols-2">
           {categorias.map(({ nome, itens }) => {
             const Icon = iconeDe(nome);
             return (
-              <button
+              <section
                 key={nome}
-                onClick={() => setCategoriaAberta(nome)}
-                className="group flex items-center gap-4 rounded-xl border bg-white p-5 text-left transition hover:border-brand/40 hover:shadow-sm"
+                className="rounded-xl border bg-white p-5 shadow-sm"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-foreground">
-                    {nome}
+                <div className="mb-1 flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                    <Icon className="h-5 w-5" />
                   </span>
-                  <span className="text-sm text-muted-foreground">
-                    {itens.length}{" "}
-                    {itens.length === 1 ? "tutorial" : "tutoriais"}
-                  </span>
-                </span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-brand" />
-              </button>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground">{nome}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {itens.length}{" "}
+                      {itens.length === 1 ? "tutorial" : "tutoriais"}
+                    </p>
+                  </div>
+                </div>
+                <ul className="mt-2 divide-y">
+                  {itens.map((t) => (
+                    <li key={t.id}>
+                      <button
+                        onClick={() => abrirLeitura(t)}
+                        className="group flex w-full items-center justify-between gap-2 py-2.5 text-left"
+                      >
+                        <span className="flex min-w-0 items-center gap-2 text-sm text-foreground/90 group-hover:text-brand">
+                          <span className="truncate">{t.titulo}</span>
+                          {isAdmin && !t.publicado && (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 text-[10px]"
+                            >
+                              Rascunho
+                            </Badge>
+                          )}
+                        </span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 transition group-hover:translate-x-0.5 group-hover:text-brand" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             );
           })}
         </div>
       )}
 
-      {/* Leitura do tutorial */}
-      <Sheet open={!!lendo} onOpenChange={(o) => !o && fecharLeitura()}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-          {lendo && (
-            <>
-              <SheetHeader>
-                <button
-                  onClick={fecharLeitura}
-                  className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                >
-                  <ArrowLeft className="h-4 w-4" /> Voltar
-                </button>
-                {lendo.categoria && (
-                  <span className="inline-block w-fit rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
-                    {lendo.categoria}
-                  </span>
-                )}
-                <SheetTitle className="text-2xl leading-tight">
-                  {lendo.titulo}
-                </SheetTitle>
-              </SheetHeader>
-              <div
-                className="prose prose-sm mt-5 max-w-none prose-headings:text-secondary prose-a:text-brand prose-img:rounded-lg"
-                dangerouslySetInnerHTML={{ __html: lendo.conteudo_html }}
-              />
-              {isAdmin && (
-                <div className="mt-6 border-t pt-4">
-                  <Button
-                    variant="outline"
-                    className="gap-1.5"
-                    onClick={() => {
-                      const t = lendo;
-                      setLendo(null);
-                      setEditando(t);
-                    }}
-                  >
-                    <Pencil className="h-3.5 w-3.5" /> Editar este tutorial
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      {renderEditor()}
+      {renderExcluir()}
+    </div>
+  );
 
-      {/* Editor (admin) */}
+  // ---------- Sheets compartilhados (editor + exclusão) ----------
+  function renderEditor() {
+    return (
       <Sheet open={!!editando} onOpenChange={(o) => !o && setEditando(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
           <SheetHeader>
@@ -580,8 +556,11 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+    );
+  }
 
-      {/* Confirmar exclusão */}
+  function renderExcluir() {
+    return (
       <Sheet
         open={!!paraExcluir}
         onOpenChange={(o) => !o && setParaExcluir(null)}
@@ -606,6 +585,6 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
           </SheetFooter>
         </SheetContent>
       </Sheet>
-    </div>
-  );
+    );
+  }
 };
