@@ -104,7 +104,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
 
   const Sidebar = (
     <aside
-      className="flex w-60 shrink-0 flex-col text-white"
+      className="flex min-h-0 w-60 shrink-0 flex-col text-white"
       style={{ backgroundColor: SIDEBAR_BG }}
     >
       <div className="flex flex-col items-start gap-2 px-5 py-6">
@@ -113,7 +113,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
       </div>
       <hr className="border-white/15" />
 
-      <nav className="flex-1 space-y-1 p-3">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {itensVisiveis.map((item) => {
           const ativo = !checkinAtivo && abaAtiva === item.id;
           const Icon = item.icon;
@@ -199,7 +199,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
   );
 
   return (
-    <div className="flex min-h-screen w-full" style={{ backgroundColor: "#F5F5F5" }}>
+    <div className="flex h-screen w-full overflow-hidden" style={{ backgroundColor: "#F5F5F5" }}>
       {/* Desktop sidebar */}
       <div className="hidden md:flex">{Sidebar}</div>
 
@@ -214,7 +214,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Mobile topbar */}
         <header
           className="flex items-center gap-3 border-b bg-white px-4 py-3 md:hidden"
@@ -232,7 +232,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
           </p>
         </header>
 
-        <main className="flex-1 p-4 md:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
       </div>
     </div>
   );

@@ -234,7 +234,8 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
     const p = new URLSearchParams(searchParams);
     p.set("artigo", t.slug);
     setSearchParams(p, { replace: true });
-    window.scrollTo({ top: 0 });
+    // O scroll agora é do <main>, não da janela.
+    document.querySelector("main")?.scrollTo({ top: 0 });
   };
 
   const fecharLeitura = () => {
