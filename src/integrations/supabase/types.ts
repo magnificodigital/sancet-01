@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      auditoria_acesso: {
+        Row: {
+          acao: string
+          ator_email: string | null
+          ator_user_id: string | null
+          criado_em: string
+          detalhe: string | null
+          id: string
+          paciente_id: string | null
+          paciente_nome: string | null
+        }
+        Insert: {
+          acao: string
+          ator_email?: string | null
+          ator_user_id?: string | null
+          criado_em?: string
+          detalhe?: string | null
+          id?: string
+          paciente_id?: string | null
+          paciente_nome?: string | null
+        }
+        Update: {
+          acao?: string
+          ator_email?: string | null
+          ator_user_id?: string | null
+          criado_em?: string
+          detalhe?: string | null
+          id?: string
+          paciente_id?: string | null
+          paciente_nome?: string | null
+        }
+        Relationships: []
+      }
       configuracoes: {
         Row: {
           atualizado_em: string
@@ -333,6 +366,7 @@ export type Database = {
           conteudo_html: string
           criado_em: string
           criado_por: string | null
+          home: boolean
           id: string
           meta_description: string | null
           meta_title: string | null
@@ -348,6 +382,7 @@ export type Database = {
           conteudo_html?: string
           criado_em?: string
           criado_por?: string | null
+          home?: boolean
           id?: string
           meta_description?: string | null
           meta_title?: string | null
@@ -363,6 +398,7 @@ export type Database = {
           conteudo_html?: string
           criado_em?: string
           criado_por?: string | null
+          home?: boolean
           id?: string
           meta_description?: string | null
           meta_title?: string | null
@@ -507,6 +543,51 @@ export type Database = {
           },
         ]
       }
+      posts: {
+        Row: {
+          autor: string | null
+          capa_url: string | null
+          categoria: string | null
+          conteudo_html: string
+          criado_em: string
+          id: string
+          publicado: boolean
+          publicado_em: string
+          resumo: string | null
+          slug: string
+          titulo: string
+          wp_id: number | null
+        }
+        Insert: {
+          autor?: string | null
+          capa_url?: string | null
+          categoria?: string | null
+          conteudo_html?: string
+          criado_em?: string
+          id?: string
+          publicado?: boolean
+          publicado_em?: string
+          resumo?: string | null
+          slug: string
+          titulo: string
+          wp_id?: number | null
+        }
+        Update: {
+          autor?: string | null
+          capa_url?: string | null
+          categoria?: string | null
+          conteudo_html?: string
+          criado_em?: string
+          id?: string
+          publicado?: boolean
+          publicado_em?: string
+          resumo?: string | null
+          slug?: string
+          titulo?: string
+          wp_id?: number | null
+        }
+        Relationships: []
+      }
       resultados: {
         Row: {
           arquivo_url: string
@@ -588,6 +669,45 @@ export type Database = {
           tipo?: string
           unidades_atualizadas?: number
           unidades_criadas?: number
+        }
+        Relationships: []
+      }
+      tutoriais: {
+        Row: {
+          atualizado_em: string
+          categoria: string | null
+          conteudo_html: string
+          criado_em: string
+          id: string
+          ordem: number
+          publicado: boolean
+          resumo: string | null
+          slug: string
+          titulo: string
+        }
+        Insert: {
+          atualizado_em?: string
+          categoria?: string | null
+          conteudo_html?: string
+          criado_em?: string
+          id?: string
+          ordem?: number
+          publicado?: boolean
+          resumo?: string | null
+          slug: string
+          titulo: string
+        }
+        Update: {
+          atualizado_em?: string
+          categoria?: string | null
+          conteudo_html?: string
+          criado_em?: string
+          id?: string
+          ordem?: number
+          publicado?: boolean
+          resumo?: string | null
+          slug?: string
+          titulo?: string
         }
         Relationships: []
       }
@@ -790,31 +910,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      atualizar_meu_perfil: {
-        Args: { p_cpf: string; p_data_nasc: string; p_patch: Json }
-        Returns: Json
-      }
       atualizar_meu_perfil_auth: { Args: { p_patch: Json }; Returns: Json }
       cadastrar_paciente: { Args: { p: Json }; Returns: Json }
-      cancelar_meu_pedido: {
-        Args: { p_cpf: string; p_protocolo: string }
-        Returns: boolean
-      }
       cancelar_meu_pedido_auth: {
         Args: { p_protocolo: string }
-        Returns: boolean
-      }
-      confirmar_pagamento_manual: {
-        Args: { p_cpf: string; p_protocolo: string }
         Returns: boolean
       }
       confirmar_pagamento_manual_auth: {
         Args: { p_protocolo: string }
         Returns: boolean
-      }
-      criar_pedido_paciente: {
-        Args: { p_cpf: string; p_data_nasc: string; p_pedido: Json }
-        Returns: Json
       }
       criar_pedido_paciente_auth: { Args: { p_pedido: Json }; Returns: Json }
       gerar_protocolo_sancet: { Args: never; Returns: string }
@@ -825,25 +929,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      login_paciente: {
-        Args: { p_cpf: string; p_data_nasc: string }
-        Returns: Json
-      }
-      meu_perfil: {
-        Args: { p_cpf: string; p_data_nasc: string }
-        Returns: Json
-      }
       meu_perfil_auth: { Args: never; Returns: Json }
-      pedido_por_protocolo: {
-        Args: { p_cpf: string; p_protocolo: string }
-        Returns: Json
-      }
       pedido_por_protocolo_auth: {
         Args: { p_protocolo: string }
-        Returns: Json
-      }
-      pedidos_do_paciente: {
-        Args: { p_cpf: string; p_data_nasc: string }
         Returns: Json
       }
       pedidos_do_paciente_auth: { Args: never; Returns: Json }
@@ -851,15 +939,16 @@ export type Database = {
         Args: { p_codigo_shift: string }
         Returns: boolean
       }
-      resultados_do_paciente: {
-        Args: { p_cpf: string; p_data_nasc: string }
-        Returns: Json
+      registrar_acesso: {
+        Args: { p_acao: string; p_detalhe?: string; p_paciente_id: string }
+        Returns: undefined
       }
       resultados_do_paciente_auth: { Args: never; Returns: Json }
       staff_pode_ver_paciente: {
         Args: { p_paciente_id: string }
         Returns: boolean
       }
+      tema_publico: { Args: never; Returns: Json }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {

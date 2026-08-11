@@ -431,12 +431,12 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
   // ---- Rodapé (texto + links) ----
   const footerLinks = parseFooterLinks(configs.FOOTER_LINKS);
   const setFooterTexto = (v: string) => {
-    const novos = { ...configs, FOOTER_TEXTO: v };
+    const novos: Configs = { ...configs, FOOTER_TEXTO: v };
     setConfigs(novos);
     setFooter({ texto: v, links: parseFooterLinks(novos.FOOTER_LINKS) });
   };
   const setFooterLinksList = (links: { label: string; url: string }[]) => {
-    const novos = { ...configs, FOOTER_LINKS: JSON.stringify(links) };
+    const novos: Configs = { ...configs, FOOTER_LINKS: JSON.stringify(links) };
     setConfigs(novos);
     setFooter({ texto: novos.FOOTER_TEXTO || "", links });
   };

@@ -34,6 +34,7 @@ import LandingPublica from "./pages/LandingPublica.tsx";
 import PaginaPublica from "./pages/PaginaPublica.tsx";
 import Preparos from "./pages/Preparos.tsx";
 import Denuncias from "./pages/Denuncias.tsx";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade.tsx";
 import Blog from "./pages/Blog.tsx";
 import BlogPost from "./pages/BlogPost.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -80,6 +81,7 @@ const App = () => {
           <Route path="/staff/paginas/:id" element={<StaffPaginaEditor kind="landing" />} />
           <Route path="/staff/paginas-cms/:id" element={<StaffPaginaEditor kind="cms" />} />
           <Route path="/preparos" element={<Preparos />} />
+          <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/denuncias" element={<Denuncias />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
