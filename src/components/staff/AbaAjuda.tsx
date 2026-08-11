@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +29,7 @@ import {
   ClipboardList,
   FileText,
   FlaskConical,
+  Image as ImageIcon,
   LayoutDashboard,
   LifeBuoy,
   Loader2,
@@ -38,6 +45,7 @@ import {
   Trash2,
   UserCog,
   Users,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 
@@ -236,6 +244,77 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
     setSearchParams(p, { replace: true });
   };
 
+  // ---- Inserção de imagem/vídeo no conteúdo do editor ----
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const imgInputRef = useRef<HTMLInputElement>(null);
+  const [enviandoImg, setEnviandoImg] = useState(false);
+
+  // Insere o trecho no ponto do cursor (ou no fim) e reposiciona o cursor.
+  const inserirConteudo = (trecho: string) => {
+    setEditando((prev) => {
+      if (!prev) return prev;
+      const ta = contentRef.current;
+      const atual = prev.conteudo_html ?? "";
+      if (!ta) return { ...prev, conteudo_html: atual + trecho };
+      const start = ta.selectionStart ?? atual.length;
+      const end = ta.selectionEnd ?? atual.length;
+      const novo = atual.slice(0, start) + trecho + atual.slice(end);
+      requestAnimationFrame(() => {
+        ta.focus();
+        const pos = start + trecho.length;
+        ta.setSelectionRange(pos, pos);
+      });
+      return { ...prev, conteudo_html: novo };
+    });
+  };
+
+  const onUploadImagem = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEnviandoImg(true);
+    try {
+      const path = `tutoriais/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage
+        .from("imagens-exames")
+        .upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage
+        .from("imagens-exames")
+        .getPublicUrl(path);
+      inserirConteudo(`\n<img src="${data.publicUrl}" alt="">\n`);
+      toast.success("Imagem inserida no conteúdo.");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Erro ao enviar imagem.");
+    } finally {
+      setEnviandoImg(false);
+      e.target.value = "";
+    }
+  };
+
+  const urlParaEmbed = (url: string): string | null => {
+    const yt = url.match(
+      /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/,
+    );
+    if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+    const lo = url.match(/loom\.com\/(?:share|embed)\/([\w-]+)/);
+    if (lo) return `https://www.loom.com/embed/${lo[1]}`;
+    return null;
+  };
+
+  const inserirVideo = () => {
+    const url = window.prompt("Cole o link do vídeo (YouTube ou Loom):");
+    if (!url) return;
+    const embed = urlParaEmbed(url.trim());
+    if (!embed) {
+      toast.error("Link não reconhecido. Use um link do YouTube ou do Loom.");
+      return;
+    }
+    inserirConteudo(
+      `\n<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;margin:1.5rem 0"><iframe src="${embed}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe></div>\n`,
+    );
+    toast.success("Vídeo inserido no conteúdo.");
+  };
+
   // ---------- LEITURA DO ARTIGO (página inteira, estilo documentação) ----------
   if (lendo) {
     const Icon = iconeDe(lendo.categoria?.trim() || SEM_CATEGORIA);
@@ -275,7 +354,7 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
           )}
 
           <div
-            className="prose prose-slate mt-6 max-w-none prose-headings:text-secondary prose-a:text-brand prose-img:rounded-lg prose-li:marker:text-brand"
+            className="prose prose-slate mt-8 max-w-none prose-headings:font-semibold prose-headings:text-secondary prose-h2:mt-10 prose-h2:mb-3 prose-h2:text-xl prose-h3:text-lg prose-p:my-4 prose-p:leading-relaxed prose-a:font-medium prose-a:text-brand prose-strong:text-foreground prose-ol:my-4 prose-ul:my-4 prose-li:my-1.5 prose-li:marker:text-brand prose-img:my-6 prose-img:w-full prose-img:rounded-xl prose-img:border prose-img:shadow-sm prose-blockquote:rounded-r-lg prose-blockquote:border-l-brand prose-blockquote:bg-brand/5 prose-blockquote:py-0.5 prose-blockquote:not-italic prose-blockquote:text-foreground/80"
             dangerouslySetInnerHTML={{ __html: lendo.conteudo_html }}
           />
 
@@ -516,19 +595,54 @@ export const AbaAjuda = ({ isAdmin }: Props) => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Conteúdo (HTML)</Label>
+                <Label>Conteúdo</Label>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    ref={imgInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={onUploadImagem}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={enviandoImg}
+                    onClick={() => imgInputRef.current?.click()}
+                  >
+                    {enviandoImg ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ImageIcon className="h-3.5 w-3.5" />
+                    )}
+                    Inserir imagem
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={inserirVideo}
+                  >
+                    <Video className="h-3.5 w-3.5" /> Inserir vídeo
+                  </Button>
+                </div>
                 <Textarea
+                  ref={contentRef}
                   rows={14}
                   value={editando.conteudo_html}
                   onChange={(e) =>
                     setEditando({ ...editando, conteudo_html: e.target.value })
                   }
                   className="font-mono text-xs"
-                  placeholder="<p>Passo a passo...</p> — aceita listas <ol>, imagens <img> e vídeos (embed do YouTube/Loom)."
+                  placeholder="Escreva o passo a passo. Use os botões acima para inserir prints e vídeos — o conteúdo entra no ponto do cursor."
                 />
                 <p className="text-xs text-muted-foreground">
-                  Dica: use <code>&lt;ol&gt;&lt;li&gt;</code> para o passo a
-                  passo e cole o embed do YouTube/Loom para vídeos de tela.
+                  Escreva em HTML simples (&lt;p&gt;, &lt;ol&gt;&lt;li&gt;,
+                  &lt;strong&gt;) ou use os botões para inserir imagem/vídeo.
+                  Para uma dica em destaque, use &lt;blockquote&gt;.
                 </p>
               </div>
               <label className="flex items-center gap-2 text-sm">
