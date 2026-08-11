@@ -81,6 +81,7 @@ const App = () => {
           <Route path="/staff/paginas/:id" element={<StaffPaginaEditor kind="landing" />} />
           <Route path="/staff/paginas-cms/:id" element={<StaffPaginaEditor kind="cms" />} />
           <Route path="/preparos" element={<Preparos />} />
+          <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/denuncias" element={<Denuncias />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
