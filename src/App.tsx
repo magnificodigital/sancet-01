@@ -34,6 +34,7 @@ import LandingPublica from "./pages/LandingPublica.tsx";
 import PaginaPublica from "./pages/PaginaPublica.tsx";
 import Preparos from "./pages/Preparos.tsx";
 import Denuncias from "./pages/Denuncias.tsx";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade.tsx";
 import Blog from "./pages/Blog.tsx";
 import BlogPost from "./pages/BlogPost.tsx";
 import NotFound from "./pages/NotFound.tsx";
