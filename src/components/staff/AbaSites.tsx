@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AbaPaginasCMS } from "./AbaPaginasCMS";
 import { AbaPaginas } from "./AbaPaginas";
 import { AbaBlog } from "./AbaBlog";
+import { AbaAvisos } from "./AbaAvisos";
 
 export const AbaSites = () => {
   return (
@@ -17,6 +18,7 @@ export const AbaSites = () => {
           <TabsTrigger value="site">Páginas do site</TabsTrigger>
           <TabsTrigger value="landing">Landing pages</TabsTrigger>
           <TabsTrigger value="blog">Blog</TabsTrigger>
+          <TabsTrigger value="avisos">Avisos</TabsTrigger>
         </TabsList>
         <TabsContent value="site" className="pt-4">
           <AbaPaginasCMS />
@@ -26,6 +28,9 @@ export const AbaSites = () => {
         </TabsContent>
         <TabsContent value="blog" className="pt-4">
           <AbaBlog />
+        </TabsContent>
+        <TabsContent value="avisos" className="pt-4">
+          <AbaAvisos />
         </TabsContent>
       </Tabs>
     </div>

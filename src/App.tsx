@@ -40,6 +40,7 @@ import Blog from "./pages/Blog.tsx";
 import BlogPost from "./pages/BlogPost.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { BarraCheckoutFlutuante } from "./components/catalogo/BarraCheckoutFlutuante";
+import { AvisoPopup } from "./components/avisos/AvisoPopup";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +93,7 @@ const App = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
         <BarraCheckoutFlutuante />
+        <AvisoPopup />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
