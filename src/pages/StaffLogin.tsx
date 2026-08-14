@@ -15,10 +15,23 @@ const StaffLogin = () => {
   const [verSenha, setVerSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
+  // SEGURANÇA: só é da equipe quem tem linha em user_roles (paciente logado não tem).
+  const temPapelStaff = async (uid: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", uid)
+      .maybeSingle();
+    return !!data;
+  };
+
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) navigate("/staff/dashboard", { replace: true });
+    supabase.auth.getSession().then(async ({ data }) => {
+      const uid = data.session?.user.id;
+      if (active && uid && (await temPapelStaff(uid))) {
+        navigate("/staff/dashboard", { replace: true });
+      }
     });
     return () => {
       active = false;
@@ -28,15 +41,23 @@ const StaffLogin = () => {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCarregando(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password: senha,
     });
-    setCarregando(false);
-    if (error) {
+    if (error || !data.user) {
+      setCarregando(false);
       toast.error("E-mail ou senha incorretos");
       return;
     }
+    // SEGURANÇA: só entra no painel quem tem papel de equipe.
+    if (!(await temPapelStaff(data.user.id))) {
+      await supabase.auth.signOut();
+      setCarregando(false);
+      toast.error("Esta conta não tem acesso ao painel da equipe.");
+      return;
+    }
+    setCarregando(false);
     navigate("/staff/dashboard", { replace: true });
   };
 

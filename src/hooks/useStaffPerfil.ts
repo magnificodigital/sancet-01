@@ -45,13 +45,20 @@ export const useStaffPerfil = (): StaffPerfil => {
         .eq("user_id", uid)
         .maybeSingle();
 
-      const role = (row?.role ?? "staff") as "admin" | "staff";
+      // SEGURANÇA: sem linha em user_roles = NÃO é da equipe (ex.: paciente logado).
+      // Nunca assumir "staff" por padrão.
+      if (!row) {
+        setPerfil({ role: null, nome: null, permissoes: null, isAdmin: false, carregando: false });
+        return;
+      }
+
+      const role = (row.role ?? "staff") as "admin" | "staff";
       const isAdmin = role === "admin";
 
       setPerfil({
         role,
-        nome: row?.nome ?? null,
-        permissoes: isAdmin ? PERMISSOES_ADMIN : (row?.permissoes as Permissoes) ?? null,
+        nome: row.nome ?? null,
+        permissoes: isAdmin ? PERMISSOES_ADMIN : (row.permissoes as Permissoes) ?? null,
         isAdmin,
         carregando: false,
       });

@@ -30,6 +30,7 @@ import StaffDashboard from "./pages/StaffDashboard.tsx";
 import StaffCheckin from "./pages/StaffCheckin.tsx";
 import StaffAlterarSenha from "./pages/StaffAlterarSenha.tsx";
 import StaffPaginaEditor from "./pages/StaffPaginaEditor.tsx";
+import { RequireStaff } from "./components/staff/RequireStaff.tsx";
 import LandingPublica from "./pages/LandingPublica.tsx";
 import PaginaPublica from "./pages/PaginaPublica.tsx";
 import Preparos from "./pages/Preparos.tsx";
@@ -75,11 +76,11 @@ const App = () => {
           <Route path="/pronto/:protocolo" element={<Pronto />} />
           <Route path="/pagamento/:protocolo" element={<Pagamento />} />
           <Route path="/staff/login" element={<StaffLogin />} />
-          <Route path="/staff/dashboard" element={<StaffDashboard />} />
-          <Route path="/staff/checkin" element={<StaffCheckin />} />
-          <Route path="/staff/alterar-senha" element={<StaffAlterarSenha />} />
-          <Route path="/staff/paginas/:id" element={<StaffPaginaEditor kind="landing" />} />
-          <Route path="/staff/paginas-cms/:id" element={<StaffPaginaEditor kind="cms" />} />
+          <Route path="/staff/dashboard" element={<RequireStaff><StaffDashboard /></RequireStaff>} />
+          <Route path="/staff/checkin" element={<RequireStaff><StaffCheckin /></RequireStaff>} />
+          <Route path="/staff/alterar-senha" element={<RequireStaff><StaffAlterarSenha /></RequireStaff>} />
+          <Route path="/staff/paginas/:id" element={<RequireStaff><StaffPaginaEditor kind="landing" /></RequireStaff>} />
+          <Route path="/staff/paginas-cms/:id" element={<RequireStaff><StaffPaginaEditor kind="cms" /></RequireStaff>} />
           <Route path="/preparos" element={<Preparos />} />
           <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/denuncias" element={<Denuncias />} />
