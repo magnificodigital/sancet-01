@@ -96,6 +96,8 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
     : "—";
 
   const endereco = pedido.endereco_coleta as any;
+  // Convênio não exibe preço (nem por item, nem total) — regra do projeto.
+  const isConvenio = pedido.tipo_solicitacao === "convenio";
 
   return (
     <Sheet open={!!pedido} onOpenChange={(o) => !o && onClose()}>
@@ -116,9 +118,11 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
               {itens.map((i, idx) => (
                 <li key={idx} className="flex justify-between text-sm gap-2">
                   <span className="truncate">{i.nome}</span>
-                  <span className="text-muted-foreground whitespace-nowrap">
-                    {i.precoCentavos != null ? formatarPreco(i.precoCentavos) : "—"}
-                  </span>
+                  {!isConvenio && (
+                    <span className="text-muted-foreground whitespace-nowrap">
+                      {i.precoCentavos != null ? formatarPreco(i.precoCentavos) : "—"}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -153,12 +157,14 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
             </p>
           </section>
 
-          <section>
-            <h4 className="text-sm font-semibold mb-2">Valor total</h4>
-            <p className="text-lg font-bold text-brand">
-              {formatarPreco(pedido.valor_total_centavos ?? 0)}
-            </p>
-          </section>
+          {!isConvenio && (
+            <section>
+              <h4 className="text-sm font-semibold mb-2">Valor total</h4>
+              <p className="text-lg font-bold text-brand">
+                {formatarPreco(pedido.valor_total_centavos ?? 0)}
+              </p>
+            </section>
+          )}
 
           <section>
             <h4 className="text-sm font-semibold mb-2">Resultados</h4>
