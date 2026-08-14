@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { useSacola } from "@/stores/sacola";
 import { AlertTrocarTipo } from "@/components/catalogo/AlertTrocarTipo";
 import { cn } from "@/lib/utils";
-import { OCULTAR_PARTICULAR } from "@/config/testeConvenio";
+import { useAtendimento } from "@/lib/tema";
 
 const SelecaoTipoCompra = () => {
   const navigate = useNavigate();
   const { tipo, itens, limparContexto, setTipo } = useSacola();
+  const { particular: aceitaParticular, convenio: aceitaConvenio } = useAtendimento();
+  const ambos = aceitaParticular && aceitaConvenio;
   const [pendente, setPendente] = useState<"particular" | "convenio" | null>(null);
 
   const ir = (escolha: "particular" | "convenio") => {
@@ -49,10 +51,10 @@ const SelecaoTipoCompra = () => {
         <div
           className={cn(
             "grid gap-5",
-            OCULTAR_PARTICULAR ? "max-w-md mx-auto" : "md:grid-cols-2 max-w-4xl mx-auto",
+            ambos ? "md:grid-cols-2 max-w-4xl mx-auto" : "max-w-md mx-auto",
           )}
         >
-          {!OCULTAR_PARTICULAR && (
+          {aceitaParticular && (
             <button
               onClick={() => ir("particular")}
               className="text-left rounded-2xl border-2 border-brand bg-card p-6 hover:bg-brand/5 transition group"
@@ -68,25 +70,27 @@ const SelecaoTipoCompra = () => {
             </button>
           )}
 
-          <button
-            onClick={() => ir("convenio")}
-            className="text-left rounded-2xl border-2 border-brand-2 bg-card p-6 hover:bg-brand-2/5 transition group"
-          >
-            <ShieldCheck className="h-10 w-10 text-brand-2 mb-3" />
-            <h2 className="text-xl font-bold text-secondary mb-2">
-              Convênio / Plano de Saúde
-            </h2>
-            <p className="text-sm text-muted-foreground mb-5">
-              Realize seus exames pelo seu plano. Verificamos cobertura. Apresentação
-              obrigatória de carteirinha e documentos.
-            </p>
-            <Button className="w-full bg-brand-2 hover:bg-[#16315a] text-white gap-2">
-              Começar por Convênio <ChevronRight className="h-4 w-4" />
-            </Button>
-          </button>
+          {aceitaConvenio && (
+            <button
+              onClick={() => ir("convenio")}
+              className="text-left rounded-2xl border-2 border-brand-2 bg-card p-6 hover:bg-brand-2/5 transition group"
+            >
+              <ShieldCheck className="h-10 w-10 text-brand-2 mb-3" />
+              <h2 className="text-xl font-bold text-secondary mb-2">
+                Convênio / Plano de Saúde
+              </h2>
+              <p className="text-sm text-muted-foreground mb-5">
+                Realize seus exames pelo seu plano. Verificamos cobertura. Apresentação
+                obrigatória de carteirinha e documentos.
+              </p>
+              <Button className="w-full bg-brand-2 hover:bg-[#16315a] text-white gap-2">
+                Começar por Convênio <ChevronRight className="h-4 w-4" />
+              </Button>
+            </button>
+          )}
         </div>
 
-        {!OCULTAR_PARTICULAR && (
+        {ambos && (
           <p className="text-center text-xs text-muted-foreground mt-6 max-w-2xl mx-auto">
             Você poderá trocar o tipo depois, mas perderá os itens já selecionados.
           </p>

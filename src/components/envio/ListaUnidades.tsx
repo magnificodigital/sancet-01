@@ -2,11 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  SOMENTE_MATRIZ,
-  MATRIZ_CODIGO_SHIFT,
-  MATRIZ_NOME,
-} from "@/config/testeConvenio";
+import { MATRIZ_CODIGO_SHIFT, MATRIZ_NOME } from "@/config/testeConvenio";
+import { useAtendimento } from "@/lib/tema";
 
 export type Unidade = {
   codigo_shift: string;
@@ -29,6 +26,7 @@ type Props = {
 };
 
 export const ListaUnidades = ({ onEscolher }: Props) => {
+  const { somenteMatriz } = useAtendimento();
   const { data, isLoading } = useQuery({
     queryKey: ["unidades_cache"],
     queryFn: async () => {
@@ -45,7 +43,7 @@ export const ListaUnidades = ({ onEscolher }: Props) => {
   const ehMatriz = (u: Unidade) =>
     u.codigo_shift === MATRIZ_CODIGO_SHIFT ||
     (u.nome ?? "").toLowerCase().includes(MATRIZ_NOME);
-  const unidades = SOMENTE_MATRIZ ? base.filter(ehMatriz) : base;
+  const unidades = somenteMatriz ? base.filter(ehMatriz) : base;
 
   if (isLoading) {
     return <p className="text-muted-foreground text-sm">Carregando unidades...</p>;

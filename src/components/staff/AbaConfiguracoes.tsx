@@ -17,6 +17,7 @@ import {
   CircleDashed,
   Palette,
   ShieldAlert,
+  SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,7 @@ import { AbaAuditoria } from "./AbaAuditoria";
 import { aplicarTema, aplicarFavicon, setLogos, setFooter, parseFooterLinks, TEMA_PADRAO } from "@/lib/tema";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ConfirmarExclusao } from "./ConfirmarExclusao";
@@ -76,6 +78,11 @@ const CHAVES = [
   "FAVICON",
   "FOOTER_TEXTO",
   "FOOTER_LINKS",
+  "ATEND_PARTICULAR",
+  "ATEND_CONVENIO",
+  "ATEND_SANCET_CASA",
+  "ATEND_SOMENTE_MATRIZ",
+  "ATEND_CONVENIO_PULAR_CATALOGO",
 ];
 
 const SENSIVEIS = new Set([
@@ -89,7 +96,7 @@ const SENSIVEIS = new Set([
   "RESEND_API_KEY",
 ]);
 
-type SecaoId = "shift" | "ia" | "pagamento" | "email" | "aparencia" | "auditoria" | "risco";
+type SecaoId = "shift" | "ia" | "pagamento" | "email" | "atendimento" | "aparencia" | "auditoria" | "risco";
 
 type Secao = {
   id: SecaoId;
@@ -126,6 +133,13 @@ const SECOES: Secao[] = [
     descricao: "Asaas, Mercado Pago e Paghiper",
     icone: CreditCard,
     chavesRequeridas: ["GATEWAY_ATIVO"],
+  },
+  {
+    id: "atendimento",
+    titulo: "Modo de atendimento",
+    descricao: "Ativar/desativar Convênio, Particular e opções do checkout",
+    icone: SlidersHorizontal,
+    adminOnly: true,
   },
   {
     id: "email",
@@ -328,6 +342,12 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
 
   const set = (chave: string, valor: string) =>
     setConfigs((prev) => ({ ...prev, [chave]: valor }));
+
+  // Lê um toggle salvo como "true"/"false"; usa o default quando ainda não existe.
+  const boolConfig = (chave: string, def: boolean) => {
+    const v = configs[chave];
+    return v == null || v === "" ? def : v === "true";
+  };
 
   const toggleRevelar = (chave: string) =>
     setRevelados((prev) => {
@@ -574,6 +594,44 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                 </p>
               )}
             </>
+          )}
+
+          {secaoAtiva === "atendimento" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SlidersHorizontal className="h-5 w-5 text-secondary" /> Modo de atendimento
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Controle o que aparece para o paciente no site. As mudanças
+                  valem após clicar em <b>Salvar</b>.
+                </p>
+                {[
+                  { chave: "ATEND_CONVENIO", label: "Aceitar Convênio", desc: "Mostra a opção de atendimento por convênio.", def: true },
+                  { chave: "ATEND_PARTICULAR", label: "Aceitar Particular", desc: "Mostra a opção particular (com preços).", def: false },
+                  { chave: "ATEND_SANCET_CASA", label: "Oferecer coleta em casa", desc: "Exibe a opção 'Sancet em Casa' no checkout.", def: false },
+                  { chave: "ATEND_SOMENTE_MATRIZ", label: "Mostrar apenas a Matriz", desc: "Restringe a seleção de unidade à Matriz.", def: true },
+                  { chave: "ATEND_CONVENIO_PULAR_CATALOGO", label: "Convênio pula o catálogo", desc: "No fluxo de convênio, vai direto ao envio do pedido.", def: true },
+                ].map((t) => (
+                  <div
+                    key={t.chave}
+                    className="flex items-center justify-between gap-4 border-b py-3 last:border-b-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{t.label}</p>
+                      <p className="text-xs text-muted-foreground">{t.desc}</p>
+                    </div>
+                    <Switch
+                      checked={boolConfig(t.chave, t.def)}
+                      disabled={!podeEditar}
+                      onCheckedChange={(v) => set(t.chave, v ? "true" : "false")}
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           )}
 
           {secaoAtiva === "aparencia" && (

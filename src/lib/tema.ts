@@ -25,6 +25,34 @@ export function setFooter(f: FooterConfig) {
   footerSubs.forEach((cb) => cb());
 }
 
+// ---- Modo de atendimento (controlável em Configurações → Modo de atendimento) ----
+export type Atendimento = {
+  particular: boolean;
+  convenio: boolean;
+  sancetCasa: boolean;
+  somenteMatriz: boolean;
+  convenioPularCatalogo: boolean;
+};
+// Defaults = comportamento atual (fase de teste do convênio) antes de carregar do banco.
+let atendimentoAtual: Atendimento = {
+  particular: false,
+  convenio: true,
+  sancetCasa: false,
+  somenteMatriz: true,
+  convenioPularCatalogo: true,
+};
+const atendSubs = new Set<() => void>();
+
+export function setAtendimento(a: Atendimento) {
+  atendimentoAtual = a;
+  atendSubs.forEach((cb) => cb());
+}
+
+export function parseBoolConfig(v: string | undefined, def: boolean): boolean {
+  if (v == null || v === "") return def;
+  return v === "true" || v === "1";
+}
+
 export function parseFooterLinks(raw: string | undefined): FooterLink[] {
   if (!raw) return [];
   try {
@@ -47,6 +75,20 @@ export function useFooter(): FooterConfig {
     };
   }, []);
   return footerAtual;
+}
+
+/** Hook reativo: flags de modo de atendimento (convênio/particular/etc.). */
+export function useAtendimento(): Atendimento {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const cb = () => force((x) => x + 1);
+    atendSubs.add(cb);
+    cb(); // relê o valor atual ao montar (evita corrida com o boot)
+    return () => {
+      atendSubs.delete(cb);
+    };
+  }, []);
+  return atendimentoAtual;
 }
 
 /** Atualiza o favicon da aba do navegador em runtime (vazio → volta ao padrão). */
@@ -168,6 +210,16 @@ export async function carregarTema() {
     setFooter({
       texto: cores.FOOTER_TEXTO || "",
       links: parseFooterLinks(cores.FOOTER_LINKS),
+    });
+    setAtendimento({
+      particular: parseBoolConfig(cores.ATEND_PARTICULAR, false),
+      convenio: parseBoolConfig(cores.ATEND_CONVENIO, true),
+      sancetCasa: parseBoolConfig(cores.ATEND_SANCET_CASA, false),
+      somenteMatriz: parseBoolConfig(cores.ATEND_SOMENTE_MATRIZ, true),
+      convenioPularCatalogo: parseBoolConfig(
+        cores.ATEND_CONVENIO_PULAR_CATALOGO,
+        true,
+      ),
     });
   } catch {
     /* silencioso — mantém as cores padrão do CSS */
