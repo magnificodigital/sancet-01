@@ -90,6 +90,18 @@ function templateConfirmadoPaciente(p: any, endereco: string): { subject: string
   return { subject, html };
 }
 
+function templateResultadoPaciente(p: any): { subject: string; html: string } {
+  const subject = `Sancet — Resultado do pedido ${p.protocolo} disponível ✅`;
+  const html = shell(
+    "Seu resultado está pronto ✅",
+    `<p>Olá, <b>${escapeHtml(p.paciente_nome)}</b>!</p>
+     <p>O resultado do seu pedido <b>${escapeHtml(p.protocolo)}</b> já está disponível. Você pode acessá-lo com segurança pelo portal.</p>
+     <p style="margin-top:16px"><a href="${BASE_URL}/agendamentos?aba=resultados" style="background:#C8102E;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block">Ver meu resultado</a></p>
+     <p style="color:#888;font-size:12px;margin-top:12px">Para sua segurança, o acesso exige seu login. O resultado tem finalidade diagnóstica e não substitui a avaliação de um médico.</p>`,
+  );
+  return { subject, html };
+}
+
 function templateAdmin(p: any): { subject: string; html: string } {
   const subject = `[Sancet] Novo pedido ${p.protocolo} — ${p.unidade_nome ?? "—"} — ${formatarData(p.data_agendamento)}`;
   const conv =
@@ -142,7 +154,7 @@ Deno.serve(async (req) => {
 
   try {
     const { pedido_id, tipo } = await req.json();
-    if (!pedido_id || !["novo", "confirmado"].includes(tipo)) {
+    if (!pedido_id || !["novo", "confirmado", "resultado"].includes(tipo)) {
       return new Response(JSON.stringify({ error: "params inválidos" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -187,6 +199,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Idempotência: nunca notificar "resultado pronto" duas vezes para o mesmo pedido.
+    if (tipo === "resultado") {
+      const jaNotificado = (Array.isArray(pedido.emails_enviados)
+        ? pedido.emails_enviados
+        : []
+      ).some((l: any) => l?.tipo === "resultado" && l?.status === "ok");
+      if (jaNotificado) {
+        return new Response(
+          JSON.stringify({ skipped: true, reason: "ja_notificado" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     let emailPaciente: string | null = null;
     let endereco = "";
     if (pedido.paciente_id) {
@@ -226,7 +252,9 @@ Deno.serve(async (req) => {
       const tpl =
         tipo === "novo"
           ? templateNovoPaciente(pedido)
-          : templateConfirmadoPaciente(pedido, endereco);
+          : tipo === "resultado"
+            ? templateResultadoPaciente(pedido)
+            : templateConfirmadoPaciente(pedido, endereco);
       const r = await enviarResend({
         apiKey,
         from,

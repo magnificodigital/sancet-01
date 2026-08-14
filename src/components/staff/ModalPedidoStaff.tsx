@@ -284,6 +284,17 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
       if (insErr) throw insErr;
       await carregarResultados(pedido.protocolo);
       toast.success("Resultado enviado!");
+      // Notifica o paciente que o resultado está disponível (só na 1ª vez — idempotente).
+      supabase.functions
+        .invoke("enviar-email-pedido", {
+          body: { pedido_id: pedido.id, tipo: "resultado" },
+        })
+        .then(({ data }) => {
+          if ((data as any)?.sent_paciente) {
+            toast.success("Paciente avisado por e-mail: resultado disponível.");
+          }
+        })
+        .catch(() => {});
     } catch (err) {
       toast.error("Erro ao enviar resultado");
     } finally {
