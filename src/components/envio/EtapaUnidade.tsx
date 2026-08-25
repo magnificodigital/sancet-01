@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { mascaraCEP } from "@/lib/mascaras";
 import { ListaUnidades, Unidade } from "./ListaUnidades";
-import { PainelUnidade } from "./PainelUnidade";
 
 type Props = {
   onConfirmar: (u: Unidade) => void;
@@ -13,7 +12,6 @@ type Props = {
 
 export const EtapaUnidade = ({ onConfirmar }: Props) => {
   const [cep, setCep] = useState("");
-  const [selecionada, setSelecionada] = useState<Unidade | null>(null);
 
   return (
     <div className="space-y-4">
@@ -39,7 +37,8 @@ export const EtapaUnidade = ({ onConfirmar }: Props) => {
         <Button variant="outline">Buscar</Button>
       </div>
 
-      <ListaUnidades onEscolher={setSelecionada} />
+      {/* "Escolher local" vai direto para a próxima etapa (sem abrir painel lateral). */}
+      <ListaUnidades onEscolher={onConfirmar} />
 
       <Alert className="bg-muted/50 border-muted-foreground/20">
         <Info className="h-4 w-4" />
@@ -47,15 +46,6 @@ export const EtapaUnidade = ({ onConfirmar }: Props) => {
           Os exames deste pedido só poderão ser realizados na unidade selecionada.
         </AlertDescription>
       </Alert>
-
-      <PainelUnidade
-        unidade={selecionada}
-        onClose={() => setSelecionada(null)}
-        onConfirmar={(u) => {
-          setSelecionada(null);
-          onConfirmar(u);
-        }}
-      />
     </div>
   );
 };
