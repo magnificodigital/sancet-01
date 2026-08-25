@@ -540,6 +540,27 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
               </div>
             </div>
 
+            {Array.isArray((pedido as any).exames_identificados_ia) &&
+              (pedido as any).exames_identificados_ia.length > 0 && (
+                <div className="rounded-lg border border-brand/30 bg-brand/5">
+                  <p className="border-b border-brand/20 px-3 py-2 text-xs font-semibold uppercase text-brand">
+                    Exames identificados pela IA no pedido médico
+                  </p>
+                  <ul className="divide-y divide-brand/10">
+                    {((pedido as any).exames_identificados_ia as any[]).map(
+                      (ex, idx) => (
+                        <li key={idx} className="px-3 py-2 text-sm">
+                          {ex?.nome ?? ex?.codigo_shift ?? "—"}
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                  <p className="border-t border-brand/20 px-3 py-1.5 text-[11px] text-muted-foreground">
+                    Leitura automática do pedido médico — confira com o documento anexado.
+                  </p>
+                </div>
+              )}
+
             {pedido.observacoes && (
               <div className="rounded-lg bg-muted p-3 text-sm">
                 <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">

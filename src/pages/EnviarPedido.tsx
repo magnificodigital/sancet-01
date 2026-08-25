@@ -171,6 +171,19 @@ const EnviarPedido = () => {
           .catch(() => {});
       }
 
+      // Registra no pedido os exames que a IA leu do pedido médico (para a recepção).
+      if (extras.examesIdentificadosIA?.length) {
+        supabase
+          .rpc("registrar_exames_ia_auth", {
+            p_protocolo: protocolo,
+            p_exames: extras.examesIdentificadosIA,
+          })
+          .then(
+            () => {},
+            () => {},
+          );
+      }
+
       localStorage.setItem("sancet-ultimo-protocolo", protocolo);
       // Navega ANTES de limpar contexto pra evitar que o guard
       // (if !tipo → /exames) intercepte o redirect.

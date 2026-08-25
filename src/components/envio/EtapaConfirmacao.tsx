@@ -97,6 +97,7 @@ type Props = {
     arquivoRelatorioMedico: File | null;
     tipoDocumentoIdentidade: TipoDocumento;
     deficiencias: string;
+    examesIdentificadosIA: { codigo_shift: string; nome: string }[];
   }) => void;
 };
 
@@ -410,6 +411,11 @@ export const EtapaConfirmacao = ({
       arquivoRelatorioMedico,
       tipoDocumentoIdentidade: tipoDoc,
       deficiencias: deficiencias.trim(),
+      examesIdentificadosIA:
+        iaPedido?.itens.map((it) => ({
+          codigo_shift: it.codigoShift,
+          nome: it.nome,
+        })) ?? [],
     });
   };
 
