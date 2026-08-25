@@ -101,17 +101,36 @@ const Pronto = () => {
         {pedido && (
           <div className="mt-4 space-y-5">
             {/* Cabeçalho de sucesso */}
-            <div className="no-print flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-5">
-              <CheckCircle2 className="mt-0.5 h-7 w-7 shrink-0 text-green-600" />
-              <div>
-                <h1 className="text-xl font-bold text-secondary">Tudo certo!</h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {pedido.modalidade_coleta === "domicilio"
-                    ? "Um profissional irá até você. Aguarde a confirmação."
-                    : "Compareça à unidade no horário de sua preferência."}
-                </p>
+            {pedido.status === "confirmado" ? (
+              <div className="no-print flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-5">
+                <CheckCircle2 className="mt-0.5 h-7 w-7 shrink-0 text-green-600" />
+                <div>
+                  <h1 className="text-xl font-bold text-secondary">Pedido confirmado!</h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {pedido.modalidade_coleta === "domicilio"
+                      ? "Um profissional irá até você no horário combinado."
+                      : "Você já pode comparecer à unidade no dia e período agendados."}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="no-print flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                <Clock className="mt-0.5 h-7 w-7 shrink-0 text-amber-600" />
+                <div>
+                  <h1 className="text-xl font-bold text-secondary">
+                    Seu pedido foi recebido e está em análise.
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    É necessário aguardar a confirmação do nosso atendimento antes
+                    {pedido.modalidade_coleta === "domicilio"
+                      ? " da coleta em casa"
+                      : " de comparecer à unidade"}
+                    . Você receberá um e-mail com a confirmação.{" "}
+                    <strong className="text-secondary">Não dispense esta etapa.</strong>
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* VOUCHER */}
             <div
