@@ -18,6 +18,9 @@ export type Pedido = {
   convenio_nome: string | null;
   numero_carteirinha: string | null;
   url_carteirinha: string | null;
+  convenio_tokens?: string[] | null;
+  convenio_token_solicitado_em?: string | null;
+  convenio_token_preenchido_em?: string | null;
 };
 
 type Props = {

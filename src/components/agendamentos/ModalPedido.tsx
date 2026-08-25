@@ -13,7 +13,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Circle, CheckCircle2, Download } from "lucide-react";
+import { Circle, CheckCircle2, Download, Plus, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -42,6 +43,8 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
   const [resultados, setResultados] = useState<
     Array<{ id: string; nome_arquivo: string; arquivo_url: string; created_at: string }>
   >([]);
+  const [tokens, setTokens] = useState<string[]>([""]);
+  const [salvandoTokens, setSalvandoTokens] = useState(false);
 
   useEffect(() => {
     if (!pedido || !paciente?.id) return;
@@ -60,6 +63,12 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
       });
   }, [pedido, paciente?.id]);
 
+  useEffect(() => {
+    const t = Array.isArray(pedido?.convenio_tokens) ? pedido!.convenio_tokens : [];
+    setTokens(t.length ? t.map(String) : [""]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedido?.id]);
+
   const cancelar = async () => {
     if (!pedido) return;
     const { error } = await supabase.rpc("cancelar_meu_pedido_auth", {
@@ -72,6 +81,21 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
     toast.success("Agendamento cancelado");
     qc.invalidateQueries({ queryKey: ["pedidos"] });
     onClose();
+  };
+
+  const salvarTokens = async () => {
+    if (!pedido) return;
+    const limpos = tokens.map((t) => t.trim()).filter(Boolean);
+    if (limpos.length === 0) return toast.error("Digite ao menos um token.");
+    setSalvandoTokens(true);
+    const { error } = await supabase.rpc("salvar_tokens_convenio_auth", {
+      p_protocolo: pedido.protocolo,
+      p_tokens: limpos,
+    });
+    setSalvandoTokens(false);
+    if (error) return toast.error(error.message);
+    toast.success("Token(s) enviado(s)! A recepção foi avisada.");
+    qc.invalidateQueries({ queryKey: ["pedidos"] });
   };
 
 
@@ -165,6 +189,78 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
               </p>
             </section>
           )}
+
+          {isConvenio &&
+            (pedido.convenio_token_solicitado_em ||
+              (Array.isArray(pedido.convenio_tokens) &&
+                pedido.convenio_tokens.length > 0)) && (
+              <section className="rounded-lg border border-brand/30 bg-brand/5 p-4">
+                <h4 className="mb-1 text-sm font-semibold text-secondary">
+                  Token do convênio
+                </h4>
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Informe o(s) token(s)/senha(s) de autorização que sua operadora
+                  enviou. Se ela mandou mais de um, adicione todos.
+                </p>
+                <div className="space-y-2">
+                  {tokens.map((t, i) => (
+                    <div key={i} className="flex gap-2">
+                      <Input
+                        value={t}
+                        onChange={(e) =>
+                          setTokens((prev) =>
+                            prev.map((x, idx) => (idx === i ? e.target.value : x)),
+                          )
+                        }
+                        placeholder={`Token ${i + 1}`}
+                        className="font-mono"
+                      />
+                      {tokens.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-muted-foreground"
+                          onClick={() =>
+                            setTokens((prev) => prev.filter((_, idx) => idx !== i))
+                          }
+                          aria-label="Remover token"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setTokens((prev) => [...prev, ""])}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Tem mais algum token?
+                  </Button>
+                </div>
+                <Button
+                  onClick={salvarTokens}
+                  disabled={salvandoTokens}
+                  className="mt-3 w-full bg-brand text-white hover:bg-brand-hover"
+                >
+                  {salvandoTokens ? "Enviando..." : "Enviar token(s)"}
+                </Button>
+                {pedido.convenio_token_preenchido_em && (
+                  <p className="mt-2 text-xs text-green-600">
+                    Enviado em{" "}
+                    {format(
+                      new Date(pedido.convenio_token_preenchido_em),
+                      "dd/MM/yyyy 'às' HH:mm",
+                      { locale: ptBR },
+                    )}
+                    . Você pode reenviar se precisar corrigir.
+                  </p>
+                )}
+              </section>
+            )}
 
           <section>
             <h4 className="text-sm font-semibold mb-2">Resultados</h4>

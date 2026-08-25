@@ -102,6 +102,18 @@ function templateResultadoPaciente(p: any): { subject: string; html: string } {
   return { subject, html };
 }
 
+function templateSolicitarToken(p: any): { subject: string; html: string } {
+  const subject = `Sancet — Informe o token do seu convênio (pedido ${p.protocolo})`;
+  const html = shell(
+    "Informe o token do seu convênio",
+    `<p>Olá, <b>${escapeHtml(p.paciente_nome)}</b>!</p>
+     <p>Para dar andamento ao seu pedido <b>${escapeHtml(p.protocolo)}</b> pelo convênio ${escapeHtml(p.convenio_nome ?? "")}, precisamos do <b>token/senha de autorização</b> fornecido pela sua operadora.</p>
+     <p>É rápido: clique no botão, faça login e digite o código. Se a operadora enviou <b>mais de um token</b>, você poderá adicionar todos.</p>
+     <p style="margin-top:16px"><a href="${BASE_URL}/agendamentos?token=${encodeURIComponent(p.protocolo)}" style="background:#C8102E;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block">Informar token</a></p>`,
+  );
+  return { subject, html };
+}
+
 function templateAdmin(p: any): { subject: string; html: string } {
   const subject = `[Sancet] Novo pedido ${p.protocolo} — ${p.unidade_nome ?? "—"} — ${formatarData(p.data_agendamento)}`;
   const conv =
@@ -154,7 +166,7 @@ Deno.serve(async (req) => {
 
   try {
     const { pedido_id, tipo } = await req.json();
-    if (!pedido_id || !["novo", "confirmado", "resultado"].includes(tipo)) {
+    if (!pedido_id || !["novo", "confirmado", "resultado", "solicitar_token"].includes(tipo)) {
       return new Response(JSON.stringify({ error: "params inválidos" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -254,7 +266,9 @@ Deno.serve(async (req) => {
           ? templateNovoPaciente(pedido)
           : tipo === "resultado"
             ? templateResultadoPaciente(pedido)
-            : templateConfirmadoPaciente(pedido, endereco);
+            : tipo === "solicitar_token"
+              ? templateSolicitarToken(pedido)
+              : templateConfirmadoPaciente(pedido, endereco);
       const r = await enviarResend({
         apiKey,
         from,

@@ -147,6 +147,8 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const [excluindoPedido, setExcluindoPedido] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { isAdmin, permissoes, nome: nomeStaff } = useStaffPerfil();
+  const [solicitandoToken, setSolicitandoToken] = useState(false);
+  const [solicitadoAgora, setSolicitadoAgora] = useState(false);
   const podeExcluirPedido = isAdmin || permissoes?.pedidos?.excluir === true;
   const [mudandoTransicao, setMudandoTransicao] = useState<string | null>(null);
 
@@ -232,6 +234,35 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
 
     onSalvo?.();
     onClose();
+  };
+
+  const solicitarToken = async () => {
+    if (!pedido) return;
+    setSolicitandoToken(true);
+    const { error } = await supabase
+      .from("pedidos")
+      .update({ convenio_token_solicitado_em: new Date().toISOString() })
+      .eq("id", pedido.id);
+    if (error) {
+      setSolicitandoToken(false);
+      toast.error("Erro ao solicitar token");
+      return;
+    }
+    setSolicitadoAgora(true);
+    supabase.functions
+      .invoke("enviar-email-pedido", {
+        body: { pedido_id: pedido.id, tipo: "solicitar_token" },
+      })
+      .then(({ data }) => {
+        if ((data as any)?.sent_paciente) {
+          toast.success("Solicitação de token enviada ao paciente por e-mail.");
+        } else {
+          toast.message("Solicitação registrada (e-mail não enviado — confira o Resend).");
+        }
+      })
+      .catch(() => {});
+    setSolicitandoToken(false);
+    onSalvo?.();
   };
 
   const transicoes: { alvo: string; label: string; variant?: "destructive" | "default" | "success" }[] = (() => {
@@ -441,6 +472,42 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                     <span className="text-muted-foreground">Carteirinha:</span>{" "}
                     {pedido.numero_carteirinha ?? "—"}
                   </p>
+                  <div className="mt-1 rounded-md border bg-muted/30 p-2">
+                    <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
+                      Token de autorização
+                    </p>
+                    {(Array.isArray(pedido.convenio_tokens)
+                      ? pedido.convenio_tokens
+                      : []
+                    ).length > 0 ? (
+                      <ul className="space-y-0.5">
+                        {(pedido.convenio_tokens as any[]).map((t, i) => (
+                          <li key={i} className="font-mono text-sm text-foreground">
+                            {String(t)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <>
+                        <p className="mb-2 text-sm text-muted-foreground">
+                          {pedido.convenio_token_solicitado_em || solicitadoAgora
+                            ? "Solicitado — aguardando o paciente informar."
+                            : "Ainda não solicitado."}
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={solicitandoToken}
+                          onClick={solicitarToken}
+                        >
+                          {pedido.convenio_token_solicitado_em || solicitadoAgora
+                            ? "Reenviar solicitação"
+                            : "Solicitar token ao paciente"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </>
               )}
               <p>

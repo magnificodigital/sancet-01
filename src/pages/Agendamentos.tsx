@@ -66,6 +66,15 @@ const Agendamentos = () => {
   });
 
 
+  // Deep-link do e-mail de token: /agendamentos?token=PROTOCOLO abre o pedido direto.
+  useEffect(() => {
+    const alvo = searchParams.get("token");
+    if (alvo && pedidos?.length) {
+      const p = pedidos.find((x) => x.protocolo === alvo);
+      if (p) setDetalhe(p);
+    }
+  }, [pedidos, searchParams]);
+
   const agendados = (pedidos ?? []).filter((p) => STATUS_AGENDADOS.includes(p.status));
   const cancelados = (pedidos ?? []).filter((p) => p.status === "cancelado");
   const concluidos = (pedidos ?? []).filter((p) => p.status === "concluido");

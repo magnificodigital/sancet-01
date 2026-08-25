@@ -14,6 +14,7 @@ import { AbaEquipe } from "@/components/staff/AbaEquipe";
 import { AbaSites } from "@/components/staff/AbaSites";
 import { AbaAjuda } from "@/components/staff/AbaAjuda";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
+import { toast } from "sonner";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
@@ -55,6 +56,48 @@ const StaffDashboard = () => {
       sub.data.subscription.unsubscribe();
     };
   }, [navigate]);
+
+  // Alerta ao vivo: paciente informou o token do convênio (som + notificação na tela).
+  useEffect(() => {
+    const beep = () => {
+      try {
+        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new Ctx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } catch {
+        /* som é best-effort */
+      }
+    };
+    const channel = supabase
+      .channel("alerta-token-convenio")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "pedidos" },
+        (payload) => {
+          const novo = payload.new as any;
+          const ts = novo?.convenio_token_preenchido_em;
+          if (ts && Date.now() - new Date(ts).getTime() < 15000) {
+            beep();
+            toast.success(
+              `🔔 Paciente informou o token do convênio — pedido ${novo.protocolo}`,
+              { duration: 12000 },
+            );
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   if (carregando) {
     return (
