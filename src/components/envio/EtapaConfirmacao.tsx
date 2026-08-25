@@ -21,6 +21,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useSacola } from "@/stores/sacola";
+import type { ItemSacola } from "@/stores/sacola";
+import { lerPedidoIA } from "@/lib/lerPedido";
 import { formatBRL, precoItemReais } from "@/lib/preco";
 import { Unidade } from "./ListaUnidades";
 import { EnderecoColeta } from "./EtapaEndereco";
@@ -35,6 +37,7 @@ import {
   FileText,
   ShieldCheck,
   Upload,
+  Loader2,
   X,
   User,
   Phone,
@@ -207,7 +210,7 @@ export const EtapaConfirmacao = ({
   onConfirmar,
   convenioPreset,
 }: Props) => {
-  const { itens } = useSacola();
+  const { itens, adicionar, setNaoAdicionados } = useSacola();
   const { paciente } = usePaciente();
   const [numeroCarteirinha, setNumeroCarteirinha] = useState(
     convenioPreset?.numeroCarteirinha ?? "",
@@ -218,6 +221,33 @@ export const EtapaConfirmacao = ({
   const [arquivoRgVerso, setArquivoRgVerso] = useState<File | null>(null);
   const [arquivoCertidao, setArquivoCertidao] = useState<File | null>(null);
   const [arquivoRelatorioMedico, setArquivoRelatorioMedico] = useState<File | null>(null);
+
+  // IA lê o pedido médico assim que o paciente anexa (adianta etapas).
+  const [lendoPedido, setLendoPedido] = useState(false);
+  const [iaPedido, setIaPedido] = useState<{
+    itens: ItemSacola[];
+    naoEnc: string[];
+  } | null>(null);
+
+  const lerPedidoAnexado = async (file: File) => {
+    setLendoPedido(true);
+    setIaPedido(null);
+    try {
+      const r = await lerPedidoIA(file);
+      setIaPedido({ itens: r.itens, naoEnc: r.naoEncontrados });
+    } catch {
+      setIaPedido(null); // silencioso — a leitura é um bônus, não bloqueia o envio
+    } finally {
+      setLendoPedido(false);
+    }
+  };
+
+  const adicionarIdentificados = () => {
+    if (!iaPedido) return;
+    iaPedido.itens.forEach((it) => adicionar(it));
+    if (iaPedido.naoEnc.length) setNaoAdicionados(iaPedido.naoEnc);
+    toast.success(`${iaPedido.itens.length} exame(s) adicionado(s) à sacola.`);
+  };
   const [tipoDoc, setTipoDoc] = useState<TipoDocumento>("rg");
   const [aceito, setAceito] = useState(false);
   const [deficiencias, setDeficiencias] = useState("");
@@ -710,10 +740,55 @@ export const EtapaConfirmacao = ({
           label="Pedido médico"
           helper="Envie o pedido médico em PDF ou imagem. Atenção à qualidade e legibilidade."
           file={arquivoPedidoMedico}
-          onChange={setArquivoPedidoMedico}
+          onChange={(f) => {
+            setArquivoPedidoMedico(f);
+            if (f) lerPedidoAnexado(f);
+            else setIaPedido(null);
+          }}
           required
           invalid={hasErr("doc-pedido-medico")}
         />
+
+        {lendoPedido && (
+          <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Nossa IA está lendo seu
+            pedido médico...
+          </div>
+        )}
+        {iaPedido && !lendoPedido && (
+          <div className="space-y-2 rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm">
+            {iaPedido.itens.length > 0 ? (
+              <>
+                <p className="font-medium text-secondary">
+                  A IA identificou {iaPedido.itens.length} exame(s) no seu pedido:
+                </p>
+                <ul className="list-disc pl-5 text-muted-foreground">
+                  {iaPedido.itens.map((it) => (
+                    <li key={it.codigoShift}>{it.nome}</li>
+                  ))}
+                </ul>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-brand text-white hover:bg-brand-hover"
+                  onClick={adicionarIdentificados}
+                >
+                  Adicionar à sacola
+                </Button>
+              </>
+            ) : (
+              <p className="text-muted-foreground">
+                Não conseguimos identificar os exames automaticamente. Tudo bem —
+                nossa equipe fará a conferência do seu pedido.
+              </p>
+            )}
+            {iaPedido.naoEnc.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Não reconhecidos automaticamente: {iaPedido.naoEnc.join(", ")}.
+              </p>
+            )}
+          </div>
+        )}
 
         <UploadField
           id="doc-relatorio-medico"
