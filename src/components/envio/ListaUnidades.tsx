@@ -75,7 +75,7 @@ export const ListaUnidades = ({ onEscolher }: Props) => {
             onClick={() => onEscolher(u)}
             className="bg-brand hover:bg-brand-hover text-white whitespace-nowrap"
           >
-            Escolher local
+            Confirmar unidade
           </Button>
         </div>
       ))}
