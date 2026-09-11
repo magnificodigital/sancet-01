@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
     const base64 = fileBase64;
     const mimeType = mimeTypeReq || "image/jpeg";
     const dataUrl = `data:${mimeType};base64,${base64}`;
+    const isPdf = mimeType.includes("pdf");
 
     // 3. Montar catálogo enxuto
     const catalogoTexto = catalogo
@@ -57,43 +58,78 @@ Responda SOMENTE com um JSON válido, sem markdown, sem explicações:
 }`;
 
     // 6. Chamar OpenRouter
-    const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://sancet.com.br",
-        "X-Title": "Sancet Leitor de Receitas",
-      },
-      body: JSON.stringify({
-        model: modelo,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: { url: dataUrl },
-              },
-              {
-                type: "text",
-                text: systemPrompt,
-              },
-            ],
-          },
-        ],
-        temperature: 0.1,
-        max_tokens: 1000,
-      }),
-    });
+    // PDF e imagem usam formatos de conteúdo DIFERENTES no OpenRouter:
+    //  - imagem  → { type: "image_url" }
+    //  - PDF     → { type: "file", file: { filename, file_data } } + plugin file-parser
+    // O engine "native" entrega o PDF direto ao Gemini, que o lê com a mesma
+    // capacidade de visão das imagens (funciona até com PDF escaneado/manuscrito).
+    const conteudoArquivo = isPdf
+      ? {
+          type: "file",
+          file: { filename: "pedido.pdf", file_data: dataUrl },
+        }
+      : {
+          type: "image_url",
+          image_url: { url: dataUrl },
+        };
 
-    if (!orRes.ok) {
-      const errText = await orRes.text();
-      throw new Error(`OpenRouter error ${orRes.status}: ${errText}`);
+    const requestBody: Record<string, unknown> = {
+      model: modelo,
+      messages: [
+        {
+          role: "user",
+          content: [
+            conteudoArquivo,
+            {
+              type: "text",
+              text: systemPrompt,
+            },
+          ],
+        },
+      ],
+      temperature: 0.1,
+      max_tokens: 1000,
+    };
+
+    if (isPdf) {
+      requestBody.plugins = [
+        { id: "file-parser", pdf: { engine: "native" } },
+      ];
     }
 
-    const orData = await orRes.json();
-    const content = orData.choices?.[0]?.message?.content ?? "";
+    const chamarOpenRouter = async (body: Record<string, unknown>) => {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://sancet.com.br",
+          "X-Title": "Sancet Leitor de Receitas",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`OpenRouter error ${res.status}: ${errText}`);
+      }
+      const json = await res.json();
+      return (json.choices?.[0]?.message?.content ?? "") as string;
+    };
+
+    let content = "";
+    try {
+      content = await chamarOpenRouter(requestBody);
+    } catch (primeiroErro) {
+      // Fallback só para PDF: se o engine "native" não for suportado pelo
+      // modelo, tenta de novo extraindo o texto do PDF (engine "pdf-text",
+      // grátis). Cobre PDFs digitais; escaneados dependem do engine nativo.
+      if (!isPdf) throw primeiroErro;
+      console.warn("PDF native falhou, tentando pdf-text:", (primeiroErro as Error).message);
+      content = await chamarOpenRouter({
+        ...requestBody,
+        plugins: [{ id: "file-parser", pdf: { engine: "pdf-text" } }],
+      });
+    }
 
     // 7. Extrair JSON da resposta (remove possível markdown)
     const jsonMatch = content.match(/\{[\s\S]*\}/);
