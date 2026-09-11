@@ -7,10 +7,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Clock, ClipboardList, Home, ShoppingBag, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { ItemCatalogo } from "./types";
 import { useSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/preco";
+import { supabase } from "@/integrations/supabase/client";
+import { normalizeExameNome } from "@/lib/normalizeExame";
 
 type Props = {
   item: ItemCatalogo | null;
@@ -22,6 +25,25 @@ export const ExameDrawer = ({ item, tipo, onClose }: Props) => {
   const { itens, adicionar, remover } = useSacola();
   const open = !!item;
   const jaAdicionado = item ? itens.some((i) => i.codigoShift === item.codigo_shift) : false;
+
+  // Preparo estruturado (jejum + instruções) da tabela exame_preparo, casado por nome.
+  const { data: preparoDb } = useQuery({
+    queryKey: ["preparo", item?.nome],
+    enabled: !!item,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("exame_preparo")
+        .select("jejum_horas, instrucoes")
+        .eq("nome_norm", normalizeExameNome(item!.nome))
+        .maybeSingle();
+      return (data as { jejum_horas: number; instrucoes: string[] } | null) ?? null;
+    },
+  });
+
+  // Com jejum em horas, o badge é a autoridade — remove linhas "Jejum ..." duplicadas.
+  const instrucoes = (preparoDb?.instrucoes ?? []).filter(
+    (l) => !(preparoDb && preparoDb.jejum_horas > 0 && /^jejum/i.test(l.trim())),
+  );
 
   const handleToggle = () => {
     if (!item) return;
@@ -94,21 +116,39 @@ export const ExameDrawer = ({ item, tipo, onClose }: Props) => {
                 </div>
               )}
 
-              {item.preparo && (
+              {(preparoDb || item.preparo) && (
                 <div>
                   <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <ClipboardList className="h-4 w-4 text-secondary" />
-                    Instrução de preparo
+                    Preparo
                   </h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">
-                    {item.preparo}
-                  </p>
-                  <a
-                    href={`/preparos#exame-${item.codigo_shift}`}
-                    className="inline-block text-xs font-semibold text-primary hover:underline mt-2"
-                  >
-                    Ver todos os preparos →
-                  </a>
+
+                  {preparoDb ? (
+                    <>
+                      <Badge
+                        variant="secondary"
+                        className="gap-1.5 font-normal"
+                      >
+                        <Clock className="h-3 w-3" />
+                        {preparoDb.jejum_horas > 0
+                          ? `Jejum de ${preparoDb.jejum_horas} ${preparoDb.jejum_horas === 1 ? "hora" : "horas"}`
+                          : "Jejum não obrigatório"}
+                      </Badge>
+                      {instrucoes.length > 0 && (
+                        <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground list-disc pl-4">
+                          {instrucoes.map((l, idx) => (
+                            <li key={idx} className="whitespace-pre-line">
+                              {l}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                      {item.preparo}
+                    </p>
+                  )}
                 </div>
               )}
 

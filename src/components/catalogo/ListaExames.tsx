@@ -18,6 +18,8 @@ type Props = {
   categoriasSelecionadas: string[];
   /** Padrão true. Em fluxo convênio, passar false para esconder preço e mostrar badge de cobertura. */
   mostrarPreco?: boolean;
+  /** "loja" (exames_cache, padrão) ou "convenio" (catálogo completo em exames_convenio). */
+  origem?: "loja" | "convenio";
 };
 
 const PAGE_SIZE = 20;
@@ -116,16 +118,38 @@ const MOCK_VACINAS: ItemCatalogo[] = [
   },
 ];
 
-export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostrarPreco = true }: Props) => {
+export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostrarPreco = true, origem = "loja" }: Props) => {
   const [pagina, setPagina] = useState(1);
   const [selecionado, setSelecionado] = useState<ItemCatalogo | null>(null);
   const { itens: itensSacola, adicionar, remover } = useSacola();
 
+  // Convênio (exame) usa o catálogo COMPLETO (exames_convenio); loja usa exames_cache.
+  const ehConvenioFull = origem === "convenio" && tipo === "exame";
   const tabela = tipo === "exame" ? "exames_cache" : "vacinas_cache";
 
   const { data, isLoading } = useQuery({
-    queryKey: [tabela],
+    queryKey: [ehConvenioFull ? "exames_convenio" : tabela],
     queryFn: async () => {
+      if (ehConvenioFull) {
+        const { data, error } = await (supabase as any)
+          .from("exames_convenio")
+          .select("codigo_shift, nome")
+          .eq("ativo", true)
+          .order("nome");
+        if (error) throw error;
+        return ((data ?? []) as any[]).map((e) => ({
+          codigo_shift: String(e.codigo_shift),
+          nome: e.nome,
+          outros_nomes: null,
+          preco_particular: null,
+          preco_centavos: null,
+          prazo_resultado: null,
+          preparo: null,
+          disponivel_na_unidade: true,
+          disponivel_em_casa: false,
+          categoria: null,
+        })) as ItemCatalogo[];
+      }
       const colunas =
         tipo === "exame"
           ? "codigo_shift, nome, outros_nomes, preco_particular, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, categoria"
@@ -143,17 +167,22 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostr
   const fonte: ItemCatalogo[] = useMemo(() => {
     if (isLoading) return [];
     if (!data || data.length === 0) {
+      // Sem mock no convênio: catálogo real ou vazio.
+      if (ehConvenioFull) return [];
       return tipo === "exame" ? MOCK_EXAMES : MOCK_VACINAS;
     }
     return data;
-  }, [data, isLoading, tipo]);
+  }, [data, isLoading, tipo, ehConvenioFull]);
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return fonte.filter((item) => {
-      if (emCasa && !item.disponivel_em_casa) return false;
-      if (categoriasSelecionadas.length > 0) {
-        if (!item.categoria || !categoriasSelecionadas.includes(item.categoria)) return false;
+      // Convênio (catálogo completo) não tem dados de categoria/coleta em casa.
+      if (!ehConvenioFull) {
+        if (emCasa && !item.disponivel_em_casa) return false;
+        if (categoriasSelecionadas.length > 0) {
+          if (!item.categoria || !categoriasSelecionadas.includes(item.categoria)) return false;
+        }
       }
       if (termo) {
         const haystack = [
@@ -166,7 +195,7 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostr
       }
       return true;
     });
-  }, [fonte, busca, emCasa, categoriasSelecionadas]);
+  }, [fonte, busca, emCasa, categoriasSelecionadas, ehConvenioFull]);
 
   const visiveis = filtrados.slice(0, pagina * PAGE_SIZE);
   const temMais = filtrados.length > visiveis.length;
