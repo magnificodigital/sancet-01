@@ -724,9 +724,15 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
               ) : (
                 <>
                   {[
-                    { label: "RG — Frente", campo: "url_rg_frente" },
-                    { label: "RG — Verso", campo: "url_rg_verso" },
-                    { label: "Certidão de Nascimento", campo: "url_certidao_nascimento" },
+                    {
+                      label: `${pedido.tipo_documento_identidade === "cnh" ? "CNH" : "RG"} — Frente`,
+                      campo: "url_rg_frente",
+                    },
+                    {
+                      label: `${pedido.tipo_documento_identidade === "cnh" ? "CNH" : "RG"} — Verso`,
+                      campo: "url_rg_verso",
+                    },
+                    { label: "Certidão de Nascimento (legado)", campo: "url_certidao_nascimento" },
                     { label: "Pedido médico", campo: "url_pedido_medico" },
                     { label: "Relatório médico", campo: "url_relatorio_medico" },
                     { label: "Carteirinha do convênio", campo: "url_carteirinha" },

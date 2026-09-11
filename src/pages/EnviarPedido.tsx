@@ -70,9 +70,8 @@ const EnviarPedido = () => {
     arquivoPedidoMedico: File | null;
     arquivoRgFrente: File | null;
     arquivoRgVerso: File | null;
-    arquivoCertidao: File | null;
     arquivoRelatorioMedico: File | null;
-    tipoDocumentoIdentidade: "rg" | "certidao";
+    tipoDocumentoIdentidade: "rg" | "cnh";
     deficiencias: string;
   }) => {
     if (!paciente) return;
@@ -112,14 +111,12 @@ const EnviarPedido = () => {
         urlPedidoMedico,
         urlRgFrente,
         urlRgVerso,
-        urlCertidao,
         urlRelatorioMedico,
       ] = await Promise.all([
         uploadDoc(extras.arquivoCarteirinha, "carteirinha"),
         uploadDoc(extras.arquivoPedidoMedico, "pedido-medico"),
         uploadDoc(extras.arquivoRgFrente, "rg-frente"),
         uploadDoc(extras.arquivoRgVerso, "rg-verso"),
-        uploadDoc(extras.arquivoCertidao, "certidao"),
         uploadDoc(extras.arquivoRelatorioMedico, "relatorio-medico"),
       ]);
 
@@ -142,7 +139,6 @@ const EnviarPedido = () => {
         url_pedido_medico: urlPedidoMedico,
         url_rg_frente: urlRgFrente,
         url_rg_verso: urlRgVerso,
-        url_certidao_nascimento: urlCertidao,
         url_relatorio_medico: urlRelatorioMedico,
         tipo_documento_identidade: extras.tipoDocumentoIdentidade,
         valor_total_centavos: ehConvenio ? 0 : total(),

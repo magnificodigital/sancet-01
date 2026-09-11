@@ -58,7 +58,7 @@ type ConvenioSelecionado = {
   codigo_shift: string;
 } | null;
 
-type TipoDocumento = "rg" | "certidao";
+type TipoDocumento = "rg" | "cnh";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/jpg,application/pdf";
@@ -93,7 +93,6 @@ type Props = {
     arquivoPedidoMedico: File | null;
     arquivoRgFrente: File | null;
     arquivoRgVerso: File | null;
-    arquivoCertidao: File | null;
     arquivoRelatorioMedico: File | null;
     tipoDocumentoIdentidade: TipoDocumento;
     deficiencias: string;
@@ -218,9 +217,10 @@ export const EtapaConfirmacao = ({
   );
   const [arquivoCarteirinha, setArquivoCarteirinha] = useState<File | null>(null);
   const [arquivoPedidoMedico, setArquivoPedidoMedico] = useState<File | null>(null);
+  // RG e CNH têm frente e verso — ambos usam estes dois slots; o tipo escolhido
+  // apenas rotula o documento (guardado em tipo_documento_identidade).
   const [arquivoRgFrente, setArquivoRgFrente] = useState<File | null>(null);
   const [arquivoRgVerso, setArquivoRgVerso] = useState<File | null>(null);
-  const [arquivoCertidao, setArquivoCertidao] = useState<File | null>(null);
   const [arquivoRelatorioMedico, setArquivoRelatorioMedico] = useState<File | null>(null);
 
   // IA lê o pedido médico assim que o paciente anexa (adianta etapas).
@@ -359,12 +359,12 @@ export const EtapaConfirmacao = ({
 
     if (!nomePaciente.trim()) faltas.push({ label: "Nome", id: "campo-nome" });
 
-    if (tipoDoc === "rg") {
-      if (!arquivoRgFrente) faltas.push({ label: "RG — Frente", id: "doc-rg-frente" });
-      if (!arquivoRgVerso) faltas.push({ label: "RG — Verso", id: "doc-rg-verso" });
-    } else {
-      if (!arquivoCertidao)
-        faltas.push({ label: "Certidão de Nascimento", id: "doc-certidao" });
+    {
+      const rotulo = tipoDoc === "cnh" ? "CNH" : "RG";
+      if (!arquivoRgFrente)
+        faltas.push({ label: `${rotulo} — Frente`, id: "doc-rg-frente" });
+      if (!arquivoRgVerso)
+        faltas.push({ label: `${rotulo} — Verso`, id: "doc-rg-verso" });
     }
 
     if (!arquivoPedidoMedico)
@@ -405,9 +405,8 @@ export const EtapaConfirmacao = ({
       planoDescricao: planoSel?.descricao ?? null,
       arquivoCarteirinha,
       arquivoPedidoMedico,
-      arquivoRgFrente: tipoDoc === "rg" ? arquivoRgFrente : null,
-      arquivoRgVerso: tipoDoc === "rg" ? arquivoRgVerso : null,
-      arquivoCertidao: tipoDoc === "certidao" ? arquivoCertidao : null,
+      arquivoRgFrente,
+      arquivoRgVerso,
       arquivoRelatorioMedico,
       tipoDocumentoIdentidade: tipoDoc,
       deficiencias: deficiencias.trim(),
@@ -705,40 +704,29 @@ export const EtapaConfirmacao = ({
               RG
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <RadioGroupItem value="certidao" id="tipo-certidao" />
-              Certidão de Nascimento
+              <RadioGroupItem value="cnh" id="tipo-cnh" />
+              CNH
             </label>
           </RadioGroup>
 
-          {tipoDoc === "rg" ? (
-            <div className="space-y-2">
-              <UploadField
-                id="doc-rg-frente"
-                label="RG — Frente"
-                file={arquivoRgFrente}
-                onChange={setArquivoRgFrente}
-                required
-                invalid={hasErr("doc-rg-frente")}
-              />
-              <UploadField
-                id="doc-rg-verso"
-                label="RG — Verso"
-                file={arquivoRgVerso}
-                onChange={setArquivoRgVerso}
-                required
-                invalid={hasErr("doc-rg-verso")}
-              />
-            </div>
-          ) : (
+          <div className="space-y-2">
             <UploadField
-              id="doc-certidao"
-              label="Certidão de Nascimento"
-              file={arquivoCertidao}
-              onChange={setArquivoCertidao}
+              id="doc-rg-frente"
+              label={`${tipoDoc === "cnh" ? "CNH" : "RG"} — Frente`}
+              file={arquivoRgFrente}
+              onChange={setArquivoRgFrente}
               required
-              invalid={hasErr("doc-certidao")}
+              invalid={hasErr("doc-rg-frente")}
             />
-          )}
+            <UploadField
+              id="doc-rg-verso"
+              label={`${tipoDoc === "cnh" ? "CNH" : "RG"} — Verso`}
+              file={arquivoRgVerso}
+              onChange={setArquivoRgVerso}
+              required
+              invalid={hasErr("doc-rg-verso")}
+            />
+          </div>
         </div>
 
         <UploadField

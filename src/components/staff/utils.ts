@@ -66,7 +66,8 @@ export type Pedido = {
   url_rg_verso?: string | null;
   url_certidao_nascimento?: string | null;
   url_relatorio_medico?: string | null;
-  tipo_documento_identidade?: "rg" | "certidao" | null;
+  // "certidao" mantido para pedidos legados; novos pedidos usam "rg" | "cnh".
+  tipo_documento_identidade?: "rg" | "cnh" | "certidao" | null;
   observacoes: string | null;
   deficiencias?: string | null;
   status: string;
