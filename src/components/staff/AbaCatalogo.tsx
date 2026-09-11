@@ -36,6 +36,7 @@ import {
   CATEGORIAS_EXAMES,
   CATEGORIAS_VACINAS,
 } from "@/components/catalogo/types";
+import { normalizeExameNome } from "@/lib/normalizeExame";
 
 type Item = {
   id: string;
@@ -60,6 +61,7 @@ type FormState = {
   preco_reais: string;
   prazo_resultado: string;
   preparo: string;
+  jejum_horas: string;
   disponivel_na_unidade: boolean;
   disponivel_em_casa: boolean;
   ativo: boolean;
@@ -73,6 +75,7 @@ const formVazio: FormState = {
   preco_reais: "",
   prazo_resultado: "",
   preparo: "",
+  jejum_horas: "",
   disponivel_na_unidade: true,
   disponivel_em_casa: false,
   ativo: true,
@@ -123,8 +126,22 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
     setDrawerAberto(true);
   };
 
-  const abrirEdicao = (item: Item) => {
+  const abrirEdicao = async (item: Item) => {
     setEditando(item);
+    // Exames: o preparo mora em exame_preparo (jejum + instruções), casado por nome.
+    let preparoText = item.preparo ?? "";
+    let jejum_horas = "";
+    if (tabela === "exames_cache") {
+      const { data } = await (supabase as any)
+        .from("exame_preparo")
+        .select("jejum_horas, instrucoes")
+        .eq("nome_norm", normalizeExameNome(item.nome))
+        .maybeSingle();
+      if (data) {
+        jejum_horas = data.jejum_horas ? String(data.jejum_horas) : "";
+        preparoText = ((data.instrucoes as string[]) ?? []).join("\n");
+      }
+    }
     setForm({
       nome: item.nome ?? "",
       codigo_shift: item.codigo_shift ?? "",
@@ -139,7 +156,8 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
             ? (item.preco_centavos / 100).toFixed(2)
             : "",
       prazo_resultado: item.prazo_resultado ?? "",
-      preparo: item.preparo ?? "",
+      preparo: preparoText,
+      jejum_horas,
       disponivel_na_unidade: item.disponivel_na_unidade,
       disponivel_em_casa: item.disponivel_em_casa,
       ativo: item.ativo,
@@ -170,24 +188,53 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       categoria: form.categoria || null,
       preco_centavos,
       prazo_resultado: form.prazo_resultado.trim() || null,
-      preparo: form.preparo.trim() || null,
       disponivel_na_unidade: form.disponivel_na_unidade,
       disponivel_em_casa: form.disponivel_em_casa,
       ativo: form.ativo,
     };
     if (tabela === "exames_cache") {
       payload.preco_particular = precoValido ? precoNum : null;
+      // Exames: preparo NÃO vai pra exames_cache (a sync do Shift apagaria) — vai pra exame_preparo.
+    } else {
+      payload.preparo = form.preparo.trim() || null;
     }
 
     const { error } = editando
       ? await (supabase as any).from(tabela).update(payload).eq("id", editando.id)
       : await (supabase as any).from(tabela).insert(payload);
 
-    setSalvando(false);
     if (error) {
+      setSalvando(false);
       toast.error(error.message ?? "Erro ao salvar");
       return;
     }
+
+    // Exames: grava preparo (jejum + instruções) na tabela isolada, casado por nome.
+    if (tabela === "exames_cache") {
+      const linhas = form.preparo
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const jejum = parseInt(form.jejum_horas, 10);
+      const { error: prepErr } = await (supabase as any)
+        .from("exame_preparo")
+        .upsert(
+          {
+            nome_norm: normalizeExameNome(form.nome),
+            jejum_horas: isNaN(jejum) ? 0 : jejum,
+            instrucoes: linhas,
+            atualizado_em: new Date().toISOString(),
+          },
+          { onConflict: "nome_norm" },
+        );
+      if (prepErr) {
+        setSalvando(false);
+        toast.error("Item salvo, mas falhou ao salvar o preparo: " + prepErr.message);
+        return;
+      }
+    }
+
+    setSalvando(false);
     toast.success(editando ? "Item atualizado" : "Item criado");
     setDrawerAberto(false);
     carregar();
@@ -418,7 +465,7 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
 
             <Button
               size="sm"
-              onClick={() => { setEditando(null); setDrawerAberto(true); }}
+              onClick={abrirNovo}
               className="gap-1.5 text-white"
               style={{ backgroundColor: "hsl(var(--brand))" }}
             >
@@ -562,14 +609,42 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Preparo</Label>
-              <Textarea
-                value={form.preparo}
-                onChange={(e) => setForm({ ...form, preparo: e.target.value })}
-                rows={4}
-              />
-            </div>
+            {tabela === "exames_cache" ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Jejum (horas)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={form.jejum_horas}
+                    onChange={(e) => setForm({ ...form, jejum_horas: e.target.value })}
+                    placeholder="0 = sem jejum obrigatório"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Preparo — instruções (uma por linha)</Label>
+                  <Textarea
+                    value={form.preparo}
+                    onChange={(e) => setForm({ ...form, preparo: e.target.value })}
+                    rows={5}
+                    placeholder={"Informar medicamentos em uso durante os últimos 3 dias.\nColher a primeira amostra do dia."}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Salvo na tabela de preparos (o que o paciente vê). Não é apagado pela sincronização do Shift.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>Preparo</Label>
+                <Textarea
+                  value={form.preparo}
+                  onChange={(e) => setForm({ ...form, preparo: e.target.value })}
+                  rows={4}
+                />
+              </div>
+            )}
 
             <div className="flex items-center justify-between rounded-md border p-3">
               <Label className="cursor-pointer">Disponível na unidade</Label>
