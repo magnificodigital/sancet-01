@@ -94,8 +94,20 @@ Deno.serve(async (req) => {
       }),
     });
     if (!r.ok) {
-      const body = await r.json().catch(() => ({}));
-      return json({ error: "Falha ao enviar o e-mail com o código.", detalhe: body }, 502);
+      const body: any = await r.json().catch(() => ({}));
+      // Mostra o motivo real do Resend (ex.: remetente/domínio não verificado),
+      // senão o erro vira um beco sem saída para quem está tentando entrar.
+      const motivo = String(body?.message ?? body?.error ?? "").trim();
+      console.error("Resend recusou o envio:", r.status, body, "from:", from);
+      return json(
+        {
+          error: motivo
+            ? `Falha ao enviar o e-mail com o código: ${motivo}`
+            : "Falha ao enviar o e-mail com o código.",
+          detalhe: body,
+        },
+        502,
+      );
     }
 
     return json({ ok: true });
