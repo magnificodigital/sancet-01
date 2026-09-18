@@ -81,8 +81,10 @@ const Entrar = () => {
         (await extrairErro(error, "Não foi possível enviar o código."));
       setCarregando(false);
       toast.error(msg, {
+        // Se a conta ainda não existe (paciente antigo sem login), o cadastro
+        // já reconhece o CPF e vincula — é o caminho único agora.
         action: /senha incorret/i.test(msg)
-          ? { label: "Primeiro acesso", onClick: () => navigate("/primeiro-acesso") }
+          ? { label: "Criar conta", onClick: () => navigate("/cadastro") }
           : undefined,
       });
       return;
@@ -206,14 +208,9 @@ const Entrar = () => {
                 )}
               </Button>
 
-              <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" asChild className="h-11 font-semibold">
-                  <Link to="/cadastro">Fazer cadastro</Link>
-                </Button>
-                <Button type="button" variant="outline" asChild className="h-11 font-semibold">
-                  <Link to="/primeiro-acesso">Primeiro acesso</Link>
-                </Button>
-              </div>
+              <Button type="button" variant="outline" asChild className="h-11 font-semibold">
+                <Link to="/cadastro">Fazer cadastro</Link>
+              </Button>
             </form>
           </>
         ) : (

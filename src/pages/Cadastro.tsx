@@ -212,7 +212,7 @@ const Cadastro = () => {
         });
       } else if (err?.code === "23505") {
         toast.error("Este CPF já possui cadastro.", {
-          action: { label: "Primeiro acesso", onClick: () => navigate("/primeiro-acesso") },
+          action: { label: "Entrar", onClick: () => navigate("/entrar") },
         });
       } else {
         toast.error(msg);

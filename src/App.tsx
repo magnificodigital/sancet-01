@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { carregarTema } from "@/lib/tema";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,7 +20,6 @@ import Cadastro from "./pages/Cadastro.tsx";
 import Entrar from "./pages/Entrar.tsx";
 import EsqueciSenha from "./pages/EsqueciSenha.tsx";
 import RedefinirSenha from "./pages/RedefinirSenha.tsx";
-import PrimeiroAcesso from "./pages/PrimeiroAcesso.tsx";
 import Agendamentos from "./pages/Agendamentos.tsx";
 import Unidades from "./pages/Unidades.tsx";
 import Pronto from "./pages/Pronto.tsx";
@@ -71,7 +70,9 @@ const App = () => {
           <Route path="/entrar" element={<Entrar />} />
           <Route path="/esqueci-senha" element={<EsqueciSenha />} />
           <Route path="/redefinir-senha" element={<RedefinirSenha />} />
-          <Route path="/primeiro-acesso" element={<PrimeiroAcesso />} />
+          {/* Primeiro acesso foi unificado no cadastro (o cadastro já vincula
+              pacientes existentes pelo CPF). Mantém o redirect p/ links antigos. */}
+          <Route path="/primeiro-acesso" element={<Navigate to="/cadastro" replace />} />
           <Route path="/agendamentos" element={<Agendamentos />} />
           <Route path="/unidades" element={<Unidades />} />
           <Route path="/pronto/:protocolo" element={<Pronto />} />
