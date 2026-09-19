@@ -8,6 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { TabelaPedidos } from "./TabelaPedidos";
 import { ModalPedidoStaff } from "./ModalPedidoStaff";
+import { DashboardMetricas } from "./DashboardMetricas";
 import { Pedido } from "./utils";
 
 type Metricas = { total: number; novos: number; confirmados: number; cancelados: number };
@@ -82,6 +83,8 @@ export const AbaVisaoGeral = ({ onAtualizar }: { onAtualizar?: () => void }) => 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-secondary">Visão Geral</h1>
+
+      <DashboardMetricas />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card Icon={LayoutDashboard} cor="hsl(var(--brand-2))" valor={metricas.total} label="Total de pedidos" />
