@@ -13,6 +13,19 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  build: {
+    rollupOptions: {
+      output: {
+        // Vendors estáveis em chunk próprio → melhor cache entre deploys.
+        // (As libs pesadas de staff — xlsx, recharts, html5-qrcode — já ficam
+        // isoladas pelo code-splitting por rota no App.tsx.)
+        manualChunks: {
+          "react-vendor": ["react", "react-dom", "react-router-dom"],
+          supabase: ["@supabase/supabase-js"],
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
