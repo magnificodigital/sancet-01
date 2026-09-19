@@ -89,8 +89,11 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from,
         to: [emailNorm],
-        subject: `Sancet — Código de acesso ${codigo}`,
+        // Sem o código no assunto (número no subject prejudica a inbox no Hotmail).
+        subject: "Sancet — Seu código de acesso",
         html: emailShell(codigo),
+        // Versão texto (multipart) melhora a entregabilidade.
+        text: `Seu código de acesso Sancet é: ${codigo}\n\nEle expira em 10 minutos. Se você não tentou entrar, ignore este e-mail.`,
       }),
     });
     if (!r.ok) {

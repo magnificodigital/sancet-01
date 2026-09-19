@@ -137,6 +137,22 @@ function templateAdmin(p: any): { subject: string; html: string } {
   return { subject, html };
 }
 
+// Versão texto do HTML — e-mail multipart (html + text) melhora a
+// entregabilidade (inbox do Hotmail/Outlook prefere multipart).
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h1|h2|h3|tr|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .split("\n").map((l) => l.trim()).filter((l, i, a) => !(l === "" && a[i - 1] === "")).join("\n")
+    .trim();
+}
+
 async function enviarResend(opts: {
   apiKey: string;
   from: string;
@@ -155,6 +171,7 @@ async function enviarResend(opts: {
       to: opts.to,
       subject: opts.subject,
       html: opts.html,
+      text: htmlToText(opts.html),
     }),
   });
   const body = await r.json().catch(() => ({}));
