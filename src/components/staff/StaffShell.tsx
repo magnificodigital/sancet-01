@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
+  BellRing,
   Building2,
   ChevronDown,
   ClipboardList,
@@ -44,6 +45,7 @@ export type StaffTab =
   | "config"
   | "sites"
   | "equipe"
+  | "recall"
   | "ajuda";
 
 const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
@@ -56,6 +58,7 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "config", label: "Configurações", icon: Settings2 },
   { id: "sites", label: "Sites", icon: FileText },
   { id: "equipe", label: "Equipe", icon: UserCog },
+  { id: "recall", label: "Recall", icon: BellRing },
   { id: "ajuda", label: "Ajuda", icon: LifeBuoy },
 ];
 
@@ -71,7 +74,7 @@ type Props = {
 
 export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAdmin }: Props) => {
   const itensVisiveis = ITENS.filter(
-    (i) => (i.id !== "equipe" && i.id !== "sites") || isAdmin,
+    (i) => (i.id !== "equipe" && i.id !== "sites" && i.id !== "recall") || isAdmin,
   );
   const navigate = useNavigate();
   const location = useLocation();
