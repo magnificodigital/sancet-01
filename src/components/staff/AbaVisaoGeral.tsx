@@ -39,6 +39,7 @@ export const AbaVisaoGeral = ({ onAtualizar }: { onAtualizar?: () => void }) => 
   });
   const [recentes, setRecentes] = useState<Pedido[]>([]);
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
+  const [nps, setNps] = useState<any>(null);
 
   const carregar = async () => {
     const [tot, nov, conf, canc, rec] = await Promise.all([
@@ -69,6 +70,9 @@ export const AbaVisaoGeral = ({ onAtualizar }: { onAtualizar?: () => void }) => 
       cancelados: canc.count ?? 0,
     });
     setRecentes((rec.data as Pedido[]) ?? []);
+
+    const { data: npsData } = await supabase.rpc("nps_resumo");
+    setNps(npsData && !(npsData as any).error ? npsData : null);
   };
 
   useEffect(() => {
@@ -85,6 +89,71 @@ export const AbaVisaoGeral = ({ onAtualizar }: { onAtualizar?: () => void }) => 
         <Card Icon={CheckCircle2} cor="#16A34A" valor={metricas.confirmados} label="Confirmados" />
         <Card Icon={XCircle} cor="#DC2626" valor={metricas.cancelados} label="Cancelados" />
       </div>
+
+      {nps && (
+        <div className="rounded-xl bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-semibold text-secondary">
+              Satisfação (NPS)
+            </h2>
+            <span className="text-sm text-muted-foreground">
+              {nps.total} avaliação(ões)
+            </span>
+          </div>
+
+          {nps.total > 0 ? (
+            <>
+              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div>
+                  <p className="text-3xl font-bold text-secondary">{nps.nps ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">Score NPS (-100 a 100)</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-secondary">{nps.media ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">Nota média (0-10)</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-green-600">{nps.promotores}</p>
+                  <p className="text-xs text-muted-foreground">Promotores (9-10)</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-red-600">{nps.detratores}</p>
+                  <p className="text-xs text-muted-foreground">Detratores (0-6)</p>
+                </div>
+              </div>
+
+              {Array.isArray(nps.recentes) && nps.recentes.some((r: any) => r.comentario) && (
+                <div className="mt-5">
+                  <p className="mb-2 text-sm font-semibold text-secondary">Comentários recentes</p>
+                  <ul className="space-y-2">
+                    {nps.recentes
+                      .filter((r: any) => r.comentario)
+                      .slice(0, 6)
+                      .map((r: any, i: number) => (
+                        <li key={i} className="rounded-lg bg-muted/40 p-3 text-sm">
+                          <span
+                            className={
+                              "mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white " +
+                              (r.nota <= 6 ? "bg-red-600" : r.nota <= 8 ? "bg-amber-500" : "bg-green-600")
+                            }
+                          >
+                            {r.nota}
+                          </span>
+                          {r.comentario}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Ainda não há avaliações. Elas aparecem aqui conforme os pacientes respondem
+              o link enviado no e-mail de resultado.
+            </p>
+          )}
+        </div>
+      )}
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-secondary">Pedidos recentes</h2>
