@@ -22,7 +22,7 @@ import { AbaDadosPessoais } from "@/components/agendamentos/AbaDadosPessoais";
 const STATUS_AGENDADOS = ["novo", "em_analise", "aguardando_pagamento", "confirmado"];
 
 const Agendamentos = () => {
-  const { paciente, logado, carregando } = usePaciente();
+  const { paciente, logado, carregando, logout } = usePaciente();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [aba, setAba] = useState<AbaKey>(() => {
@@ -88,6 +88,50 @@ const Agendamentos = () => {
       </Button>
     </div>
   );
+
+  // Enquanto a sessão/perfil carregam.
+  if (carregando) {
+    return (
+      <PageShell>
+        <div className="container mx-auto px-4 py-16 max-w-6xl">
+          <Skeleton className="h-40 w-full" />
+        </div>
+      </PageShell>
+    );
+  }
+
+  // Sem sessão: o useEffect acima já redireciona para /entrar.
+  if (!logado) return null;
+
+  // Sessão válida, mas a conta não tem perfil de paciente (ex.: conta da
+  // equipe). Evita mostrar formulários vazios — deixa claro e oferece troca.
+  if (!paciente) {
+    return (
+      <PageShell>
+        <div className="container mx-auto px-4 py-16 max-w-lg text-center">
+          <h1 className="text-2xl font-bold text-secondary mb-2">
+            Esta conta não tem perfil de paciente
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            Você está conectado com uma conta sem cadastro de paciente (por
+            exemplo, uma conta da equipe). Entre com uma conta de paciente para
+            ver agendamentos, resultados e dados pessoais.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              onClick={logout}
+              className="bg-brand hover:bg-brand-hover text-white font-semibold"
+            >
+              Sair e entrar com outra conta
+            </Button>
+            <Button asChild variant="outline" className="font-semibold">
+              <Link to="/">Ir para o início</Link>
+            </Button>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>
