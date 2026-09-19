@@ -7,7 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const BASE_URL = "https://sancet.magnificodigital.com";
+// URL do SITE (onde o app roda), não o domínio de envio do Resend.
+// Pode ser sobrescrito pela config SITE_URL (troca fácil quando o domínio mudar).
+let BASE_URL = "https://sancet.vercel.app";
 
 function escapeHtml(s: string | null | undefined): string {
   if (s == null) return "";
@@ -97,7 +99,10 @@ function templateResultadoPaciente(p: any): { subject: string; html: string } {
     `<p>Olá, <b>${escapeHtml(p.paciente_nome)}</b>!</p>
      <p>O resultado do seu pedido <b>${escapeHtml(p.protocolo)}</b> já está disponível. Você pode acessá-lo com segurança pelo portal.</p>
      <p style="margin-top:16px"><a href="${BASE_URL}/agendamentos?aba=resultados" style="background:#C8102E;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block">Ver meu resultado</a></p>
-     <p style="color:#888;font-size:12px;margin-top:12px">Para sua segurança, o acesso exige seu login. O resultado tem finalidade diagnóstica e não substitui a avaliação de um médico.</p>`,
+     <p style="color:#888;font-size:12px;margin-top:12px">Para sua segurança, o acesso exige seu login. O resultado tem finalidade diagnóstica e não substitui a avaliação de um médico.</p>
+     ${p.nps_token ? `<hr style="border:none;border-top:1px solid #eee;margin:20px 0"/>
+     <p style="margin:0 0 8px">Como foi sua experiência com a Sancet? Leva 10 segundos:</p>
+     <p style="margin:0"><a href="${BASE_URL}/nps/${p.nps_token}" style="background:#0F5132;color:#fff;padding:9px 15px;border-radius:6px;text-decoration:none;display:inline-block">Avaliar atendimento</a></p>` : ""}`,
   );
   return { subject, html };
 }
@@ -198,9 +203,10 @@ Deno.serve(async (req) => {
     const { data: cfgRows } = await supabase
       .from("configuracoes")
       .select("chave, valor")
-      .in("chave", ["RESEND_API_KEY", "RESEND_EMAIL_FROM", "RESEND_EMAILS_ADMIN"]);
+      .in("chave", ["RESEND_API_KEY", "RESEND_EMAIL_FROM", "RESEND_EMAILS_ADMIN", "SITE_URL"]);
     const cfg: Record<string, string> = {};
     (cfgRows ?? []).forEach((r: any) => (cfg[r.chave] = r.valor ?? ""));
+    if (cfg.SITE_URL?.trim()) BASE_URL = cfg.SITE_URL.trim().replace(/\/+$/, "");
 
     const apiKey = cfg.RESEND_API_KEY?.trim();
     const from = cfg.RESEND_EMAIL_FROM?.trim() || "onboarding@resend.dev";
@@ -239,6 +245,12 @@ Deno.serve(async (req) => {
           JSON.stringify({ skipped: true, reason: "ja_notificado" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
+      }
+      // Garante um token de NPS para o link "Avaliar atendimento" no e-mail.
+      if (!pedido.nps_token) {
+        const token = crypto.randomUUID();
+        await supabase.from("pedidos").update({ nps_token: token }).eq("id", pedido.id);
+        (pedido as any).nps_token = token;
       }
     }
 

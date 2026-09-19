@@ -44,6 +44,7 @@ const Denuncias = lazy(() => import("./pages/Denuncias.tsx"));
 const PoliticaPrivacidade = lazy(() => import("./pages/PoliticaPrivacidade.tsx"));
 const Blog = lazy(() => import("./pages/Blog.tsx"));
 const BlogPost = lazy(() => import("./pages/BlogPost.tsx"));
+const NPS = lazy(() => import("./pages/NPS.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
@@ -100,6 +101,7 @@ const App = () => {
             <Route path="/denuncias" element={<Denuncias />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/nps/:token" element={<NPS />} />
             <Route path="/p/:slug" element={<LandingPublica />} />
             {/* Catch-all dinâmico para páginas do CMS (deve ser o último antes do 404) */}
             <Route path="/:slug" element={<PaginaPublica />} />
