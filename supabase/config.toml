@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.sancet-denuncia]
 verify_jwt = false
+
+[functions.sancet-recall]
+verify_jwt = false

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Loader2, Play, Plus, Search, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ export const AbaRecall = () => {
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState<ExameBusca[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [rodando, setRodando] = useState(false);
 
   const carregar = async () => {
     const [{ data: cfg }, { data: rg }, { data: cand }] = await Promise.all([
@@ -52,6 +53,19 @@ export const AbaRecall = () => {
       toast.success(v ? "Recall ativado." : "Recall desativado.");
       carregar();
     }
+  };
+
+  const rodarAgora = async () => {
+    setRodando(true);
+    const { data, error } = await supabase.functions.invoke("sancet-recall");
+    setRodando(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "Falha ao rodar o recall.");
+      return;
+    }
+    const n = (data as any)?.enviados ?? 0;
+    toast.success(n > 0 ? `${n} lembrete(s) enviado(s).` : "Nenhum lembrete a enviar agora.");
+    carregar();
   };
 
   const buscar = async (q: string) => {
@@ -129,12 +143,18 @@ export const AbaRecall = () => {
             </p>
           </div>
         </div>
-        {devidos !== null && (
-          <div className="text-right">
-            <p className="text-2xl font-bold text-secondary">{devidos}</p>
-            <p className="text-xs text-muted-foreground">pacientes devidos agora</p>
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          {devidos !== null && (
+            <div className="text-right">
+              <p className="text-2xl font-bold text-secondary">{devidos}</p>
+              <p className="text-xs text-muted-foreground">devidos agora</p>
+            </div>
+          )}
+          <Button onClick={rodarAgora} disabled={rodando || !ativo} variant="outline" className="gap-2">
+            {rodando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            Rodar agora
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl bg-white p-5 shadow-sm">

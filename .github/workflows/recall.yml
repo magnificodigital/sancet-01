@@ -1,0 +1,28 @@
+name: Recall diário (lembretes de retorno)
+
+# Dispara o motor de Recall uma vez por dia. A função só age se o admin tiver
+# ativado o Recall no painel (config RECALL_ATIVO). Também pode ser rodada à mão
+# aqui (Run workflow) ou pelo botão "Rodar agora" no painel do staff.
+#
+# Pré-requisito: criar o secret RECALL_CRON_SECRET no GitHub (Settings → Secrets
+# → Actions) E o MESMO valor em Supabase → Edge Functions → Manage secrets
+# (variável RECALL_CRON_SECRET).
+
+on:
+  schedule:
+    - cron: "0 12 * * *" # 12:00 UTC (~09:00 BRT) todo dia
+  workflow_dispatch: {}
+
+jobs:
+  recall:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar sancet-recall
+        run: |
+          curl -sS -X POST \
+            "https://bczqebeixeunhzpisurh.supabase.co/functions/v1/sancet-recall" \
+            -H "Content-Type: application/json" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjenFlYmVpeGV1bmh6cGlzdXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjM2OTksImV4cCI6MjA5MzAzOTY5OX0.Fhcfw3HyAlgJNjGmETeEm7fUPpVBPf4PbTwVarIuM0E" \
+            -H "x-cron-secret: ${{ secrets.RECALL_CRON_SECRET }}" \
+            -d '{}' \
+            --fail-with-body
