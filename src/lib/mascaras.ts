@@ -51,6 +51,21 @@ export function validarCPF(cpf: string): boolean {
   return r === parseInt(d[10]);
 }
 
+// Valida nome de pessoa: precisa ter nome + sobrenome com letras de verdade.
+// Recusa entradas só com números/pontuação (ex.: CPF digitado no lugar do nome).
+export function nomeValido(nome: string): boolean {
+  const t = (nome ?? "").trim();
+  if (t.length < 3) return false;
+  // Ao menos duas "palavras" (nome e sobrenome) e cada uma começando com letra.
+  const partes = t.split(/\s+/).filter(Boolean);
+  if (partes.length < 2) return false;
+  const comLetra = /^\p{L}/u;
+  if (!partes.every((p) => comLetra.test(p))) return false;
+  // Pelo menos 3 letras no total (evita "A B", "1 2", etc.).
+  const letras = (t.match(/\p{L}/gu) ?? []).length;
+  return letras >= 3;
+}
+
 // Converte "DD/MM/AAAA" → "AAAA-MM-DD". Retorna null se inválida.
 export function dataBRparaISO(v: string): string | null {
   const d = apenasDigitos(v);

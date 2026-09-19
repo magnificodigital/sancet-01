@@ -30,6 +30,7 @@ import {
   mascaraCPF,
   mascaraCelular,
   mascaraData,
+  nomeValido,
   validarCPF,
 } from "@/lib/mascaras";
 
@@ -97,7 +98,7 @@ const Cadastro = () => {
       return apenasDigitos(form.cpf).length === 11 && apenasDigitos(form.data).length === 8;
     }
     if (etapa === 2) {
-      const nomeOk = form.nome.trim().length >= 3;
+      const nomeOk = nomeValido(form.nome);
       const socialOk = !form.usarSocial || form.nomeSocial.trim().length >= 2;
       return nomeOk && socialOk && !!form.sexo;
     }
@@ -314,6 +315,11 @@ const Cadastro = () => {
                       onChange={(e) => set("nome", e.target.value)}
                       placeholder="Como aparece no RG/CPF"
                     />
+                    {form.nome.trim() !== "" && !nomeValido(form.nome) && (
+                      <p className="text-xs text-destructive">
+                        Informe o nome completo (nome e sobrenome), sem usar CPF ou números.
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Checkbox

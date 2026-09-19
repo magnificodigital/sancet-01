@@ -28,6 +28,24 @@ Deno.serve(async (req) => {
     if (String(senha).length < 8) {
       return json({ error: "A senha precisa ter pelo menos 8 caracteres." }, 200);
     }
+    // Trava de nome válido (espelha nomeValido do front): recusa nome só com
+    // números/pontuação (ex.: CPF no lugar do nome) e exige nome + sobrenome.
+    {
+      const nomeTrim = String(nome).trim();
+      const partes = nomeTrim.split(/\s+/).filter(Boolean);
+      const letras = (nomeTrim.match(/\p{L}/gu) ?? []).length;
+      const ok =
+        nomeTrim.length >= 3 &&
+        partes.length >= 2 &&
+        letras >= 3 &&
+        partes.every((p) => /^\p{L}/u.test(p));
+      if (!ok) {
+        return json(
+          { error: "Informe o nome completo (nome e sobrenome), sem usar CPF ou números." },
+          200,
+        );
+      }
+    }
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,

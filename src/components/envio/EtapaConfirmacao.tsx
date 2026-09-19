@@ -46,7 +46,7 @@ import { usePaciente } from "@/hooks/usePaciente";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { mascaraCelular } from "@/lib/mascaras";
+import { mascaraCelular, nomeValido } from "@/lib/mascaras";
 import { toast } from "sonner";
 
 type Convenio = { id: string; nome: string; codigo_shift: string };
@@ -357,7 +357,8 @@ export const EtapaConfirmacao = ({
   const validar = (): { label: string; id: string }[] => {
     const faltas: { label: string; id: string }[] = [];
 
-    if (!nomePaciente.trim()) faltas.push({ label: "Nome", id: "campo-nome" });
+    if (!nomeValido(nomePaciente))
+      faltas.push({ label: "Nome completo (nome e sobrenome)", id: "campo-nome" });
 
     {
       const rotulo = tipoDoc === "cnh" ? "CNH" : "RG";
