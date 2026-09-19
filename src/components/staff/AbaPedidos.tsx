@@ -77,8 +77,10 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     const { data } = await supabase
       .from("pedidos")
       .select("*")
-      .order("data_agendamento", { ascending: true, nullsFirst: false })
+      // Mais recentes no topo (comportamento de caixa de entrada); a data de
+      // agendamento entra como critério secundário.
       .order("created_at", { ascending: false })
+      .order("data_agendamento", { ascending: true, nullsFirst: false })
       .limit(500);
     setPedidos((data as Pedido[]) ?? []);
   };
