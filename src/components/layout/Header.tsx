@@ -61,7 +61,7 @@ const agendamentosItens = [
 
 export const Header = () => {
   const quantidade = useSacola((s) => s.quantidade());
-  const { paciente, logado, logout } = usePaciente();
+  const { paciente, cadastrado, logout } = usePaciente();
   const paginasMenu = usePaginasMenu();
   useLocation(); // re-renderiza ao trocar de rota
   const sobreHero = useSobreHero();
@@ -121,8 +121,9 @@ export const Header = () => {
             )}
           </Link>
 
-          {/* Entrar / Conta */}
-          {!logado ? (
+          {/* Entrar / Conta — só mostra a conta para paciente cadastrado.
+              Sessão sem perfil (órfã) cai no "Entrar", evitando o avatar "??". */}
+          {!cadastrado ? (
             <Button
               asChild
               className="hidden md:inline-flex rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6"
@@ -214,7 +215,7 @@ export const Header = () => {
                     {p.titulo}
                   </Link>
                 ))}
-                {logado && (
+                {cadastrado && (
                   <>
                     <div className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       Agendamento
@@ -230,7 +231,7 @@ export const Header = () => {
                     ))}
                   </>
                 )}
-                {!logado && (
+                {!cadastrado && (
                   <Button
                     asChild
                     className="mt-6 rounded-pill bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
@@ -238,7 +239,7 @@ export const Header = () => {
                     <Link to="/entrar">Entrar</Link>
                   </Button>
                 )}
-                {logado && (
+                {cadastrado && (
                   <Button
                     onClick={logout}
                     variant="outline"

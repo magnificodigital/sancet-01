@@ -116,6 +116,10 @@ export function usePaciente() {
     paciente,
     session,
     logado: !!session,
+    // "cadastrado" = tem sessão E perfil de paciente carregado. É o gate real:
+    // uma sessão órfã (token sem perfil) tem logado=true mas cadastrado=false,
+    // e não deve ver o menu de conta nem conseguir enviar pedido.
+    cadastrado: !!paciente,
     logout,
     carregando,
     recarregar,

@@ -17,7 +17,7 @@ import { HeaderContexto } from "@/components/catalogo/HeaderContexto";
 
 const EnviarPedido = () => {
   const navigate = useNavigate();
-  const { paciente, logado } = usePaciente();
+  const { paciente, cadastrado, carregando: carregandoPerfil } = usePaciente();
   const {
     itens,
     total,
@@ -47,10 +47,13 @@ const EnviarPedido = () => {
       navigate("/exames", { replace: true });
       return;
     }
-    if (!logado) {
+    // Só paciente cadastrado envia pedido. Espera o perfil resolver antes de
+    // decidir — evita redirecionar quem está apenas com a sessão carregando.
+    if (carregandoPerfil) return;
+    if (!cadastrado) {
       navigate(`/entrar?redirect=${encodeURIComponent("/enviar-pedido")}`);
     }
-  }, [tipo, logado, navigate]);
+  }, [tipo, cadastrado, carregandoPerfil, navigate]);
 
   const handleEscolherModalidade = (m: "domicilio" | "unidade") => {
     setModalidade(m);
