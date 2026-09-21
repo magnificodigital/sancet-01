@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FileText, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -8,6 +9,9 @@ type Props = {
 };
 
 const ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
+// Mesmo teto do envio de documentos. O arquivo é convertido em base64 e
+// enviado por JSON à IA; sem trava, um arquivo enorme estoura a memória.
+const MAX_BYTES = 10 * 1024 * 1024;
 
 export const UploadReceita = ({ arquivo, onArquivo }: Props) => {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +28,11 @@ export const UploadReceita = ({ arquivo, onArquivo }: Props) => {
 
   const onSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
+    if (f && f.size > MAX_BYTES) {
+      toast.error("Arquivo muito grande. Envie um arquivo de até 10 MB.");
+      e.target.value = ""; // permite reescolher o mesmo arquivo depois
+      return;
+    }
     onArquivo(f);
   };
 
@@ -86,7 +95,7 @@ export const UploadReceita = ({ arquivo, onArquivo }: Props) => {
       />
       <FileText className="mx-auto mb-3 text-brand" size={40} />
       <p className="font-bold text-secondary">Enviar imagem do pedido médico</p>
-      <p className="mt-1 text-xs text-muted-foreground">JPG, PNG ou PDF</p>
+      <p className="mt-1 text-xs text-muted-foreground">JPG, PNG ou PDF · até 10 MB</p>
     </button>
   );
 };
