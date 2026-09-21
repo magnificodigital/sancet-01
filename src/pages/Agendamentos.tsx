@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarX, Download } from "lucide-react";
 import { format } from "date-fns";
@@ -24,6 +24,7 @@ const STATUS_AGENDADOS = ["novo", "em_analise", "aguardando_pagamento", "confirm
 const Agendamentos = () => {
   const { paciente, logado, carregando, logout } = usePaciente();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [aba, setAba] = useState<AbaKey>(() => {
     const p = searchParams.get("aba");
@@ -34,9 +35,12 @@ const Agendamentos = () => {
 
   useEffect(() => {
     if (!carregando && !logado) {
-      navigate("/entrar?redirect=/agendamentos");
+      // Preserva a URL completa (inclui ?token=PROTOCOLO) para, após o login,
+      // voltar direto ao pedido e abrir o campo de token.
+      const destino = location.pathname + location.search;
+      navigate(`/entrar?redirect=${encodeURIComponent(destino)}`);
     }
-  }, [logado, carregando, navigate]);
+  }, [logado, carregando, navigate, location]);
   
 
   const { data: pedidos, isLoading } = useQuery({

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Circle, CheckCircle2, Download, Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,22 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
   >([]);
   const [tokens, setTokens] = useState<string[]>([""]);
   const [salvandoTokens, setSalvandoTokens] = useState(false);
+  const tokenRef = useRef<HTMLDivElement>(null);
+
+  // Token pendente (solicitado e ainda não preenchido): rola até o campo ao abrir,
+  // para o paciente que veio pelo link do e-mail cair direto nele.
+  const tokenPendente =
+    !!pedido?.convenio_token_solicitado_em && !pedido?.convenio_token_preenchido_em;
+  useEffect(() => {
+    if (pedido && tokenPendente) {
+      const t = setTimeout(
+        () => tokenRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+        250,
+      );
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedido?.id, tokenPendente]);
 
   useEffect(() => {
     if (!pedido || !paciente?.id) return;
@@ -194,9 +210,17 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
             (pedido.convenio_token_solicitado_em ||
               (Array.isArray(pedido.convenio_tokens) &&
                 pedido.convenio_tokens.length > 0)) && (
-              <section className="rounded-lg border border-brand/30 bg-brand/5 p-4">
-                <h4 className="mb-1 text-sm font-semibold text-secondary">
-                  Token do convênio
+              <section
+                ref={tokenRef}
+                className={cn(
+                  "rounded-lg border p-4",
+                  tokenPendente
+                    ? "border-brand bg-brand/10 ring-2 ring-brand/30"
+                    : "border-brand/30 bg-brand/5",
+                )}
+              >
+                <h4 className="mb-1 text-base font-bold text-brand">
+                  {tokenPendente ? "⚠️ Informe o token do convênio" : "Token do convênio"}
                 </h4>
                 <p className="mb-3 text-sm text-muted-foreground">
                   Informe o(s) token(s)/senha(s) de autorização que sua operadora

@@ -279,19 +279,25 @@ export const KanbanPedidos = ({
     const linha = `[${quando}] Status alterado para '${colunaDestino}' por ${autor}.`;
     const observacoes = p.observacoes ? `${p.observacoes}\n${linha}` : linha;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("pedidos")
       .update({ status: colunaDestino, observacoes })
-      .eq("id", cardId);
+      .eq("id", cardId)
+      .select("id");
 
-    if (error) {
-      // rollback
+    // Sem erro mas 0 linhas = RLS bloqueou (silencioso). Trata como falha real
+    // para não dar "sucesso" e o card voltar sozinho no reload.
+    if (error || !data || data.length === 0) {
       setOverride((m) => {
         const c = { ...m };
         c[cardId] = anterior;
         return c;
       });
-      toast.error("Não foi possível alterar status");
+      toast.error(
+        error
+          ? "Não foi possível alterar o status."
+          : "Sem permissão para alterar este pedido.",
+      );
       return;
     }
 
