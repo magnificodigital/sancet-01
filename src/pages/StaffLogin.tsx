@@ -14,6 +14,9 @@ const StaffLogin = () => {
   const [senha, setSenha] = useState("");
   const [verSenha, setVerSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
+  // Enquanto verifica a sessão, não mostra o formulário (evita que um paciente
+  // logado chegue a VER a tela de login da equipe).
+  const [verificando, setVerificando] = useState(true);
 
   // SEGURANÇA: só é da equipe quem tem linha em user_roles (paciente logado não tem).
   const temPapelStaff = async (uid: string) => {
@@ -28,10 +31,21 @@ const StaffLogin = () => {
   useEffect(() => {
     let active = true;
     supabase.auth.getSession().then(async ({ data }) => {
+      if (!active) return;
       const uid = data.session?.user.id;
-      if (active && uid && (await temPapelStaff(uid))) {
-        navigate("/staff/dashboard", { replace: true });
+      if (uid) {
+        if (await temPapelStaff(uid)) {
+          // Já é equipe → vai pro painel.
+          navigate("/staff/dashboard", { replace: true });
+        } else {
+          // SEGURANÇA: paciente (ou qualquer conta sem papel de equipe) logado
+          // JAMAIS pode acessar a tela de login da equipe. Manda pra home.
+          navigate("/", { replace: true });
+        }
+        return;
       }
+      // Sem sessão → mostra o formulário (necessário para a equipe logar).
+      if (active) setVerificando(false);
     });
     return () => {
       active = false;
@@ -75,6 +89,14 @@ const StaffLogin = () => {
     }
     toast.success("E-mail de redefinição enviado");
   };
+
+  if (verificando) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-secondary">
+        <Loader2 className="h-6 w-6 animate-spin text-white/70" />
+      </div>
+    );
+  }
 
   return (
     <div
