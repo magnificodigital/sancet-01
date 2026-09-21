@@ -472,42 +472,60 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                     <span className="text-muted-foreground">Carteirinha:</span>{" "}
                     {pedido.numero_carteirinha ?? "—"}
                   </p>
-                  <div className="mt-1 rounded-md border bg-muted/30 p-2">
-                    <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
-                      Token de autorização
-                    </p>
-                    {(Array.isArray(pedido.convenio_tokens)
-                      ? pedido.convenio_tokens
-                      : []
-                    ).length > 0 ? (
-                      <ul className="space-y-0.5">
-                        {(pedido.convenio_tokens as any[]).map((t, i) => (
-                          <li key={i} className="font-mono text-sm text-foreground">
-                            {String(t)}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <>
-                        <p className="mb-2 text-sm text-muted-foreground">
-                          {pedido.convenio_token_solicitado_em || solicitadoAgora
-                            ? "Solicitado — aguardando o paciente informar."
-                            : "Ainda não solicitado."}
-                        </p>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={solicitandoToken}
-                          onClick={solicitarToken}
+                  {(() => {
+                    const temTokens =
+                      (Array.isArray(pedido.convenio_tokens)
+                        ? pedido.convenio_tokens
+                        : []
+                      ).length > 0;
+                    return (
+                      <div
+                        className={
+                          "mt-2 rounded-lg border p-3 " +
+                          (temTokens
+                            ? "border-green-300 bg-green-50"
+                            : "border-amber-400 bg-amber-50 ring-1 ring-amber-300")
+                        }
+                      >
+                        <p
+                          className={
+                            "mb-1 text-xs font-bold uppercase tracking-wide " +
+                            (temTokens ? "text-green-800" : "text-amber-800")
+                          }
                         >
-                          {pedido.convenio_token_solicitado_em || solicitadoAgora
-                            ? "Reenviar solicitação"
-                            : "Solicitar token ao paciente"}
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                          {temTokens ? "✅ Token de autorização" : "⚠️ Token de autorização"}
+                        </p>
+                        {temTokens ? (
+                          <ul className="space-y-0.5">
+                            {(pedido.convenio_tokens as any[]).map((t, i) => (
+                              <li key={i} className="font-mono text-sm text-foreground">
+                                {String(t)}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <>
+                            <p className="mb-2 text-sm text-amber-900">
+                              {pedido.convenio_token_solicitado_em || solicitadoAgora
+                                ? "Solicitado — aguardando o paciente informar."
+                                : "Ainda não solicitado."}
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={solicitandoToken}
+                              onClick={solicitarToken}
+                              className="bg-amber-500 text-white hover:bg-amber-600"
+                            >
+                              {pedido.convenio_token_solicitado_em || solicitadoAgora
+                                ? "Reenviar solicitação"
+                                : "Solicitar token ao paciente"}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </>
               )}
               <p>
