@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { usePaciente } from "@/hooks/usePaciente";
+import { usePaciente, sincronizarPacienteAuth } from "@/hooks/usePaciente";
 import {
   SidebarAgendamentos,
   AbaAgendamentos as AbaKey,
@@ -34,12 +34,25 @@ const Agendamentos = () => {
   const [detalhe, setDetalhe] = useState<Pedido | null>(null);
 
   useEffect(() => {
-    if (!carregando && !logado) {
+    if (carregando || logado) return;
+    let ativo = true;
+    // Antes de mandar pro login, confere a sessão direto no Supabase: logo após
+    // o código de acesso, a memória do app pode ainda não ter sincronizado e
+    // o paciente (já logado) era jogado de volta pro login.
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!ativo) return;
+      if (data.session) {
+        await sincronizarPacienteAuth();
+        return;
+      }
       // Preserva a URL completa (inclui ?token=PROTOCOLO) para, após o login,
       // voltar direto ao pedido e abrir o campo de token.
       const destino = location.pathname + location.search;
       navigate(`/entrar?redirect=${encodeURIComponent(destino)}`);
-    }
+    });
+    return () => {
+      ativo = false;
+    };
   }, [logado, carregando, navigate, location]);
   
 

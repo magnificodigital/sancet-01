@@ -41,11 +41,39 @@ const aguardarSessaoLocal = async () => {
 
 type Etapa = "senha" | "codigo";
 
+// No celular, o paciente sai do navegador para ler o código no app de e-mail.
+// Ao voltar, o navegador pode RECARREGAR a página e o app "esquecia" que estava
+// na etapa do código (voltava para o login). Guardamos a etapa por 10 min.
+const CHAVE_ETAPA = "sancet_login_etapa_codigo";
+const lerEtapaSalva = (): { email: string } | null => {
+  try {
+    const r = JSON.parse(localStorage.getItem(CHAVE_ETAPA) || "null");
+    if (r?.email && Date.now() - Number(r.ts) < 10 * 60 * 1000) return { email: r.email };
+  } catch {
+    /* storage indisponível */
+  }
+  return null;
+};
+const salvarEtapa = (email: string) => {
+  try {
+    localStorage.setItem(CHAVE_ETAPA, JSON.stringify({ email, ts: Date.now() }));
+  } catch {
+    /* ignora */
+  }
+};
+const limparEtapa = () => {
+  try {
+    localStorage.removeItem(CHAVE_ETAPA);
+  } catch {
+    /* ignora */
+  }
+};
+
 const Entrar = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [etapa, setEtapa] = useState<Etapa>("senha");
-  const [email, setEmail] = useState("");
+  const [etapa, setEtapa] = useState<Etapa>(() => (lerEtapaSalva() ? "codigo" : "senha"));
+  const [email, setEmail] = useState(() => lerEtapaSalva()?.email ?? "");
   const [senha, setSenha] = useState("");
   const [codigo, setCodigo] = useState("");
   const [carregando, setCarregando] = useState(false);
@@ -92,6 +120,7 @@ const Entrar = () => {
     setCarregando(false);
     toast.success("Código enviado! Verifique seu e-mail.");
     setEtapa("codigo");
+    salvarEtapa(email.trim().toLowerCase());
     iniciarCooldown();
   };
 
@@ -130,6 +159,7 @@ const Entrar = () => {
       toast.error("Não foi possível iniciar sua sessão. Solicite um novo código e tente novamente.");
       return;
     }
+    limparEtapa();
     toast.success("Bem-vindo(a)!");
     navigate(redirect, { replace: true });
   };
@@ -143,7 +173,11 @@ const Entrar = () => {
       <div className="relative w-full max-w-md bg-white/95 backdrop-blur rounded-2xl p-6 md:p-8 shadow-xl">
         <button
           type="button"
-          onClick={() => (etapa === "codigo" ? setEtapa("senha") : navigate("/"))}
+          onClick={() => {
+            limparEtapa();
+            if (etapa === "codigo") setEtapa("senha");
+            else navigate("/");
+          }}
           className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -259,7 +293,10 @@ const Entrar = () => {
               <div className="flex items-center justify-between text-sm">
                 <button
                   type="button"
-                  onClick={() => setEtapa("senha")}
+                  onClick={() => {
+                    limparEtapa();
+                    setEtapa("senha");
+                  }}
                   className="text-muted-foreground hover:underline"
                 >
                   Trocar e-mail
@@ -267,7 +304,15 @@ const Entrar = () => {
                 <button
                   type="button"
                   disabled={cooldown > 0 || carregando}
-                  onClick={pedirCodigo}
+                  onClick={() => {
+                    if (!senha) {
+                      limparEtapa();
+                      setEtapa("senha");
+                      toast.message("Digite sua senha novamente para receber um novo código.");
+                      return;
+                    }
+                    pedirCodigo();
+                  }}
                   className="text-brand font-semibold hover:underline disabled:opacity-50 disabled:no-underline"
                 >
                   {cooldown > 0 ? `Reenviar em ${cooldown}s` : "Reenviar código"}
