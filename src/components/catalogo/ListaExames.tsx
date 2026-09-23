@@ -24,6 +24,50 @@ type Props = {
 
 const PAGE_SIZE = 20;
 
+// O Supabase devolve no máximo 1.000 linhas por consulta. O catálogo convênio tem
+// mais que isso: sem paginar, a lista parava perto da letra "T" (sumiam UREIA,
+// TRANSAMINASES, VITAMINAS...). Busca tudo em lotes.
+async function buscarTudo<T>(consulta: (de: number, ate: number) => PromiseLike<{ data: T[] | null; error: any }>) {
+  const todos: T[] = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await consulta(de, de + 999);
+    if (error) throw error;
+    todos.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  return todos;
+}
+
+const semAcento = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+// Siglas/apelidos comuns — só entram na busca (não aparecem no card).
+const APELIDOS: [RegExp, string][] = [
+  [/TRANSAMINASE OXALACETICA|ASPARTATO AMINOTRANSFERASE/, "tgo ast"],
+  [/TRANSAMINASE PIRUVICA|ALANINA AMINOTRANSFERASE/, "tgp alt"],
+  [/GAMA GLUTAMIL/, "ggt gama gt"],
+  [/HEMOGLOBINA GLICOSILADA|HEMOGLOBINA GLICADA/, "hba1c a1c glicada"],
+  [/TIREOESTIMULANTE|^TSH/, "tsh tireoide"],
+  [/TIROXINA/, "t4 tireoide"],
+  [/TRIIODOTIRONINA/, "t3 tireoide"],
+  [/LUTEINIZANTE|LUTEOTROPINA/, "lh"],
+  [/FOLICULO ESTIMULANTE/, "fsh"],
+  [/ANTIGENO PROSTATICO|^PSA/, "psa prostata"],
+  [/HEMOSSEDIMENTACAO/, "vhs"],
+  [/PROTEINA C REATIVA/, "pcr"],
+  [/URINA TIPO|SUMARIO DE URINA|ELEMENTOS ANORMAIS/, "eas urina tipo 1"],
+  [/HDL/, "hdl colesterol bom"],
+  [/LDL/, "ldl colesterol ruim"],
+  [/ACIDO URICO|URICEMIA/, "acido urico"],
+  [/COLESTEROLEMIA|LIPIDOGRAMA/, "colesterol"],
+  [/GLICEMIA|GLICOSE/, "glicose glicemia acucar"],
+  [/VITAMINA D|25-HIDROXI|D25/, "vitamina d"],
+];
+const apelidosDe = (nome: string) => {
+  const n = semAcento(nome).toUpperCase();
+  return APELIDOS.filter(([re]) => re.test(n)).map(([, a]) => a).join(" ");
+};
+
 const MOCK_EXAMES: ItemCatalogo[] = [
   {
     codigo_shift: "MOCK-EX-001",
@@ -131,16 +175,27 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostr
     queryKey: [ehConvenioFull ? "exames_convenio" : tabela],
     queryFn: async () => {
       if (ehConvenioFull) {
-        const { data, error } = await (supabase as any)
-          .from("exames_convenio")
-          .select("codigo_shift, nome")
-          .eq("ativo", true)
-          .order("nome");
-        if (error) throw error;
-        return ((data ?? []) as any[]).map((e) => ({
+        const data = await buscarTudo<any>((de, ate) =>
+          (supabase as any)
+            .from("exames_convenio")
+            .select("codigo_shift, nome")
+            .eq("ativo", true)
+            .order("nome")
+            .range(de, ate),
+        );
+        // Nome do MESMO exame (mesmo código Shift) no catálogo particular: lá ele
+        // costuma trazer a sigla ("TRANSAMINASE OXALACETICA - TGO"). Só p/ busca.
+        const loja = await buscarTudo<any>((de, ate) =>
+          supabase.from("exames_cache").select("codigo_shift, nome, outros_nomes").range(de, ate),
+        );
+        const aliasPorCodigo = new Map<string, string[]>();
+        for (const l of loja) {
+          aliasPorCodigo.set(String(l.codigo_shift), [l.nome, ...((l.outros_nomes as string[]) ?? [])]);
+        }
+        return data.map((e) => ({
           codigo_shift: String(e.codigo_shift),
           nome: e.nome,
-          outros_nomes: null,
+          outros_nomes: aliasPorCodigo.get(String(e.codigo_shift)) ?? null,
           preco_particular: null,
           preco_centavos: null,
           prazo_resultado: null,
@@ -154,13 +209,10 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostr
         tipo === "exame"
           ? "codigo_shift, nome, outros_nomes, preco_particular, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, categoria"
           : "codigo_shift, nome, outros_nomes, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, categoria";
-      const { data, error } = await supabase
-        .from(tabela)
-        .select(colunas)
-        .eq("ativo", true)
-        .order("nome");
-      if (error) throw error;
-      return (data ?? []) as unknown as ItemCatalogo[];
+      const data = await buscarTudo<any>((de, ate) =>
+        supabase.from(tabela).select(colunas).eq("ativo", true).order("nome").range(de, ate),
+      );
+      return data as unknown as ItemCatalogo[];
     },
   });
 
@@ -175,7 +227,8 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostr
   }, [data, isLoading, tipo, ehConvenioFull]);
 
   const filtrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
+    // Busca sem acento: "hormonio" acha "HORMÔNIO", "ureia" acha "URÉIA".
+    const termo = semAcento(busca.trim());
     return fonte.filter((item) => {
       // Convênio (catálogo completo) não tem dados de categoria/coleta em casa.
       if (!ehConvenioFull) {
@@ -185,12 +238,9 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostr
         }
       }
       if (termo) {
-        const haystack = [
-          item.nome,
-          ...(item.outros_nomes ?? []),
-        ]
-          .join(" ")
-          .toLowerCase();
+        const haystack = semAcento(
+          [item.nome, ...(item.outros_nomes ?? []), apelidosDe(item.nome)].join(" "),
+        );
         if (!haystack.includes(termo)) return false;
       }
       return true;

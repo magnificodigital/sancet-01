@@ -39,7 +39,7 @@ const fmtDur = (ms: number | null) => {
 };
 
 export const AbaCatalogoShift = () => {
-  const [totais, setTotais] = useState({ exames: 0, unidades: 0, convenios: 0 });
+  const [totais, setTotais] = useState({ exames: 0, examesConvenio: 0, unidades: 0, convenios: 0 });
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [rodando, setRodando] = useState(false);
   const [rodandoDetalhes, setRodandoDetalhes] = useState(false);
@@ -47,14 +47,19 @@ export const AbaCatalogoShift = () => {
   const [expandido, setExpandido] = useState<string | null>(null);
 
   const carregar = async () => {
-    const [exa, uni, conv, lg] = await Promise.all([
+    const [exa, exaConv, uni, conv, lg] = await Promise.all([
       supabase.from("exames_cache").select("*", { count: "exact", head: true }),
+      (supabase as any)
+        .from("exames_convenio")
+        .select("*", { count: "exact", head: true })
+        .eq("ativo", true),
       supabase.from("unidades_cache").select("*", { count: "exact", head: true }),
       supabase.from("convenios_cache").select("*", { count: "exact", head: true }),
       supabase.from("shift_sync_logs").select("*").order("iniciado_em", { ascending: false }).limit(10),
     ]);
     setTotais({
       exames: exa.count ?? 0,
+      examesConvenio: exaConv.count ?? 0,
       unidades: uni.count ?? 0,
       convenios: conv.count ?? 0,
     });
@@ -138,6 +143,15 @@ export const AbaCatalogoShift = () => {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{totais.exames.toLocaleString("pt-BR")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Catálogo particular (sincronizado do Shift, com preço)
+            </p>
+            <p className="mt-2 text-sm font-semibold">
+              + {totais.examesConvenio.toLocaleString("pt-BR")} no catálogo de convênio
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Lista completa da planilha (sem ultrassom e check-ups)
+            </p>
           </CardContent>
         </Card>
         <Card>
