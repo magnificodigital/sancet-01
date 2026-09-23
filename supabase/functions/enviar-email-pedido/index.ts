@@ -43,6 +43,48 @@ function listaItensHtml(itens: any[]): string {
     .join("");
 }
 
+// Espelha src/lib/normalizeExame.ts — chave de exame_preparo.nome_norm.
+function normalizeExameNome(nome: string | null | undefined): string {
+  return (nome ?? "")
+    .replace(/^\[I\]\s*/i, "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^[.;,\s]+|[.;,\s]+$/g, "");
+}
+
+type PreparoItem = { nome: string; jejum_horas: number | null; instrucoes: string[] | null };
+
+function templatePreparoPaciente(p: any, preparos: PreparoItem[]): { subject: string; html: string } {
+  const subject = `Sancet — Preparo dos seus exames (pedido ${p.protocolo})`;
+  const blocos = preparos
+    .map((pr) => {
+      const jj = Number(pr.jejum_horas ?? 0);
+      const jejum = jj > 0
+        ? `<p style="margin:2px 0;color:#9a3412"><b>Jejum:</b> ${jj} horas</p>`
+        : `<p style="margin:2px 0;color:#166534"><b>Jejum:</b> não é necessário</p>`;
+      const linhas = (Array.isArray(pr.instrucoes) ? pr.instrucoes : [])
+        .map((l) => String(l).trim())
+        .filter((l) => l && !(jj > 0 && /^jejum/i.test(l)));
+      const instr = linhas.length
+        ? `<ul style="margin:6px 0 0;padding-left:18px">${linhas.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>`
+        : "";
+      return `<div style="border:1px solid #eee;border-radius:8px;padding:12px;margin:10px 0">
+        <p style="margin:0 0 4px;font-weight:600;color:#222">${escapeHtml(pr.nome)}</p>${jejum}${instr}</div>`;
+    })
+    .join("");
+  const html = shell(
+    "Preparo dos seus exames",
+    `<p>Olá, <b>${escapeHtml(p.paciente_nome)}</b>!</p>
+     <p>Seu pedido <b>${escapeHtml(p.protocolo)}</b> foi confirmado. Veja abaixo como se preparar para <b>cada exame</b>:</p>
+     ${blocos || "<p>Os exames deste pedido não exigem preparo específico.</p>"}
+     <p style="color:#888;font-size:12px;margin-top:12px">Se tiver mais de um exame com jejum, siga o <b>maior</b> tempo indicado. Em caso de dúvida, fale com a recepção.</p>`,
+  );
+  return { subject, html };
+}
+
 function shell(title: string, inner: string): string {
   return `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;margin:0;padding:24px;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #eee;">
@@ -188,7 +230,7 @@ Deno.serve(async (req) => {
 
   try {
     const { pedido_id, tipo } = await req.json();
-    if (!pedido_id || !["novo", "confirmado", "resultado", "solicitar_token"].includes(tipo)) {
+    if (!pedido_id || !["novo", "confirmado", "resultado", "solicitar_token", "preparo"].includes(tipo)) {
       return new Response(JSON.stringify({ error: "params inválidos" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -254,6 +296,38 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Preparativos: um e-mail único com o preparo de cada exame (1x por pedido).
+    let preparosLista: PreparoItem[] = [];
+    if (tipo === "preparo") {
+      const jaEnviado = (Array.isArray(pedido.emails_enviados) ? pedido.emails_enviados : [])
+        .some((l: any) => l?.tipo === "preparo" && l?.status === "ok");
+      if (jaEnviado) {
+        return new Response(
+          JSON.stringify({ skipped: true, reason: "ja_notificado" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      const exames = (Array.isArray(pedido.itens) ? pedido.itens : [])
+        .filter((it: any) => (it?.tipo ?? "exame") !== "vacina" && it?.nome);
+      const chaves = [...new Set(exames.map((it: any) => normalizeExameNome(it.nome)))];
+      const mapa: Record<string, any> = {};
+      if (chaves.length) {
+        const { data: preps } = await supabase
+          .from("exame_preparo")
+          .select("nome_norm, jejum_horas, instrucoes")
+          .in("nome_norm", chaves);
+        (preps ?? []).forEach((r: any) => (mapa[r.nome_norm] = r));
+      }
+      preparosLista = exames.map((it: any) => {
+        const r = mapa[normalizeExameNome(it.nome)];
+        return {
+          nome: it.nome,
+          jejum_horas: r?.jejum_horas ?? 0,
+          instrucoes: r?.instrucoes ?? ["Sem preparo específico. Em caso de dúvida, confirme na recepção."],
+        };
+      });
+    }
+
     let emailPaciente: string | null = null;
     let endereco = "";
     if (pedido.paciente_id) {
@@ -297,7 +371,9 @@ Deno.serve(async (req) => {
             ? templateResultadoPaciente(pedido)
             : tipo === "solicitar_token"
               ? templateSolicitarToken(pedido)
-              : templateConfirmadoPaciente(pedido, endereco);
+              : tipo === "preparo"
+                ? templatePreparoPaciente(pedido, preparosLista)
+                : templateConfirmadoPaciente(pedido, endereco);
       const r = await enviarResend({
         apiKey,
         from,

@@ -302,6 +302,18 @@ export const KanbanPedidos = ({
     }
 
     toast.success("Status atualizado!");
+    if (colunaDestino === "confirmado") {
+      // Mesmo comportamento do modal: confirmação + preparativos por e-mail.
+      // Em sequência: os dois gravam em emails_enviados (paralelo perderia log).
+      (async () => {
+        for (const tipo of ["confirmado", "preparo"]) {
+          await supabase.functions.invoke("enviar-email-pedido", {
+            body: { pedido_id: cardId, tipo },
+          });
+        }
+      })().catch(() => {});
+      toast.message("E-mails de confirmação e preparativos enviados ao paciente.");
+    }
     onAtualizado();
   };
 
