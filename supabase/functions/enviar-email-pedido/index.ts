@@ -229,8 +229,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { pedido_id, tipo } = await req.json();
-    if (!pedido_id || !["novo", "confirmado", "resultado", "solicitar_token", "preparo"].includes(tipo)) {
+    // dry_run (só p/ tipo "preparo"): calcula o preparo e devolve CONTAGENS,
+    // sem enviar e-mail nem gravar log — p/ diagnóstico sem incomodar o paciente.
+    const { pedido_id, tipo, dry_run, protocolo } = await req.json();
+    // No dry_run de preparo aceita também o protocolo (só devolve contagens).
+    const porProtocolo = !pedido_id && dry_run === true && tipo === "preparo" && !!protocolo;
+    if ((!pedido_id && !porProtocolo) || !["novo", "confirmado", "resultado", "solicitar_token", "preparo"].includes(tipo)) {
       return new Response(JSON.stringify({ error: "params inválidos" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -267,7 +271,7 @@ Deno.serve(async (req) => {
     const { data: pedido, error: pedErr } = await supabase
       .from("pedidos")
       .select("*")
-      .eq("id", pedido_id)
+      .eq(porProtocolo ? "protocolo" : "id", porProtocolo ? protocolo : pedido_id)
       .maybeSingle();
     if (pedErr || !pedido) {
       return new Response(JSON.stringify({ error: "pedido não encontrado" }), {
@@ -301,31 +305,69 @@ Deno.serve(async (req) => {
     if (tipo === "preparo") {
       const jaEnviado = (Array.isArray(pedido.emails_enviados) ? pedido.emails_enviados : [])
         .some((l: any) => l?.tipo === "preparo" && l?.status === "ok");
-      if (jaEnviado) {
+      if (jaEnviado && !dry_run) {
         return new Response(
           JSON.stringify({ skipped: true, reason: "ja_notificado" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+      const erros: string[] = [];
       const exames = (Array.isArray(pedido.itens) ? pedido.itens : [])
         .filter((it: any) => (it?.tipo ?? "exame") !== "vacina" && it?.nome);
-      const chaves = [...new Set(exames.map((it: any) => normalizeExameNome(it.nome)))];
-      const mapa: Record<string, any> = {};
-      if (chaves.length) {
-        const { data: preps } = await supabase
-          .from("exame_preparo")
-          .select("nome_norm, jejum_horas, instrucoes")
-          .in("nome_norm", chaves);
-        (preps ?? []).forEach((r: any) => (mapa[r.nome_norm] = r));
+      const codigoDe = (it: any) => {
+        const n = parseInt(String(it?.codigoShift ?? it?.codigo_shift ?? ""), 10);
+        return Number.isFinite(n) ? n : null;
+      };
+
+      // 1) Código Shift -> nome_norm do catálogo convênio. É o nome que foi usado
+      //    ao casar o preparo, e resolve sinônimos (ex.: COLESTEROLEMIA -> COLESTEROL TOTAL).
+      const nomePorCodigo: Record<string, string> = {};
+      const codigos = [...new Set(exames.map(codigoDe).filter((n): n is number => n !== null))];
+      if (codigos.length) {
+        const { data, error } = await supabase
+          .from("exames_convenio")
+          .select("codigo_shift, nome_norm")
+          .in("codigo_shift", codigos);
+        if (error) erros.push(`exames_convenio: ${error.message}`);
+        (data ?? []).forEach((r: any) => (nomePorCodigo[String(r.codigo_shift)] = r.nome_norm));
       }
+
+      // 2) Candidatos por exame: nome do catálogo (via código) e depois o nome do item.
+      const candidatos = (it: any): string[] => {
+        const c = codigoDe(it);
+        return [c !== null ? nomePorCodigo[String(c)] : "", normalizeExameNome(it.nome)]
+          .filter((k): k is string => !!k);
+      };
+      const chaves = [...new Set(exames.flatMap(candidatos))];
+      const mapa: Record<string, any> = {};
+      for (let i = 0; i < chaves.length; i += 15) {
+        const { data, error } = await supabase
+          .from("exame_preparo")
+          .select("nome_norm,jejum_horas,instrucoes")
+          .in("nome_norm", chaves.slice(i, i + 15));
+        if (error) erros.push(`exame_preparo: ${error.message}`);
+        (data ?? []).forEach((r: any) => (mapa[r.nome_norm] = r));
+      }
+      if (erros.length) console.error("preparo lookup:", erros);
+
+      let comPreparo = 0;
       preparosLista = exames.map((it: any) => {
-        const r = mapa[normalizeExameNome(it.nome)];
+        const r = candidatos(it).map((k) => mapa[k]).find(Boolean);
+        if (r) comPreparo++;
         return {
           nome: it.nome,
           jejum_horas: r?.jejum_horas ?? 0,
           instrucoes: r?.instrucoes ?? ["Sem preparo específico. Em caso de dúvida, confirme na recepção."],
         };
       });
+
+      if (dry_run) {
+        // Só contagens — nada de nomes de exames (dado de saúde).
+        return new Response(
+          JSON.stringify({ dry_run: true, total: exames.length, com_preparo: comPreparo, erros }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     let emailPaciente: string | null = null;
