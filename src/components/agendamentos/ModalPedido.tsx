@@ -24,6 +24,7 @@ import { formatarPreco } from "@/components/catalogo/types";
 import { StatusBadge } from "./StatusBadge";
 import { Pedido } from "./CardPedido";
 import { usePaciente } from "@/hooks/usePaciente";
+import { precoItemReais } from "@/lib/preco";
 
 type Props = {
   pedido: Pedido | null;
@@ -123,11 +124,16 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
     );
   }
 
-  const itens: { nome: string; precoCentavos: number | null }[] = Array.isArray(
-    pedido.itens
-  )
-    ? pedido.itens
-    : [];
+  // Exames guardam preço em precoParticular (reais); vacinas em precoCentavos.
+  const itens: { nome: string; precoCentavos: number | null }[] = (
+    Array.isArray(pedido.itens) ? (pedido.itens as any[]) : []
+  ).map((i: any) => {
+    const reais = precoItemReais({
+      precoParticular: i?.precoParticular ?? null,
+      precoCentavos: i?.precoCentavos ?? null,
+    });
+    return { nome: i?.nome, precoCentavos: reais == null ? null : Math.round(reais * 100) };
+  });
 
   const podeCancelar = ["novo", "em_analise"].includes(pedido.status);
   const idxAtual = ETAPAS.findIndex((e) => e.key === pedido.status);
