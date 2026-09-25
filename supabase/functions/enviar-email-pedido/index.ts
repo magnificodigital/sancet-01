@@ -59,28 +59,66 @@ type PreparoItem = { nome: string; jejum_horas: number | null; instrucoes: strin
 
 function templatePreparoPaciente(p: any, preparos: PreparoItem[]): { subject: string; html: string } {
   const subject = `Sancet — Preparo dos seus exames (pedido ${p.protocolo})`;
-  const blocos = preparos
-    .map((pr) => {
-      const jj = Number(pr.jejum_horas ?? 0);
-      const jejum = jj > 0
-        ? `<p style="margin:2px 0;color:#9a3412"><b>Jejum:</b> ${jj} horas</p>`
-        : `<p style="margin:2px 0;color:#166534"><b>Jejum:</b> não é necessário</p>`;
-      const linhas = (Array.isArray(pr.instrucoes) ? pr.instrucoes : [])
-        .map((l) => String(l).trim())
-        .filter((l) => l && !(jj > 0 && /^jejum/i.test(l)));
-      const instr = linhas.length
-        ? `<ul style="margin:6px 0 0;padding-left:18px">${linhas.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>`
-        : "";
-      return `<div style="border:1px solid #eee;border-radius:8px;padding:12px;margin:10px 0">
-        <p style="margin:0 0 4px;font-weight:600;color:#222">${escapeHtml(pr.nome)}</p>${jejum}${instr}</div>`;
-    })
-    .join("");
+
+  // 1) JEJUM ÚNICO: vale o MAIOR entre os exames do pedido (regra do laboratório).
+  const jejumDe = (pr: PreparoItem) => Math.max(0, Number(pr.jejum_horas ?? 0) || 0);
+  const maiorJejum = preparos.reduce((m, pr) => Math.max(m, jejumDe(pr)), 0);
+  const exigem = preparos.filter((pr) => maiorJejum > 0 && jejumDe(pr) === maiorJejum).map((pr) => pr.nome);
+  const quadroJejum = maiorJejum > 0
+    ? `<div style="border:2px solid #ea580c;background:#fff7ed;border-radius:8px;padding:14px 16px;margin:14px 0">
+         <p style="margin:0;font-size:18px;font-weight:700;color:#9a3412">Jejum: ${maiorJejum} horas</p>
+         <p style="margin:6px 0 0;color:#7c2d12">Esse é o <b>maior jejum</b> entre os exames do seu pedido e vale para <b>todos</b> eles.
+         Exigido por: ${exigem.map((n) => escapeHtml(n)).join(", ")}.</p>
+         <p style="margin:6px 0 0;color:#7c2d12;font-size:12px">Durante o jejum, pode beber água.</p>
+       </div>`
+    : `<div style="border:2px solid #16a34a;background:#f0fdf4;border-radius:8px;padding:14px 16px;margin:14px 0">
+         <p style="margin:0;font-size:18px;font-weight:700;color:#166534">Não é necessário jejum</p>
+         <p style="margin:6px 0 0;color:#14532d">Nenhum exame do seu pedido exige jejum.</p>
+       </div>`;
+
+  // 2) Orientações sem as frases de jejum (o quadro acima já cobre o jejum).
+  const limpar = (pr: PreparoItem) =>
+    [...new Set((Array.isArray(pr.instrucoes) ? pr.instrucoes : [])
+      .map((l) => String(l).replace(/\s+/g, " ").trim())
+      // "vide informações" é nota interna do Shift, sem sentido para o paciente.
+      .filter((l) => l && !/jejum/i.test(l) && !/^sem preparo espec/i.test(l) && !/vide informa/i.test(l)))];
+  const porExame = preparos.map((pr) => ({ nome: pr.nome, linhas: limpar(pr) }));
+
+  // 3) Orientações repetidas em 2+ exames viram "gerais" (aparecem uma vez só).
+  const conta = new Map<string, number>();
+  porExame.forEach((e) => e.linhas.forEach((l) => conta.set(l, (conta.get(l) ?? 0) + 1)));
+  const gerais = [...conta.entries()].filter(([, n]) => n >= 2).map(([l]) => l);
+  const geraisSet = new Set(gerais);
+  const especificos = porExame
+    .map((e) => ({ nome: e.nome, linhas: e.linhas.filter((l) => !geraisSet.has(l)) }))
+    .filter((e) => e.linhas.length > 0);
+  const semExtra = porExame.filter((e) => !especificos.some((x) => x.nome === e.nome)).map((e) => e.nome);
+
+  const lista = (ls: string[]) =>
+    `<ul style="margin:6px 0 0;padding-left:18px">${ls.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>`;
+  const blocoGerais = gerais.length
+    ? `<h3 style="margin:18px 0 4px;font-size:15px;color:#222">Orientações gerais</h3>${lista(gerais)}`
+    : "";
+  const blocoEspecificos = especificos.length
+    ? `<h3 style="margin:18px 0 4px;font-size:15px;color:#222">Orientações específicas</h3>` +
+      especificos
+        .map((e) => `<div style="border:1px solid #eee;border-radius:8px;padding:10px 12px;margin:8px 0">
+            <p style="margin:0;font-weight:600;color:#222">${escapeHtml(e.nome)}</p>${lista(e.linhas)}</div>`)
+        .join("")
+    : "";
+  const blocoSemExtra = semExtra.length
+    ? `<p style="margin:14px 0 0;color:#555;font-size:13px"><b>Sem outras orientações além do jejum:</b> ${semExtra.map((n) => escapeHtml(n)).join(", ")}.</p>`
+    : "";
+
   const html = shell(
     "Preparo dos seus exames",
     `<p>Olá, <b>${escapeHtml(p.paciente_nome)}</b>!</p>
-     <p>Seu pedido <b>${escapeHtml(p.protocolo)}</b> foi confirmado. Veja abaixo como se preparar para <b>cada exame</b>:</p>
-     ${blocos || "<p>Os exames deste pedido não exigem preparo específico.</p>"}
-     <p style="color:#888;font-size:12px;margin-top:12px">Se tiver mais de um exame com jejum, siga o <b>maior</b> tempo indicado. Em caso de dúvida, fale com a recepção.</p>`,
+     <p>Seu pedido <b>${escapeHtml(p.protocolo)}</b> foi confirmado. Veja como se preparar:</p>
+     ${quadroJejum}
+     ${blocoGerais}
+     ${blocoEspecificos}
+     ${blocoSemExtra}
+     <p style="color:#888;font-size:12px;margin-top:16px">Em caso de dúvida, fale com a recepção.</p>`,
   );
   return { subject, html };
 }
