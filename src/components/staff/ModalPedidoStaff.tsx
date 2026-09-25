@@ -141,6 +141,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const [novoStatus, setNovoStatus] = useState<string>(pedido?.status ?? "novo");
   const [salvando, setSalvando] = useState(false);
   const [paciente, setPaciente] = useState<PacienteFull | null>(null);
+  const [nomeSocial, setNomeSocial] = useState<string | null>(null);
   const [resultados, setResultados] = useState<
     Array<{ id: string; nome_arquivo: string; arquivo_url: string; created_at: string }>
   >([]);
@@ -179,6 +180,14 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
         .eq("id", pedido.paciente_id)
         .maybeSingle()
         .then(({ data }) => setPaciente((data as PacienteFull) ?? null));
+      // Nome social em consulta separada (tolera a coluna ainda não existir).
+      setNomeSocial(null);
+      (supabase as any)
+        .from("pacientes")
+        .select("nome_social")
+        .eq("id", pedido.paciente_id)
+        .maybeSingle()
+        .then(({ data }: any) => setNomeSocial(data?.nome_social ?? null));
     }
   }, [pedido]);
 
@@ -711,6 +720,13 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
             ) : (
               <div className="space-y-1">
                 <p><span className="text-muted-foreground">Nome:</span> {paciente.nome ?? "—"}</p>
+                {nomeSocial && (
+                  <p>
+                    <span className="text-muted-foreground">Nome social:</span>{" "}
+                    <span className="font-semibold text-sky-800">{nomeSocial}</span>{" "}
+                    <span className="text-xs text-muted-foreground">(chamar o paciente por este nome)</span>
+                  </p>
+                )}
                 <p><span className="text-muted-foreground">CPF:</span> {paciente.cpf}</p>
                 <p><span className="text-muted-foreground">E-mail:</span> {paciente.email ?? "—"}</p>
                 <p><span className="text-muted-foreground">Celular:</span> {paciente.celular ?? "—"}</p>

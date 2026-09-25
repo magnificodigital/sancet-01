@@ -18,7 +18,7 @@ type Props = {
 
 export const SidebarAgendamentos = ({ ativa, onMudar }: Props) => {
   const { paciente } = usePaciente();
-  const primeiroNome = paciente?.nome?.split(" ")[0] ?? "";
+  const primeiroNome = (paciente?.nomeSocial || paciente?.nome || "").split(" ")[0];
 
   return (
     <>

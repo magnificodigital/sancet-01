@@ -169,14 +169,16 @@ const Cadastro = () => {
 
     setCarregando(true);
     try {
-      const nomeFinal = form.usarSocial && form.nomeSocial ? form.nomeSocial : form.nome;
+      // Nome civil vai sempre como "nome" (oficial, validado); o nome social vai à parte.
+      const nomeSocial = form.usarSocial ? form.nomeSocial.trim() || null : null;
 
       // Cria conta via edge function (admin API), evitando rate limit de e-mail de confirmação.
       const { data, error } = await supabase.functions.invoke("sancet-cadastrar-paciente", {
         body: {
           cpf: cpfLimpo,
           data_nascimento: dataISO,
-          nome: nomeFinal,
+          nome: form.nome.trim(),
+          nome_social: nomeSocial,
           sexo: form.sexo || null,
           email: form.email.trim().toLowerCase(),
           celular: apenasDigitos(form.celular),

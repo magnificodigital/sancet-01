@@ -69,7 +69,8 @@ export const Header = () => {
   // (Não depende da URL: a home pode ter um banner de fundo claro.)
   const dark = sobreHero;
   const navLinkClass = makeNavLinkClass(dark);
-  const iniciais = (paciente?.nome ?? "")
+  const nomeChamado = paciente?.nomeSocial || paciente?.nome || "";
+  const iniciais = nomeChamado
     .trim()
     .split(/\s+/)
     .filter(Boolean)
@@ -151,7 +152,7 @@ export const Header = () => {
                 <DropdownMenuLabel className="font-normal">
                   Olá,{" "}
                   <span className="font-semibold">
-                    {paciente?.nome?.split(" ")[0] ?? ""}
+                    {nomeChamado.split(" ")[0]}
                   </span>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

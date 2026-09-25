@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const {
-      cpf, data_nascimento, nome, sexo, email, celular, senha,
+      cpf, data_nascimento, nome, nome_social, sexo, email, celular, senha,
       cep, logradouro, numero, complemento, bairro, cidade, uf,
     } = body ?? {};
 
@@ -109,6 +109,11 @@ Deno.serve(async (req) => {
       cidade: cidade || null,
       uf: uf || null,
     };
+
+    // Nome social só entra quando preenchido (coluna nova: não quebra o cadastro
+    // de quem não usa nome social caso a migration ainda não tenha rodado).
+    const nomeSocialLimpo = String(nome_social ?? "").trim();
+    if (nomeSocialLimpo) patch.nome_social = nomeSocialLimpo;
 
     if (existente?.id) {
       const { error: updErr } = await admin.from("pacientes").update(patch).eq("id", existente.id);

@@ -5,6 +5,8 @@ import type { Session } from "@supabase/supabase-js";
 export type PacienteSessao = {
   id: string;
   nome: string;
+  /** Como o paciente quer ser chamado (pode ser vazio). */
+  nomeSocial?: string | null;
   cpf: string;
   data_nascimento: string;
   email?: string | null;
@@ -38,6 +40,7 @@ async function carregarPerfil() {
       cachedPaciente = {
         id: row.id,
         nome: row.nome ?? "",
+        nomeSocial: row.nome_social ?? null,
         cpf: row.cpf ?? "",
         data_nascimento: row.data_nascimento ?? "",
         email: row.email ?? session.user.email ?? null,
