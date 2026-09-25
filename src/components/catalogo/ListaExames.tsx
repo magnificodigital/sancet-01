@@ -332,12 +332,6 @@ export const ListaExames = ({ tipo, busca, emCasa, categoriasSelecionadas, mostr
                         {formatBRL(item.preco_centavos / 100)}
                       </span>
                     )}
-                    {!mostrarPreco && (
-                      <Badge className="ml-auto bg-green-100 text-green-800 hover:bg-green-100 gap-1.5 font-normal border border-green-200">
-                        <ShieldCheck className="h-3 w-3" />
-                        Coberto pelo convênio
-                      </Badge>
-                    )}
                   </div>
                   {!mostrarPreco && (
                     <p className="mt-1 text-[11px] text-muted-foreground">

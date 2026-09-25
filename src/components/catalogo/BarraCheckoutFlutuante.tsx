@@ -17,7 +17,7 @@ import { formatBRL } from "@/lib/preco";
 
 /**
  * Barra fixa no rodapé que aparece quando há itens na sacola.
- * Mostra contagem + total (ou "Coberto pelo convênio") + CTA pro checkout.
+ * Mostra contagem + total (ou "Pedido pelo convênio") + CTA pro checkout.
  */
 export const BarraCheckoutFlutuante = () => {
   const navigate = useNavigate();
@@ -53,7 +53,7 @@ export const BarraCheckoutFlutuante = () => {
             {ehConvenio ? (
               <p className="text-sm font-semibold text-blue-700 flex items-center gap-1 truncate">
                 <ShieldCheck className="h-4 w-4 shrink-0" />
-                Coberto pelo convênio
+                Pedido pelo convênio
               </p>
             ) : (
               <p className="text-base md:text-lg font-bold text-secondary leading-tight">

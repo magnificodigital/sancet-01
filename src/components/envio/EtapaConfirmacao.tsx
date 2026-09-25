@@ -449,12 +449,7 @@ export const EtapaConfirmacao = ({
                   <span className="truncate">
                     {i.codigoShift}-{i.nome}
                   </span>
-                  {tipo === "convenio" ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 shrink-0">
-                      <ShieldCheck className="h-3 w-3" />
-                      Coberto pelo convênio
-                    </span>
-                  ) : (
+                  {tipo === "convenio" ? null : (
                     <span className="whitespace-nowrap text-muted-foreground">
                       {formatBRL(precoItemReais(i))}
                     </span>

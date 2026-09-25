@@ -45,11 +45,7 @@ export const ListaItensSacola = ({ onVerDetalhes }: Props) => {
                   </p>
                 )}
               </div>
-              {ehConvenio ? (
-                <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border border-green-200 whitespace-nowrap">
-                  Coberto pelo convênio
-                </Badge>
-              ) : (
+              {ehConvenio ? null : (
                 (() => {
                   const r = precoItemReais(item);
                   return r != null ? (

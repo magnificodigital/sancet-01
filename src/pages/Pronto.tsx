@@ -254,7 +254,7 @@ const Pronto = () => {
                         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
                         <div className="space-y-1">
                           <p className="text-sm font-semibold text-green-800">
-                            Coberto pelo convênio
+                            Pedido pelo convênio
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Eventuais coparticipações são informadas pela operadora no momento do atendimento.
