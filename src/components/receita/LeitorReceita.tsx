@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   Brain,
@@ -11,45 +11,22 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
+import { lerPedidoIA } from "@/lib/lerPedido";
+import { AdicionarExameManual } from "@/components/catalogo/AdicionarExameManual";
 import { useSacola, ItemSacola } from "@/stores/sacola";
 import { UploadReceita } from "./UploadReceita";
 
 type Etapa = "upload" | "lendo" | "sucesso" | "erro";
 
-const toBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve((reader.result as string).split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
-type CatalogoItem = {
-  codigo_shift: string;
-  tipo: "exame" | "vacina";
-  nome: string;
-  outros_nomes: string[] | null;
-  preco_particular?: number | null;
-  preco_centavos: number | null;
-  prazo_resultado: string | null;
-  preparo: string | null;
-  disponivel_na_unidade: boolean;
-  disponivel_em_casa: boolean;
-};
-
-type Resultado = {
-  encontrados: string[];
-  nao_encontrados: string[];
-};
-
 export const LeitorReceita = () => {
   const navigate = useNavigate();
-  const { adicionar, setNaoAdicionados } = useSacola();
+  const { adicionar, setNaoAdicionados, tipo } = useSacola();
   const [etapa, setEtapa] = useState<Etapa>("upload");
   const [arquivo, setArquivo] = useState<File | null>(null);
-  const [resultado, setResultado] = useState<Resultado | null>(null);
-  const [catalogo, setCatalogo] = useState<CatalogoItem[]>([]);
+  const [lidos, setLidos] = useState<ItemSacola[]>([]);
+  const [naoEnc, setNaoEnc] = useState<string[]>([]);
+  // Convênio lê contra o catálogo COMPLETO; particular contra o catálogo com preço.
+  const origem = tipo === "convenio" ? "convenio" : "loja";
   const [progresso, setProgresso] = useState(10);
 
   // Animação da barra de progresso enquanto a IA processa
@@ -67,85 +44,18 @@ export const LeitorReceita = () => {
     setEtapa("lendo");
 
     try {
-      // 1. Buscar catálogo
-      const [exRes, vacRes] = await Promise.all([
-        supabase
-          .from("exames_cache")
-          .select(
-            "codigo_shift, nome, outros_nomes, preco_particular, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa",
-          )
-          .eq("ativo", true),
-        supabase
-          .from("vacinas_cache")
-          .select(
-            "codigo_shift, nome, outros_nomes, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa",
-          )
-          .eq("ativo", true),
-      ]);
-
-      if (exRes.error) throw exRes.error;
-      if (vacRes.error) throw vacRes.error;
-
-      const cat: CatalogoItem[] = [
-        ...(exRes.data ?? []).map((e: any) => ({ ...e, tipo: "exame" as const })),
-        ...(vacRes.data ?? []).map((v: any) => ({ ...v, tipo: "vacina" as const, preco_particular: null })),
-      ];
-      setCatalogo(cat);
-
-      // Catálogo enxuto p/ IA
-      const catalogoEnxuto = cat.map((c) => ({
-        codigo_shift: c.codigo_shift,
-        nome: c.nome,
-        outros_nomes: c.outros_nomes ?? [],
-      }));
-
-      const fileBase64 = await toBase64(arquivo);
-      const { data, error } = await supabase.functions.invoke(
-        "sancet-ler-receita",
-        {
-          body: {
-            fileBase64,
-            mimeType: arquivo.type || "image/jpeg",
-            catalogo: catalogoEnxuto,
-          },
-        },
-      );
-
-      if (error) throw error;
-      if (!data || !Array.isArray(data.encontrados)) {
-        throw new Error("Resposta inválida");
-      }
-
-      const res: Resultado = {
-        encontrados: data.encontrados ?? [],
-        nao_encontrados: data.nao_encontrados ?? [],
-      };
-
-      // Adicionar à sacola
-      for (const codigo of res.encontrados) {
-        const it = cat.find((c) => c.codigo_shift === codigo);
-        if (!it) continue;
-        const item: ItemSacola = {
-          codigoShift: it.codigo_shift,
-          tipo: it.tipo,
-          nome: it.nome,
-          outrosNomes: (it.outros_nomes ?? []).join(", "),
-          precoParticular: it.tipo === "exame" ? it.preco_particular ?? null : null,
-          precoCentavos: it.tipo === "vacina" ? it.preco_centavos : null,
-          prazoResultado: it.prazo_resultado,
-          preparo: it.preparo,
-          disponivelNaUnidade: it.disponivel_na_unidade,
-          disponivelEmCasa: it.disponivel_em_casa,
-        };
-        adicionar(item);
-      }
-      setNaoAdicionados(res.nao_encontrados ?? []);
-
+      const r = await lerPedidoIA(arquivo, origem);
+      r.itens.forEach((it) => adicionar(it));
+      setNaoAdicionados(r.naoEncontrados ?? []);
+      setLidos(r.itens);
+      setNaoEnc(r.naoEncontrados ?? []);
       setProgresso(100);
-      setResultado(res);
-      setEtapa("sucesso");
+      // Leu mas não achou nenhum exame -> mesma tela do erro (com busca manual).
+      setEtapa(r.itens.length > 0 ? "sucesso" : "erro");
     } catch (err) {
       console.error("Erro ao ler pedido:", err);
+      setLidos([]);
+      setNaoEnc([]);
       setEtapa("erro");
     }
   };
@@ -168,11 +78,7 @@ export const LeitorReceita = () => {
     );
   }
 
-  if (etapa === "sucesso" && resultado) {
-    const encontradosItens = resultado.encontrados
-      .map((cod) => catalogo.find((c) => c.codigo_shift === cod))
-      .filter(Boolean) as CatalogoItem[];
-
+  if (etapa === "sucesso") {
     return (
       <div className="flex flex-col items-center text-center">
         <CheckCircle2 size={48} className="mb-3 text-green-600" />
@@ -181,48 +87,33 @@ export const LeitorReceita = () => {
           Identificamos os seguintes procedimentos:
         </p>
 
-        {encontradosItens.length > 0 && (
-          <div className="mt-5 w-full rounded-lg bg-[#F0FAF4] p-3 text-left">
-            <p className="mb-2 text-sm font-semibold text-secondary">
-              Adicionados à sacola
-            </p>
-            <ul className="space-y-1.5">
-              {encontradosItens.map((it) => (
-                <li key={it.codigo_shift} className="flex items-center gap-2 text-sm">
-                  <Plus className="h-4 w-4 shrink-0 text-green-600" />
-                  <span>{it.nome}</span>
-                </li>
-              ))}
-            </ul>
+        <div className="mt-5 w-full rounded-lg bg-[#F0FAF4] p-3 text-left">
+          <p className="mb-2 text-sm font-semibold text-secondary">Adicionados à sacola</p>
+          <ul className="space-y-1.5">
+            {lidos.map((it) => (
+              <li key={it.codigoShift} className="flex items-center gap-2 text-sm">
+                <Plus className="h-4 w-4 shrink-0 text-green-600" />
+                <span>{it.nome}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {naoEnc.length > 0 && (
+          <div className="mt-3 w-full rounded-lg border border-orange-300 bg-[#FFF8F0] p-3 text-left">
+            <div className="mb-1 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-orange-500" />
+              <p className="text-sm font-semibold text-secondary">
+                Não reconhecidos automaticamente
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">{naoEnc.join(", ")}</p>
           </div>
         )}
 
-        {resultado.nao_encontrados.length > 0 && (
-          <div className="mt-3 w-full rounded-lg border border-orange-300 bg-[#FFF8F0] p-3 text-left">
-            <div className="mb-2 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-orange-500" />
-              <p className="text-sm font-semibold text-secondary">
-                Não encontrados no catálogo
-              </p>
-            </div>
-            <ul className="space-y-1.5">
-              {resultado.nao_encontrados.map((nome) => (
-                <li
-                  key={nome}
-                  className="flex flex-wrap items-center justify-between gap-2 text-sm"
-                >
-                  <span>{nome}</span>
-                  <Link
-                    to={`/exames?q=${encodeURIComponent(nome)}`}
-                    className="text-xs font-medium text-brand underline"
-                  >
-                    Buscar manualmente
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <div className="mt-3 w-full rounded-lg border bg-card p-3 text-left">
+          <AdicionarExameManual origem={origem} titulo="Faltou algum exame? Busque e inclua aqui:" />
+        </div>
 
         <div className="mt-6 flex w-full flex-col gap-2">
           <Button
@@ -230,9 +121,6 @@ export const LeitorReceita = () => {
             onClick={() => navigate("/sacola")}
           >
             Ver sacola
-          </Button>
-          <Button variant="outline" className="w-full" onClick={() => navigate("/exames")}>
-            Adicionar mais exames
           </Button>
         </div>
       </div>
@@ -243,23 +131,42 @@ export const LeitorReceita = () => {
     return (
       <div className="flex flex-col items-center text-center">
         <AlertCircle size={48} className="mb-3 text-brand" />
-        <h2 className="text-xl font-bold text-secondary">Não conseguimos ler o pedido</h2>
+        <h2 className="text-xl font-bold text-secondary">
+          Não conseguimos identificar os exames automaticamente
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Tente uma foto mais nítida ou adicione os exames manualmente
+          Tudo bem: se você sabe qual é o exame, é só buscar e incluir abaixo.
+          Ou tente de novo com uma foto mais nítida.
         </p>
+
+        {naoEnc.length > 0 && (
+          <p className="mt-3 w-full rounded-lg border border-orange-300 bg-[#FFF8F0] p-3 text-left text-sm text-muted-foreground">
+            Lemos no pedido, mas não achamos no catálogo: {naoEnc.join(", ")}.
+          </p>
+        )}
+
+        <div className="mt-4 w-full rounded-lg border bg-card p-3 text-left">
+          <AdicionarExameManual origem={origem} />
+        </div>
+
         <div className="mt-6 flex w-full flex-col gap-2">
           <Button
             className="w-full bg-brand text-white hover:bg-brand-hover"
+            onClick={() => navigate("/sacola")}
+          >
+            Ver sacola
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
             onClick={() => {
               setArquivo(null);
-              setResultado(null);
+              setLidos([]);
+              setNaoEnc([]);
               setEtapa("upload");
             }}
           >
-            Tentar novamente
-          </Button>
-          <Button variant="outline" className="w-full" onClick={() => navigate("/exames")}>
-            Buscar manualmente
+            Tentar ler de novo
           </Button>
         </div>
       </div>

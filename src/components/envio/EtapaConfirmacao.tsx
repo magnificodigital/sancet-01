@@ -47,6 +47,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { mascaraCelular, nomeValido } from "@/lib/mascaras";
+import { AdicionarExameManual } from "@/components/catalogo/AdicionarExameManual";
 import { toast } from "sonner";
 
 type Convenio = { id: string; nome: string; codigo_shift: string };
@@ -234,10 +235,12 @@ export const EtapaConfirmacao = ({
     setLendoPedido(true);
     setIaPedido(null);
     try {
-      const r = await lerPedidoIA(file);
+      const r = await lerPedidoIA(file, tipo === "convenio" ? "convenio" : "loja");
       setIaPedido({ itens: r.itens, naoEnc: r.naoEncontrados });
     } catch {
-      setIaPedido(null); // silencioso — a leitura é um bônus, não bloqueia o envio
+      // A leitura é um bônus e não bloqueia o envio — mas mostramos a caixa
+      // (sem exames) para o paciente poder incluir o exame manualmente.
+      setIaPedido({ itens: [], naoEnc: [] });
     } finally {
       setLendoPedido(false);
     }
@@ -773,8 +776,7 @@ export const EtapaConfirmacao = ({
               </>
             ) : (
               <p className="text-muted-foreground">
-                Não conseguimos identificar os exames automaticamente. Tudo bem —
-                nossa equipe fará a conferência do seu pedido.
+                Não conseguimos identificar os exames automaticamente.
               </p>
             )}
             {iaPedido.naoEnc.length > 0 && (
@@ -782,6 +784,19 @@ export const EtapaConfirmacao = ({
                 Não reconhecidos automaticamente: {iaPedido.naoEnc.join(", ")}.
               </p>
             )}
+            <div className="border-t border-brand/20 pt-3">
+              <AdicionarExameManual
+                origem={tipo === "convenio" ? "convenio" : "loja"}
+                titulo={
+                  iaPedido.itens.length > 0
+                    ? "Faltou algum exame? Busque e inclua aqui:"
+                    : "Sabe qual é o exame? Busque e inclua aqui:"
+                }
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Se preferir, siga assim mesmo — nossa equipe confere o seu pedido médico.
+              </p>
+            </div>
           </div>
         )}
 

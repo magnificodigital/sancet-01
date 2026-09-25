@@ -17,7 +17,45 @@ export type LeituraPedido = { itens: ItemSacola[]; naoEncontrados: string[] };
  * identificados + os nomes que não foram reconhecidos.
  * Mesma lógica do LeitorReceita da home, reaproveitável no fluxo de envio.
  */
-export async function lerPedidoIA(arquivo: File): Promise<LeituraPedido> {
+// Catálogo de convênio COMPLETO (1.191+ exames), em lotes (limite de 1.000/consulta).
+async function catalogoConvenio(): Promise<any[]> {
+  const todos: any[] = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await (supabase as any)
+      .from("exames_convenio")
+      .select("codigo_shift, nome")
+      .eq("ativo", true)
+      .order("nome")
+      .range(de, de + 999);
+    if (error) throw error;
+    todos.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  return todos.map((e) => ({
+    codigo_shift: String(e.codigo_shift),
+    nome: e.nome,
+    outros_nomes: [],
+    preco_particular: null,
+    preco_centavos: null,
+    prazo_resultado: null,
+    preparo: null,
+    disponivel_na_unidade: true,
+    disponivel_em_casa: false,
+    tipo: "exame" as const,
+  }));
+}
+
+/**
+ * origem "convenio": compara com o catálogo de convênio completo — antes só
+ * usava o particular (~470 exames) e a IA "não achava" exames de convênio.
+ */
+export async function lerPedidoIA(
+  arquivo: File,
+  origem: "loja" | "convenio" = "loja",
+): Promise<LeituraPedido> {
+  if (origem === "convenio") {
+    return lerComCatalogo(arquivo, await catalogoConvenio());
+  }
   const [exRes, vacRes] = await Promise.all([
     supabase
       .from("exames_cache")
@@ -44,6 +82,10 @@ export async function lerPedidoIA(arquivo: File): Promise<LeituraPedido> {
     })),
   ];
 
+  return lerComCatalogo(arquivo, cat);
+}
+
+async function lerComCatalogo(arquivo: File, cat: any[]): Promise<LeituraPedido> {
   const catalogoEnxuto = cat.map((c) => ({
     codigo_shift: c.codigo_shift,
     nome: c.nome,
@@ -65,7 +107,7 @@ export async function lerPedidoIA(arquivo: File): Promise<LeituraPedido> {
 
   const itens: ItemSacola[] = [];
   for (const codigo of data.encontrados as string[]) {
-    const it = cat.find((c) => c.codigo_shift === codigo);
+    const it = cat.find((c) => String(c.codigo_shift) === String(codigo));
     if (!it) continue;
     itens.push({
       codigoShift: it.codigo_shift,
