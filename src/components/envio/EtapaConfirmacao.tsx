@@ -894,7 +894,17 @@ export const EtapaConfirmacao = ({
           className="mt-0.5"
         />
         <span className="text-muted-foreground">
-          Concordo com os <span className="text-brand underline">Termos de uso</span> e
+          Concordo com os{" "}
+          {/* Nova aba: o paciente não perde os documentos já anexados no formulário. */}
+          <a
+            href="/politica-de-privacidade"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-brand underline hover:text-brand-hover"
+          >
+            Termos de uso
+          </a>{" "}
+          e
           autorizo o tratamento dos meus dados conforme a LGPD.
         </span>
       </label>
