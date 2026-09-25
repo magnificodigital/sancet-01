@@ -189,7 +189,7 @@ const EnviarPedido = () => {
       if (tipoEfetivo === "particular") {
         navigate(`/pagamento/${protocolo}`, { replace: true });
       } else {
-        navigate(`/pronto/${protocolo}`, { replace: true });
+        navigate(`/pronto/${protocolo}`, { replace: true, state: { recemFinalizado: true } });
       }
       setTimeout(() => {
         limpar();

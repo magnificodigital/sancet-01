@@ -116,7 +116,7 @@ const Pagamento = () => {
       if ((data as any)?.status_pagamento === "pago") {
         clearInterval(timer);
         setEtapa("pago");
-        setTimeout(() => navigate(`/pronto/${protocolo}`), 2000);
+        setTimeout(() => navigate(`/pronto/${protocolo}`, { replace: true, state: { recemFinalizado: true } }), 2000);
       }
     }, 8000);
     return () => clearInterval(timer);
@@ -139,7 +139,7 @@ const Pagamento = () => {
     if (!protocolo || !paciente?.id) return;
     setConfirming(true);
     await supabase.rpc("confirmar_pagamento_manual_auth", { p_protocolo: protocolo });
-    navigate(`/pronto/${protocolo}`);
+    navigate(`/pronto/${protocolo}`, { replace: true, state: { recemFinalizado: true } });
   };
 
   const formatarPreco = (centavos: number) =>

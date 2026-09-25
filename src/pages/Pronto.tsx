@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Mail, Copy, CheckCircle2, AlertCircle,
@@ -10,6 +10,14 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaciente } from "@/hooks/usePaciente";
 import { formatarAgendamento, parseDateOnly } from "@/lib/agendamento";
@@ -19,6 +27,20 @@ const Pronto = () => {
   const { paciente } = usePaciente();
   const [emailPaciente, setEmailPaciente] = useState<string>("");
   const voucherRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Aviso de sucesso: só logo após finalizar (envio no convênio ou pagamento
+  // confirmado). Reabrir o comprovante depois não mostra de novo.
+  const [avisoAberto, setAvisoAberto] = useState<boolean>(
+    !!(location.state as any)?.recemFinalizado,
+  );
+  useEffect(() => {
+    if ((location.state as any)?.recemFinalizado) {
+      // Limpa o marcador do histórico: recarregar a página não reabre o aviso.
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: pedido, isLoading, isError } = useQuery({
     queryKey: ["pedido", protocolo, paciente?.id],
@@ -64,6 +86,42 @@ const Pronto = () => {
 
   return (
     <PageShell>
+      <Dialog open={avisoAberto} onOpenChange={setAvisoAberto}>
+        <DialogContent className="max-w-md text-center sm:text-center">
+          <DialogHeader className="items-center sm:text-center">
+            <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+            <DialogTitle className="text-xl text-secondary">Deu tudo certo!</DialogTitle>
+            <DialogDescription className="space-y-2 text-sm leading-relaxed">
+              <span className="block">
+                Recebemos o seu pedido{protocolo ? (
+                  <> <b className="font-mono text-secondary">{protocolo}</b></>
+                ) : null}.
+              </span>
+              <span className="block">
+                Você vai receber <b>por e-mail todas as informações</b>: o resumo do
+                pedido agora e, assim que nossa equipe confirmar, a confirmação e o{" "}
+                <b>preparo dos exames</b>.
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                Não achou o e-mail? Confira também a caixa de spam.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <Button
+              onClick={() => navigate("/agendamentos")}
+              className="w-full bg-brand text-white hover:bg-brand-hover"
+            >
+              Ver meus agendamentos
+            </Button>
+            <Button variant="ghost" onClick={() => setAvisoAberto(false)} className="w-full">
+              Ver comprovante
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <style>{`
         @media print {
           body * { visibility: hidden; }
