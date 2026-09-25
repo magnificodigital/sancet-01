@@ -110,10 +110,21 @@ function templatePreparoPaciente(p: any, preparos: PreparoItem[]): { subject: st
     ? `<p style="margin:14px 0 0;color:#555;font-size:13px"><b>Sem outras orientações além do jejum:</b> ${semExtra.map((n) => escapeHtml(n)).join(", ")}.</p>`
     : "";
 
+  // Recado salvo pela equipe no pedido ("Informações para o paciente"): vai
+  // junto na confirmação, em destaque vermelho (pedido do cliente).
+  const recado = String(p.info_paciente ?? "").trim();
+  const quadroRecado = recado
+    ? `<div style="border:2px solid #C8102E;background:#fef2f2;border-radius:8px;padding:14px 16px;margin:14px 0">
+         <p style="margin:0;font-size:16px;font-weight:700;color:#C8102E">Informação importante da Sancet</p>
+         <p style="margin:6px 0 0;color:#7f1d1d">${escapeHtml(recado).replace(/\n/g, "<br/>")}</p>
+       </div>`
+    : "";
+
   const html = shell(
     "Preparo dos seus exames",
     `<p>Olá, <b>${escapeHtml(p.paciente_nome)}</b>!</p>
      <p>Seu pedido <b>${escapeHtml(p.protocolo)}</b> foi confirmado. Veja como se preparar:</p>
+     ${quadroRecado}
      ${quadroJejum}
      ${blocoGerais}
      ${blocoEspecificos}

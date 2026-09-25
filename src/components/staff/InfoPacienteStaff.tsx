@@ -57,7 +57,11 @@ export const InfoPacienteStaff = ({ pedido, podeEditar, onSalvo }: Props) => {
         toast.message("Mensagem salva. O e-mail não foi enviado (paciente sem e-mail?).");
       }
     } else {
-      toast.success(valor ? "Mensagem salva — o paciente vê no pedido." : "Mensagem removida.");
+      toast.success(
+        valor
+          ? "Mensagem salva — vai junto no e-mail de preparo ao confirmar o pedido."
+          : "Mensagem removida.",
+      );
     }
     setSalvando(null);
     onSalvo?.();
@@ -71,6 +75,9 @@ export const InfoPacienteStaff = ({ pedido, podeEditar, onSalvo }: Props) => {
       <p className="mb-2 text-xs text-muted-foreground">
         Aparece em destaque no pedido, na área do paciente. Ex.: trazer a carteirinha
         física, coleta de urina em frasco próprio, ajuste de horário.
+        <br />
+        <b>Salvar</b>: vai junto no e-mail de preparo quando o pedido for{" "}
+        <b>confirmado</b>. <b>Salvar e enviar agora</b>: manda um e-mail na hora.
       </p>
       <Textarea
         value={texto}
@@ -95,7 +102,7 @@ export const InfoPacienteStaff = ({ pedido, podeEditar, onSalvo }: Props) => {
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <Send className="h-3.5 w-3.5" /> Salvar e avisar por e-mail
+                <Send className="h-3.5 w-3.5" /> Salvar e enviar agora
               </>
             )}
           </Button>
