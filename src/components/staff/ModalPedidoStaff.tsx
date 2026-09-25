@@ -29,6 +29,8 @@ import {
   statusAgendamento,
 } from "./utils";
 import { ConfirmarExclusao } from "./ConfirmarExclusao";
+import { EditorItensPedido } from "./EditorItensPedido";
+import { InfoPacienteStaff } from "./InfoPacienteStaff";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { CalendarCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -182,7 +184,6 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
 
   if (!pedido) return null;
 
-  const itens: any[] = Array.isArray(pedido.itens) ? pedido.itens : [];
   const mudouStatus = novoStatus !== pedido.status;
 
   const salvarStatus = async () => {
@@ -197,9 +198,14 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
     const quando = new Date().toLocaleString("pt-BR");
     const autor = nomeStaff || "staff";
     const linha = `[${quando}] Status alterado para '${alvo}' por ${autor}.`;
-    const observacoes = pedido.observacoes
-      ? `${pedido.observacoes}\n${linha}`
-      : linha;
+    // Relê o histórico atual (pode ter mudado nesta sessão, ex.: exames editados).
+    const { data: atual } = await supabase
+      .from("pedidos")
+      .select("observacoes")
+      .eq("id", pedido.id)
+      .maybeSingle();
+    const obsAtual = (atual as any)?.observacoes ?? pedido.observacoes;
+    const observacoes = obsAtual ? `${obsAtual}\n${linha}` : linha;
 
     const { error } = await supabase
       .from("pedidos")
@@ -541,28 +547,18 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
               </p>
             </div>
 
-            <div className="rounded-lg border bg-white">
-              <p className="border-b px-3 py-2 text-xs font-semibold uppercase text-muted-foreground">
-                Exames e vacinas
-              </p>
-              <ul className="divide-y">
-                {itens.map((it: any, idx: number) => (
-                  <li key={idx} className="flex items-center justify-between px-3 py-2 text-sm">
-                    <span className="truncate pr-3">{it.nome ?? it.codigoShift ?? "—"}</span>
-                    <span className="font-medium">
-                      {formatarPreco(it.precoCentavos ?? it.preco_centavos)}
-                    </span>
-                  </li>
-                ))}
-                {itens.length === 0 && (
-                  <li className="px-3 py-3 text-sm text-muted-foreground">Sem itens</li>
-                )}
-              </ul>
-              <div className="flex items-center justify-between border-t px-3 py-2 text-sm font-bold">
-                <span>Total</span>
-                <span>{formatarPreco(pedido.valor_total_centavos)}</span>
-              </div>
-            </div>
+            <EditorItensPedido
+              pedido={pedido}
+              nomeStaff={nomeStaff}
+              podeEditar={permissoes?.pedidos?.editar !== false}
+              onSalvo={onSalvo}
+            />
+
+            <InfoPacienteStaff
+              pedido={pedido}
+              podeEditar={permissoes?.pedidos?.editar !== false}
+              onSalvo={onSalvo}
+            />
 
             {Array.isArray((pedido as any).exames_identificados_ia) &&
               (pedido as any).exames_identificados_ia.length > 0 && (

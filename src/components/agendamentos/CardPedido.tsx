@@ -21,6 +21,8 @@ export type Pedido = {
   convenio_tokens?: string[] | null;
   convenio_token_solicitado_em?: string | null;
   convenio_token_preenchido_em?: string | null;
+  info_paciente?: string | null;
+  info_paciente_em?: string | null;
 };
 
 type Props = {

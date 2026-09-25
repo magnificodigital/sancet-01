@@ -85,6 +85,19 @@ function templatePreparoPaciente(p: any, preparos: PreparoItem[]): { subject: st
   return { subject, html };
 }
 
+function templateInformacaoPaciente(p: any): { subject: string; html: string } {
+  const subject = `Sancet — Informação sobre o seu pedido ${p.protocolo}`;
+  const msg = escapeHtml(p.info_paciente ?? "").replace(/\n/g, "<br/>");
+  const html = shell(
+    "Temos uma informação sobre o seu pedido",
+    `<p>Olá, <b>${escapeHtml(p.paciente_nome)}</b>!</p>
+     <p>A equipe da Sancet deixou uma informação sobre o seu pedido <b>${escapeHtml(p.protocolo)}</b>:</p>
+     <div style="border-left:4px solid #0284c7;background:#f0f9ff;padding:12px 14px;margin:12px 0;border-radius:4px">${msg}</div>
+     <p style="margin-top:16px"><a href="${BASE_URL}/agendamentos" style="background:#C8102E;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block">Ver meu pedido</a></p>`,
+  );
+  return { subject, html };
+}
+
 function shell(title: string, inner: string): string {
   return `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;margin:0;padding:24px;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #eee;">
@@ -234,7 +247,7 @@ Deno.serve(async (req) => {
     const { pedido_id, tipo, dry_run, protocolo } = await req.json();
     // No dry_run de preparo aceita também o protocolo (só devolve contagens).
     const porProtocolo = !pedido_id && dry_run === true && tipo === "preparo" && !!protocolo;
-    if ((!pedido_id && !porProtocolo) || !["novo", "confirmado", "resultado", "solicitar_token", "preparo"].includes(tipo)) {
+    if ((!pedido_id && !porProtocolo) || !["novo", "confirmado", "resultado", "solicitar_token", "preparo", "informacao"].includes(tipo)) {
       return new Response(JSON.stringify({ error: "params inválidos" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -415,6 +428,8 @@ Deno.serve(async (req) => {
               ? templateSolicitarToken(pedido)
               : tipo === "preparo"
                 ? templatePreparoPaciente(pedido, preparosLista)
+                : tipo === "informacao"
+                  ? templateInformacaoPaciente(pedido)
                 : templateConfirmadoPaciente(pedido, endereco);
       const r = await enviarResend({
         apiKey,

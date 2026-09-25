@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Circle, CheckCircle2, Download, Plus, X } from "lucide-react";
+import { Circle, CheckCircle2, Download, MessageSquareText, Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -152,6 +152,19 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {pedido.info_paciente && (
+            <section className="rounded-lg border-l-4 border-sky-500 bg-sky-50 p-4">
+              <h4 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-sky-900">
+                <MessageSquareText className="h-4 w-4" /> Informação da Sancet
+              </h4>
+              <p className="whitespace-pre-line text-sm text-sky-950">{pedido.info_paciente}</p>
+              {pedido.info_paciente_em && (
+                <p className="mt-2 text-xs text-sky-800/70">
+                  {format(new Date(pedido.info_paciente_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </p>
+              )}
+            </section>
+          )}
           <section>
             <h4 className="text-sm font-semibold mb-2">Procedimentos</h4>
             <ul className="space-y-1.5">
