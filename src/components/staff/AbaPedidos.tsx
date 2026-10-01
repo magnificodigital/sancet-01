@@ -13,7 +13,7 @@ import {
 import { TabelaPedidos } from "./TabelaPedidos";
 import { KanbanPedidos } from "./KanbanPedidos";
 import { ModalPedidoStaff } from "./ModalPedidoStaff";
-import { Pedido, STATUS_OPTIONS, statusAgendamento } from "./utils";
+import { Pedido, respostaPaciente, STATUS_OPTIONS, statusAgendamento } from "./utils";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { cn } from "@/lib/utils";
 
@@ -124,7 +124,7 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     const em7 = new Date(hoje);
     em7.setDate(em7.getDate() + 7);
 
-    return pedidos.filter((p) => {
+    const lista = pedidos.filter((p) => {
       if (status !== "todos" && p.status !== status) return false;
       if (tipo !== "todos" && p.tipo_solicitacao !== tipo) return false;
       if (modalidade !== "todos" && p.modalidade_coleta !== modalidade) return false;
@@ -150,6 +150,10 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
       }
       return true;
     });
+    // Quem respondeu (ex.: token informado) sobe para o topo; sort é estável.
+    return [...lista].sort(
+      (a, b) => Number(!!respostaPaciente(b)) - Number(!!respostaPaciente(a)),
+    );
   }, [pedidos, status, tipo, modalidade, unidade, agendamento, busca]);
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));

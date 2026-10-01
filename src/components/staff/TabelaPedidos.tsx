@@ -15,6 +15,7 @@ import {
   Pedido,
   rotuloPeriodo,
   statusAgendamento,
+  respostaPaciente,
 } from "./utils";
 import { cn } from "@/lib/utils";
 
@@ -92,6 +93,11 @@ export const TabelaPedidos = ({ pedidos, onAbrir, vazioMsg = "Nenhum pedido." }:
             <TableRow key={p.id}>
               <TableCell className="font-mono text-xs font-bold">{p.protocolo}</TableCell>
               <TableCell className="max-w-[220px] truncate" title={p.paciente_nome ?? ""}>
+                {respostaPaciente(p) && (
+                  <span className="mr-1.5 inline-flex rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
+                    🔔 {respostaPaciente(p)}
+                  </span>
+                )}
                 {p.paciente_nome ?? "—"}
               </TableCell>
               <TableCell>

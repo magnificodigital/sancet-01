@@ -18,6 +18,7 @@ import {
   formatarPreco,
   Pedido,
   STATUS_LABELS,
+  respostaPaciente,
   statusAgendamento,
 } from "./utils";
 import { cn } from "@/lib/utils";
@@ -68,15 +69,22 @@ const CardPedido = ({
 }) => {
   const ag = statusAgendamento(p.data_agendamento, p.status);
   const nome = p.paciente_nome || p.paciente_cpf;
+  const respondeu = respostaPaciente(p);
 
   return (
     <div
       onClick={() => !arrastando && onAbrir(p)}
       className={cn(
         "cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition hover:shadow-md",
+        respondeu && "border-amber-400 bg-amber-50 ring-2 ring-amber-300",
         arrastando && "opacity-50",
       )}
     >
+      {respondeu && (
+        <p className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+          🔔 Paciente respondeu · {respondeu}
+        </p>
+      )}
       <p className="truncate text-sm font-bold text-secondary" title={nome}>
         {nome}
       </p>

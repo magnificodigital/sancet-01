@@ -77,6 +77,9 @@ export type Pedido = {
   termos_aceitos_em: string | null;
   created_at: string | null;
   data_agendamento: string | null;
+  convenio_tokens?: string[] | null;
+  convenio_token_solicitado_em?: string | null;
+  convenio_token_preenchido_em?: string | null;
   periodo_agendamento: "manha" | "tarde" | null;
   emails_enviados?: any;
 };
@@ -131,4 +134,21 @@ export function formatarAgendamentoCurto(
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const per = rotuloPeriodo(periodo);
   return per ? `${dd}/${mm} — ${per}` : `${dd}/${mm}`;
+}
+
+// ---------- "Paciente respondeu" ----------
+// Destaque no Kanban/lista: o paciente respondeu algo que a equipe pediu e o
+// pedido ainda não foi tratado (confirmado/concluído/cancelado). Hoje: token do
+// convênio. (Anexos do paciente entram aqui também.)
+const STATUS_TRATADOS = ["confirmado", "atendido", "concluido", "cancelado"];
+
+export function respostaPaciente(p: Pedido): string | null {
+  if (STATUS_TRATADOS.includes(p.status)) return null;
+  const preenchido = p.convenio_token_preenchido_em ? Date.parse(p.convenio_token_preenchido_em) : NaN;
+  const solicitado = p.convenio_token_solicitado_em ? Date.parse(p.convenio_token_solicitado_em) : NaN;
+  // Respondeu o token, e não houve novo pedido de token depois da resposta.
+  if (!Number.isNaN(preenchido) && (Number.isNaN(solicitado) || preenchido >= solicitado)) {
+    return "Token informado";
+  }
+  return null;
 }
