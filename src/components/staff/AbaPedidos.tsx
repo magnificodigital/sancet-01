@@ -111,6 +111,24 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     setSemUnidades(lista.length === 0);
   };
 
+  // Tempo real: pedido novo ou alterado (ex.: paciente informou o token) já
+  // reordena/destaca o board, sem precisar recarregar a página.
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const canal = supabase
+      .channel("aba-pedidos-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, () => {
+        if (t) clearTimeout(t);
+        t = setTimeout(() => carregar(), 600); // agrupa rajadas de mudanças
+      })
+      .subscribe();
+    return () => {
+      if (t) clearTimeout(t);
+      supabase.removeChannel(canal);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     carregar();
     carregarUnidades();
