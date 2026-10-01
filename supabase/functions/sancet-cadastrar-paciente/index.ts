@@ -12,6 +12,18 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+function cpfValido(v: string): boolean {
+  const c = v.replace(/\D/g, "");
+  if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;
+  const dv = (n: number) => {
+    let soma = 0;
+    for (let i = 0; i < n; i++) soma += Number(c[i]) * (n + 1 - i);
+    const r = (soma * 10) % 11;
+    return r === 10 ? 0 : r;
+  };
+  return dv(9) === Number(c[9]) && dv(10) === Number(c[10]);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -47,6 +59,10 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (!cpfValido(String(cpf))) {
+      return json({ error: "CPF inválido. Confira os números." }, 200);
+    }
+
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -62,12 +78,23 @@ Deno.serve(async (req) => {
     // Verifica se já existe paciente com esse CPF (com ou sem máscara)
     const { data: existente } = await admin
       .from("pacientes")
-      .select("id, auth_user_id")
+      .select("id, auth_user_id, data_nascimento")
       .or(`cpf.eq.${cpfClean},cpf.eq.${cpfFmt}`)
       .maybeSingle();
 
     if (existente?.auth_user_id) {
       return json({ error: "Este CPF já possui cadastro. Use 'Entrar' ou 'Esqueci minha senha'." }, 200);
+    }
+
+    // Paciente já existia (cadastrado pela equipe/pedido anterior) e ainda sem
+    // acesso: só vincula se a data de nascimento conferir — senão bastaria o
+    // CPF para alguém assumir o histórico de outra pessoa.
+    if (existente?.id && existente.data_nascimento &&
+        String(existente.data_nascimento).slice(0, 10) !== String(data_nascimento).slice(0, 10)) {
+      return json(
+        { error: "Os dados não conferem com o cadastro existente deste CPF. Procure a recepção da Sancet." },
+        200,
+      );
     }
 
     // Cria usuário no Auth com email já confirmado (não dispara email → sem rate limit)

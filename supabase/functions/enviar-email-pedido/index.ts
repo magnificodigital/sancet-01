@@ -322,6 +322,26 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Quem chama precisa estar logado: equipe envia qualquer tipo; o paciente
+    // só dispara o "novo" do PRÓPRIO pedido (checado após carregar o pedido).
+    const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const { data: authData } = jwt ? await supabase.auth.getUser(jwt) : ({ data: { user: null } } as any);
+    const caller = authData?.user;
+    if (!caller) {
+      return new Response(JSON.stringify({ error: "não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: roleRow } = await supabase.from("user_roles").select("user_id").eq("user_id", caller.id).maybeSingle();
+    const ehStaff = !!roleRow;
+    if (!ehStaff && (tipo !== "novo" || dry_run)) {
+      return new Response(JSON.stringify({ error: "não autorizado" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: cfgRows } = await supabase
       .from("configuracoes")
       .select("chave, valor")
@@ -354,6 +374,30 @@ Deno.serve(async (req) => {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (!ehStaff) {
+      const { data: dono } = await supabase
+        .from("pacientes")
+        .select("id")
+        .eq("id", pedido.paciente_id ?? "00000000-0000-0000-0000-000000000000")
+        .eq("auth_user_id", caller.id)
+        .maybeSingle();
+      if (!dono) {
+        return new Response(JSON.stringify({ error: "pedido não encontrado" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Paciente não pode reenviar o "novo" (evita spam para a equipe).
+      const jaEnviado = (Array.isArray(pedido.emails_enviados) ? pedido.emails_enviados : []).some(
+        (l: any) => l?.tipo === "novo",
+      );
+      if (jaEnviado) {
+        return new Response(JSON.stringify({ skipped: true, reason: "ja_enviado" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Idempotência: nunca notificar "resultado pronto" duas vezes para o mesmo pedido.

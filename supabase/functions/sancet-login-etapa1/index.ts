@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
     await ephemeral.auth.signOut();
 
     // 2) Gera código 6 dígitos
-    const codigo = String(Math.floor(100000 + Math.random() * 900000));
+    // Aleatório criptográfico (Math.random é previsível).
+    const codigo = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
     const hash = await sha256Hex(`${emailNorm}:${codigo}`);
     const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 

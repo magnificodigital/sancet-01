@@ -27,8 +27,18 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Limites: evita usar a chave da IA como "proxy" para qualquer coisa.
+    const mimeType = String(mimeTypeReq || "image/jpeg").toLowerCase();
+    if (!/^(image\/(jpeg|jpg|png|webp|heic|heif)|application\/pdf)$/.test(mimeType)) {
+      return new Response(JSON.stringify({ error: "Formato não suportado. Envie foto ou PDF." }), { status: 400, headers: cors });
+    }
+    if (typeof fileBase64 !== "string" || fileBase64.length > 14_000_000) {
+      return new Response(JSON.stringify({ error: "Arquivo muito grande (máx. 10 MB)." }), { status: 413, headers: cors });
+    }
+    if (!Array.isArray(catalogo) || catalogo.length > 20000) {
+      return new Response(JSON.stringify({ error: "Catálogo inválido." }), { status: 400, headers: cors });
+    }
     const base64 = fileBase64;
-    const mimeType = mimeTypeReq || "image/jpeg";
     const dataUrl = `data:${mimeType};base64,${base64}`;
     const isPdf = mimeType.includes("pdf");
 
@@ -36,7 +46,7 @@ Deno.serve(async (req) => {
     const catalogoTexto = catalogo
       .map((c: any) => {
         const outros = (c.outros_nomes ?? []).join(", ");
-        return `${c.codigo_shift} | ${c.nome}${outros ? ` | ${outros}` : ""}`;
+        return `${String(c.codigo_shift).slice(0, 20)} | ${String(c.nome).slice(0, 200)}${outros ? ` | ${outros.slice(0, 300)}` : ""}`;
       })
       .join("\n");
 

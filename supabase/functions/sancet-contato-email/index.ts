@@ -64,7 +64,14 @@ Deno.serve(async (req) => {
     });
 
   try {
-    const { nome, email, telefone, mensagem, pagina } = await req.json();
+    const corpo = await req.json();
+    // Limita tamanhos (formulário público).
+    const corta = (v: unknown, n: number) => String(v ?? "").slice(0, n);
+    const nome = corta(corpo.nome, 120);
+    const email = corta(corpo.email, 200);
+    const telefone = corta(corpo.telefone, 40);
+    const mensagem = corta(corpo.mensagem, 5000);
+    const pagina = corta(corpo.pagina, 300);
     if (!String(nome ?? "").trim() || !String(mensagem ?? "").trim()) {
       return json(400, { ok: false, reason: "Nome e mensagem são obrigatórios." });
     }

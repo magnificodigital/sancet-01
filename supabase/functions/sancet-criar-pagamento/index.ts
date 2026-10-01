@@ -127,18 +127,41 @@ serve(async (req) => {
 
     const gateway = cfg["GATEWAY_ATIVO"] || "asaas";
     const body = await req.json().catch(() => ({}));
-    const { protocolo, valor_centavos, descricao } = body;
+    const protocolo = String(body.protocolo ?? "");
     const metodo: Metodo = (["pix", "boleto", "cartao"] as const).includes(body.metodo) ? body.metodo : "pix";
-    const valor = valor_centavos / 100;
+
+    // Quem chama: precisa estar logado (paciente dono do pedido ou equipe).
+    const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const { data: userData } = jwt ? await supabase.auth.getUser(jwt) : { data: { user: null } } as any;
+    const caller = userData?.user;
+    if (!caller) return respondError("gateway", "Faça login para pagar.", "sem sessão", 401);
 
     // Busca dados reais do pedido
     const { data: pedido } = await supabase
       .from("pedidos")
-      .select("id, paciente_nome, paciente_cpf, asaas_payment_id, asaas_customer_id, paciente_id")
+      .select("id, paciente_nome, paciente_cpf, asaas_payment_id, asaas_customer_id, paciente_id, valor_total_centavos, status_pagamento, status")
       .eq("protocolo", protocolo)
       .maybeSingle();
 
     if (!pedido) return respondError("gateway", "Pedido não encontrado.", "protocolo inexistente", 404);
+
+    const { data: dono } = pedido.paciente_id
+      ? await supabase.from("pacientes").select("id").eq("id", pedido.paciente_id).eq("auth_user_id", caller.id).maybeSingle()
+      : { data: null } as any;
+    const { data: ehStaff } = await supabase.from("user_roles").select("user_id").eq("user_id", caller.id).maybeSingle();
+    if (!dono && !ehStaff) return respondError("gateway", "Pedido não encontrado.", "não é dono do pedido", 404);
+
+    if (pedido.status_pagamento === "pago") {
+      return respondError("gateway", "Este pedido já está pago.", "ja_pago", 409);
+    }
+    if (pedido.status === "cancelado") {
+      return respondError("gateway", "Este pedido foi cancelado.", "cancelado", 409);
+    }
+
+    // O valor SEMPRE vem do pedido salvo no banco — nunca do navegador.
+    const valor_centavos = Number(pedido.valor_total_centavos ?? 0);
+    const valor = valor_centavos / 100;
+    const descricao = `Pedido Sancet ${protocolo}`;
 
     let pacienteEmail: string | null = null;
     let pacienteCelular: string | null = null;
@@ -185,7 +208,7 @@ serve(async (req) => {
       if (pedido?.asaas_payment_id) {
         const getRes = await fetch(`${baseUrl}/payments/${pedido.asaas_payment_id}`, { headers });
         const existing = await safeJson(getRes);
-        if (getRes.ok && existing?.id && existing.billingType === billingType && existing.status !== "OVERDUE") {
+        if (getRes.ok && existing?.id && existing.billingType === billingType && existing.status !== "OVERDUE" && Math.round(Number(existing.value) * 100) === valor_centavos) {
           chargeId = existing.id;
           charge = existing;
         }

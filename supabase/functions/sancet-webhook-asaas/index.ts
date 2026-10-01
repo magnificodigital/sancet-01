@@ -17,6 +17,16 @@ const EVENT_MAP: Record<string, string> = {
   PAYMENT_DELETED: "cancelado",
 };
 
+function ambienteAsaas(apiKey: string, cfgAmbiente?: string): string {
+  const amb = (cfgAmbiente ?? "").toLowerCase();
+  if (amb === "producao" || amb === "production" || amb === "prod") return "https://api.asaas.com/api/v3";
+  if (amb === "sandbox" || amb === "homologacao" || amb === "hmlg") return "https://sandbox.asaas.com/api/v3";
+  const k = apiKey.toLowerCase();
+  if (k.includes("hmlg") || k.includes("sandbox") || k.includes("homolog")) return "https://sandbox.asaas.com/api/v3";
+  if (apiKey.startsWith("$aact_YTU5YTE0M")) return "https://sandbox.asaas.com/api/v3";
+  return "https://api.asaas.com/api/v3";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
@@ -26,14 +36,15 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Validação opcional do token configurado no painel Asaas
-    const { data: cfgRow } = await supabase
+    const { data: cfgRows } = await supabase
       .from("configuracoes")
-      .select("valor")
-      .eq("chave", "ASAAS_WEBHOOK_TOKEN")
-      .maybeSingle();
+      .select("chave, valor")
+      .in("chave", ["ASAAS_WEBHOOK_TOKEN", "ASAAS_API_KEY", "ASAAS_AMBIENTE"]);
+    const cfg: Record<string, string> = {};
+    (cfgRows ?? []).forEach((r: any) => (cfg[r.chave] = r.valor ?? ""));
 
-    const expected = cfgRow?.valor;
+    // Token configurado no painel Asaas (quando existir, é obrigatório).
+    const expected = cfg.ASAAS_WEBHOOK_TOKEN?.trim();
     if (expected) {
       const received = req.headers.get("asaas-access-token");
       if (received !== expected) {
@@ -62,6 +73,43 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, ignored: event }), {
         headers: { ...cors, "Content-Type": "application/json" },
       });
+    }
+
+    // Nunca confia só no corpo do webhook: confirma a cobrança direto na API
+    // do Asaas (evita alguém forjar um "PAYMENT_RECEIVED" e marcar como pago).
+    const apiKey = cfg.ASAAS_API_KEY?.trim();
+    if (!apiKey || !payment?.id) {
+      return new Response(JSON.stringify({ error: "nao_verificavel" }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+    const real = await fetch(`${ambienteAsaas(apiKey, cfg.ASAAS_AMBIENTE)}/payments/${encodeURIComponent(payment.id)}`, {
+      headers: { access_token: apiKey },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (!real?.id || real.externalReference !== protocolo) {
+      return new Response(JSON.stringify({ error: "cobranca_nao_confere" }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+    if (novoStatus === "pago") {
+      const pagoDeVerdade = ["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(String(real.status));
+      const { data: ped } = await supabase
+        .from("pedidos")
+        .select("valor_total_centavos")
+        .eq("protocolo", protocolo)
+        .maybeSingle();
+      const valorOk = !!ped && Math.round(Number(real.value) * 100) >= Number(ped.valor_total_centavos ?? 0);
+      if (!pagoDeVerdade || !valorOk) {
+        console.error("[webhook-asaas] pagamento não confere", { protocolo, status: real.status, value: real.value });
+        return new Response(JSON.stringify({ error: "pagamento_nao_confere" }), {
+          status: 400,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const update: Record<string, unknown> = {
