@@ -46,6 +46,7 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [unidades, setUnidades] = useState<UnidadeOpt[]>([]);
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
+  const [revisarAoAbrir, setRevisarAoAbrir] = useState(false);
 
   const [vista, setVista] = useState<"lista" | "kanban">(() => {
     if (typeof window === "undefined") return "kanban";
@@ -319,6 +320,10 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
           onAtualizado={carregar}
           nomeStaff={nomeStaff}
           podeEditar={podeEditar}
+          onConfirmar={(p) => {
+            setRevisarAoAbrir(true);
+            setPedidoAberto(p);
+          }}
         />
       ) : (
         <>
@@ -354,7 +359,11 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
 
       <ModalPedidoStaff
         pedido={pedidoAberto}
-        onClose={() => setPedidoAberto(null)}
+        revisarAoAbrir={revisarAoAbrir}
+        onClose={() => {
+          setPedidoAberto(null);
+          setRevisarAoAbrir(false);
+        }}
         onSalvo={carregar}
       />
     </div>

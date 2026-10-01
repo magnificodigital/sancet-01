@@ -28,6 +28,8 @@ type Props = {
   onAtualizado: () => void;
   nomeStaff: string | null;
   podeEditar: boolean;
+  /** Arrastar para "Confirmado" não confirma direto: abre o pedido na revisão. */
+  onConfirmar?: (p: Pedido) => void;
 };
 
 const COLUNAS: { id: string; label: string; emoji: string; bg: string; header: string }[] = [
@@ -219,6 +221,7 @@ export const KanbanPedidos = ({
   onAtualizado,
   nomeStaff,
   podeEditar,
+  onConfirmar,
 }: Props) => {
   // estado local pra otimistic UI
   const [override, setOverride] = useState<Record<string, string>>({});
@@ -270,6 +273,15 @@ export const KanbanPedidos = ({
       return;
     }
 
+    // Confirmar dispara e-mails ao paciente: passa pelo resumo de revisão.
+    if (colunaDestino === "confirmado") {
+      if (onConfirmar) {
+        onConfirmar(p);
+        toast.message("Revise o resumo e confirme o pedido.");
+        return;
+      }
+    }
+
     // otimistic
     const anterior = p.status;
     setOverride((m) => ({ ...m, [cardId]: colunaDestino }));
@@ -302,18 +314,6 @@ export const KanbanPedidos = ({
     }
 
     toast.success("Status atualizado!");
-    if (colunaDestino === "confirmado") {
-      // Mesmo comportamento do modal: confirmação + preparativos por e-mail.
-      // Em sequência: os dois gravam em emails_enviados (paralelo perderia log).
-      (async () => {
-        for (const tipo of ["confirmado", "preparo"]) {
-          await supabase.functions.invoke("enviar-email-pedido", {
-            body: { pedido_id: cardId, tipo },
-          });
-        }
-      })().catch(() => {});
-      toast.message("E-mails de confirmação e preparativos enviados ao paciente.");
-    }
     onAtualizado();
   };
 

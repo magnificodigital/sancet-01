@@ -31,6 +31,7 @@ import {
 import { ConfirmarExclusao } from "./ConfirmarExclusao";
 import { EditorItensPedido } from "./EditorItensPedido";
 import { InfoPacienteStaff } from "./InfoPacienteStaff";
+import { RevisaoConfirmacao } from "./RevisaoConfirmacao";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { CalendarCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,8 @@ type Props = {
   pedido: Pedido | null;
   onClose: () => void;
   onSalvo?: () => void;
+  /** Abre já no resumo de revisão (ex.: card arrastado para "Confirmado"). */
+  revisarAoAbrir?: boolean;
 };
 
 type PacienteFull = {
@@ -137,7 +140,7 @@ const DocLink = ({
   );
 };
 
-export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
+export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: Props) => {
   const [novoStatus, setNovoStatus] = useState<string>(pedido?.status ?? "novo");
   const [salvando, setSalvando] = useState(false);
   const [paciente, setPaciente] = useState<PacienteFull | null>(null);
@@ -154,6 +157,8 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const [solicitadoAgora, setSolicitadoAgora] = useState(false);
   const podeExcluirPedido = isAdmin || permissoes?.pedidos?.excluir === true;
   const [mudandoTransicao, setMudandoTransicao] = useState<string | null>(null);
+  // Confirmar dispara e-mails ao paciente: antes, abre o resumo de revisão.
+  const [revisao, setRevisao] = useState<{ viaBotao: boolean } | null>(null);
 
   const carregarResultados = async (protocolo: string) => {
     const { data } = await supabase
@@ -163,6 +168,11 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
       .order("created_at", { ascending: false });
     setResultados((data as any) ?? []);
   };
+
+  useEffect(() => {
+    if (pedido && revisarAoAbrir && pedido.status !== "confirmado") setRevisao({ viaBotao: true });
+    if (!pedido) setRevisao(null);
+  }, [pedido?.id, revisarAoAbrir]);
 
   useEffect(() => {
     if (!pedido) return;
@@ -196,7 +206,16 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
   const mudouStatus = novoStatus !== pedido.status;
 
   const salvarStatus = async () => {
-    await aplicarMudancaStatus(novoStatus, false);
+    pedirMudancaStatus(novoStatus, false);
+  };
+
+  // "confirmado" passa pela revisão; os demais status aplicam direto.
+  const pedirMudancaStatus = (alvo: string, viaBotao: boolean) => {
+    if (alvo === "confirmado" && alvo !== pedido.status) {
+      setRevisao({ viaBotao });
+      return;
+    }
+    aplicarMudancaStatus(alvo, viaBotao);
   };
 
   const aplicarMudancaStatus = async (alvo: string, viaBotao: boolean) => {
@@ -646,7 +665,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
                             : { backgroundColor: "hsl(var(--brand))" }
                         }
                         disabled={mudandoTransicao !== null}
-                        onClick={() => aplicarMudancaStatus(t.alvo, true)}
+                        onClick={() => pedirMudancaStatus(t.alvo, true)}
                       >
                         {mudandoTransicao === t.alvo ? "Salvando..." : t.label}
                       </Button>
@@ -829,6 +848,18 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo }: Props) => {
         </Tabs>
       </SheetContent>
 
+      <RevisaoConfirmacao
+        aberto={!!revisao}
+        pedidoId={pedido.id}
+        emailPaciente={paciente?.email}
+        confirmando={mudandoTransicao !== null || salvando}
+        onVoltar={() => setRevisao(null)}
+        onConfirmar={async () => {
+          const via = revisao?.viaBotao ?? true;
+          await aplicarMudancaStatus("confirmado", via);
+          setRevisao(null);
+        }}
+      />
       <ConfirmarExclusao
         open={confirmarExcluir}
         onOpenChange={setConfirmarExcluir}
