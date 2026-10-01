@@ -83,9 +83,10 @@ const Agendamentos = () => {
   });
 
 
-  // Deep-link do e-mail de token: /agendamentos?token=PROTOCOLO abre o pedido direto.
+  // Deep-link dos e-mails: ?token=PROTOCOLO (token do convênio) ou
+  // ?anexo=PROTOCOLO (documento solicitado) abre o pedido direto.
   useEffect(() => {
-    const alvo = searchParams.get("token");
+    const alvo = searchParams.get("token") ?? searchParams.get("anexo");
     if (alvo && pedidos?.length) {
       const p = pedidos.find((x) => x.protocolo === alvo);
       if (p) setDetalhe(p);

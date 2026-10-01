@@ -58,7 +58,7 @@ const StaffDashboard = () => {
     };
   }, [navigate]);
 
-  // Alerta ao vivo: paciente informou o token do convênio (som + notificação na tela).
+  // Alerta ao vivo: paciente informou o token do convênio ou enviou documentos (som + notificação na tela).
   useEffect(() => {
     const beep = () => {
       try {
@@ -77,6 +77,7 @@ const StaffDashboard = () => {
         /* som é best-effort */
       }
     };
+    const avisados = new Set<string>();
     const channel = supabase
       .channel("alerta-token-convenio")
       .on(
@@ -84,12 +85,24 @@ const StaffDashboard = () => {
         { event: "UPDATE", schema: "public", table: "pedidos" },
         (payload) => {
           const novo = payload.new as any;
-          const ts = novo?.convenio_token_preenchido_em;
-          if (ts && Date.now() - new Date(ts).getTime() < 15000) {
+          const recente = (ts?: string | null) => !!ts && Date.now() - new Date(ts).getTime() < 15000;
+          // Evita alertar várias vezes pelo mesmo evento (ex.: vários anexos seguidos).
+          const avisar = (chave: string, msg: string) => {
+            if (avisados.has(chave)) return;
+            avisados.add(chave);
             beep();
-            toast.success(
+            toast.success(msg, { duration: 12000 });
+          };
+          if (recente(novo?.convenio_token_preenchido_em)) {
+            avisar(
+              `token:${novo.id}:${novo.convenio_token_preenchido_em}`,
               `🔔 Paciente informou o token do convênio — pedido ${novo.protocolo}`,
-              { duration: 12000 },
+            );
+          }
+          if (recente(novo?.anexo_paciente_em)) {
+            avisar(
+              `anexo:${novo.id}:${String(novo.anexo_paciente_em).slice(0, 16)}`,
+              `📎 Paciente enviou documento(s) — pedido ${novo.protocolo}`,
             );
           }
         },

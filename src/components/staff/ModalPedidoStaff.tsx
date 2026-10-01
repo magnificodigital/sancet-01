@@ -31,6 +31,8 @@ import {
 import { ConfirmarExclusao } from "./ConfirmarExclusao";
 import { EditorItensPedido } from "./EditorItensPedido";
 import { InfoPacienteStaff } from "./InfoPacienteStaff";
+import { SolicitarDocumentoStaff } from "./SolicitarDocumentoStaff";
+import { AnexosPacienteStaff } from "./AnexosPacienteStaff";
 import { RevisaoConfirmacao } from "./RevisaoConfirmacao";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { CalendarCheck } from "lucide-react";
@@ -588,6 +590,12 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
               onSalvo={onSalvo}
             />
 
+            <SolicitarDocumentoStaff
+              pedido={pedido}
+              podeEditar={permissoes?.pedidos?.editar !== false}
+              onSalvo={onSalvo}
+            />
+
             {pedido.observacoes && (
               <div className="rounded-lg bg-muted p-3 text-sm">
                 <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
@@ -746,6 +754,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
           </TabsContent>
 
           <TabsContent value="docs" className="space-y-2 pt-4">
+            <AnexosPacienteStaff pedidoId={pedido.id} pacienteId={pedido.paciente_id ?? null} />
             {!pedido.url_receita &&
               !pedido.url_pedido_medico &&
               !pedido.url_carteirinha &&

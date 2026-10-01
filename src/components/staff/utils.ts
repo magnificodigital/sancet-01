@@ -80,6 +80,9 @@ export type Pedido = {
   convenio_tokens?: string[] | null;
   convenio_token_solicitado_em?: string | null;
   convenio_token_preenchido_em?: string | null;
+  doc_solicitado_em?: string | null;
+  doc_solicitado_texto?: string | null;
+  anexo_paciente_em?: string | null;
   periodo_agendamento: "manha" | "tarde" | null;
   emails_enviados?: any;
 };
@@ -139,7 +142,7 @@ export function formatarAgendamentoCurto(
 // ---------- "Paciente respondeu" ----------
 // Destaque no Kanban/lista: o paciente respondeu algo que a equipe pediu e o
 // pedido ainda não foi tratado (confirmado/concluído/cancelado). Hoje: token do
-// convênio. (Anexos do paciente entram aqui também.)
+// convênio ou documentos anexados pelo paciente.
 const STATUS_TRATADOS = ["confirmado", "atendido", "concluido", "cancelado"];
 
 export function respostaPaciente(p: Pedido): string | null {
@@ -149,6 +152,12 @@ export function respostaPaciente(p: Pedido): string | null {
   // Respondeu o token, e não houve novo pedido de token depois da resposta.
   if (!Number.isNaN(preenchido) && (Number.isNaN(solicitado) || preenchido >= solicitado)) {
     return "Token informado";
+  }
+  // Paciente anexou documento(s) — espontâneo ou após "Solicitar documento".
+  const anexo = p.anexo_paciente_em ? Date.parse(p.anexo_paciente_em) : NaN;
+  const docPedido = p.doc_solicitado_em ? Date.parse(p.doc_solicitado_em) : NaN;
+  if (!Number.isNaN(anexo) && (Number.isNaN(docPedido) || anexo >= docPedido)) {
+    return "Enviou documento";
   }
   return null;
 }

@@ -147,6 +147,20 @@ function templateInformacaoPaciente(p: any): { subject: string; html: string } {
   return { subject, html };
 }
 
+function templateSolicitarDocumento(p: any): { subject: string; html: string } {
+  const subject = `Sancet — Precisamos de um documento (pedido ${p.protocolo})`;
+  const pedido = escapeHtml(p.doc_solicitado_texto ?? "").replace(/\n/g, "<br/>");
+  const html = shell(
+    "Precisamos de um documento seu",
+    `<p>Olá, <b>${escapeHtml(p.paciente_nome)}</b>!</p>
+     <p>Para dar andamento ao seu pedido <b>${escapeHtml(p.protocolo)}</b>, nossa equipe precisa que você envie:</p>
+     <div style="border:2px solid #C8102E;background:#fef2f2;border-radius:8px;padding:12px 14px;margin:12px 0;color:#7f1d1d">${pedido || "Documento solicitado pela equipe."}</div>
+     <p>É rápido: clique no botão, faça login e anexe o(s) arquivo(s) — foto ou PDF. Pode enviar mais de um.</p>
+     <p style="margin-top:16px"><a href="${BASE_URL}/agendamentos?anexo=${encodeURIComponent(p.protocolo)}" style="background:#C8102E;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block">Enviar documento</a></p>`,
+  );
+  return { subject, html };
+}
+
 function shell(title: string, inner: string): string {
   return `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;margin:0;padding:24px;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #eee;">
@@ -296,7 +310,7 @@ Deno.serve(async (req) => {
     const { pedido_id, tipo, dry_run, protocolo } = await req.json();
     // No dry_run de preparo aceita também o protocolo (só devolve contagens).
     const porProtocolo = !pedido_id && dry_run === true && tipo === "preparo" && !!protocolo;
-    if ((!pedido_id && !porProtocolo) || !["novo", "confirmado", "resultado", "solicitar_token", "preparo", "informacao"].includes(tipo)) {
+    if ((!pedido_id && !porProtocolo) || !["novo", "confirmado", "resultado", "solicitar_token", "preparo", "informacao", "solicitar_documento"].includes(tipo)) {
       return new Response(JSON.stringify({ error: "params inválidos" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -479,6 +493,8 @@ Deno.serve(async (req) => {
                 ? templatePreparoPaciente(pedido, preparosLista)
                 : tipo === "informacao"
                   ? templateInformacaoPaciente(pedido)
+                  : tipo === "solicitar_documento"
+                    ? templateSolicitarDocumento(pedido)
                 : templateConfirmadoPaciente(pedido, endereco);
       const r = await enviarResend({
         apiKey,

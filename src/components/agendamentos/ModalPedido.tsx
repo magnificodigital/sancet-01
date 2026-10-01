@@ -25,6 +25,7 @@ import { StatusBadge } from "./StatusBadge";
 import { Pedido } from "./CardPedido";
 import { usePaciente } from "@/hooks/usePaciente";
 import { precoItemReais } from "@/lib/preco";
+import { EnviarAnexosPaciente } from "./EnviarAnexosPaciente";
 
 type Props = {
   pedido: Pedido | null;
@@ -47,6 +48,22 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
   const [tokens, setTokens] = useState<string[]>([""]);
   const [salvandoTokens, setSalvandoTokens] = useState(false);
   const tokenRef = useRef<HTMLDivElement>(null);
+  const anexoRef = useRef<HTMLDivElement>(null);
+  // Documento solicitado pela equipe e ainda não respondido pelo paciente.
+  const docPendente =
+    !!pedido?.doc_solicitado_em &&
+    (!pedido?.anexo_paciente_em ||
+      Date.parse(pedido.anexo_paciente_em) < Date.parse(pedido.doc_solicitado_em));
+  useEffect(() => {
+    if (pedido && docPendente) {
+      const t = setTimeout(
+        () => anexoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+        300,
+      );
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedido?.id, docPendente]);
 
   // Token pendente (solicitado e ainda não preenchido): rola até o campo ao abrir,
   // para o paciente que veio pelo link do e-mail cair direto nele.
@@ -304,6 +321,15 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
                 )}
               </section>
             )}
+
+          {!["cancelado", "concluido"].includes(pedido.status) && (
+            <EnviarAnexosPaciente
+              ref={anexoRef}
+              protocolo={pedido.protocolo}
+              pendente={docPendente}
+              textoSolicitado={pedido.doc_solicitado_texto}
+            />
+          )}
 
           <section>
             <h4 className="text-sm font-semibold mb-2">Resultados</h4>
