@@ -2,6 +2,9 @@
 -- solicitar um documento. Os arquivos ficam no bucket documentos-pedidos
 -- (o paciente logado já pode enviar arquivos para lá).
 
+-- (garantia, caso a migration de info_paciente ainda não tenha rodado)
+alter table pedidos add column if not exists info_paciente text;
+alter table pedidos add column if not exists info_paciente_em timestamptz;
 alter table pedidos add column if not exists doc_solicitado_em timestamptz;
 alter table pedidos add column if not exists doc_solicitado_texto text;
 alter table pedidos add column if not exists anexo_paciente_em timestamptz;
