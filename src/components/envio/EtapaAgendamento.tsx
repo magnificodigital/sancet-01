@@ -27,11 +27,14 @@ const hoje = () => {
   return d;
 };
 
-// Antecedência mínima de agendamento (bloqueia o mesmo dia):
-// - Solicitado até 11h00 → pode agendar a partir do dia seguinte (24h).
-// - Solicitado após 11h00 → próxima disponibilidade em 48h (2 dias).
+// Antecedência mínima de agendamento (regra do laboratório):
+// - Mínimo de 2 dias à frente. Ex.: pedido na quarta → a partir de sexta.
+// - Pedido feito a partir das 16h conta como se fosse do dia seguinte.
+//   Ex.: quarta às 17h → conta como quinta → a partir de sábado.
+const HORA_CORTE = 16;
+const DIAS_ANTECEDENCIA = 2;
 const minData = () => {
-  const dias = new Date().getHours() < 11 ? 1 : 2;
+  const dias = DIAS_ANTECEDENCIA + (new Date().getHours() >= HORA_CORTE ? 1 : 0);
   const d = hoje();
   d.setDate(d.getDate() + dias);
   return d;
@@ -112,8 +115,8 @@ export const EtapaAgendamento = ({ onConfirmar, unidade }: Props) => {
             </PopoverContent>
           </Popover>
           <p className="mt-2 text-xs text-muted-foreground">
-            Agende com no mínimo 24h de antecedência (pedidos após as 11h só a partir de 48h),
-            até 30 dias à frente.
+            Agende com no mínimo 2 dias de antecedência (pedidos feitos a partir das 16h
+            contam como do dia seguinte), até 30 dias à frente.
           </p>
         </div>
 

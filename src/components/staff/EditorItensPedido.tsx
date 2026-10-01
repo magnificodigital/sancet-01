@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Pencil, Plus, Search, Sparkles, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Pencil, Plus, Search, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -136,7 +136,13 @@ export const EditorItensPedido = ({ pedido, nomeStaff, podeEditar, onSalvo }: Pr
   const daIA: any[] = (Array.isArray((pedido as any).exames_identificados_ia)
     ? (pedido as any).exames_identificados_ia
     : []
-  ).filter((ex: any) => ex?.codigo_shift && !jaTem(ex.codigo_shift));
+  ).filter(
+    (ex: any, i: number, arr: any[]) =>
+      ex?.codigo_shift &&
+      !jaTem(ex.codigo_shift) &&
+      // pedidos antigos podem ter o mesmo exame repetido na leitura da IA
+      arr.findIndex((o: any) => String(o?.codigo_shift) === String(ex.codigo_shift)) === i,
+  );
 
   const adicionarDaIA = async (ex: any) => {
     // Completa com preço/prazo do catálogo particular quando houver.
@@ -220,6 +226,22 @@ export const EditorItensPedido = ({ pedido, nomeStaff, podeEditar, onSalvo }: Pr
   };
 
   const lista = editando ? rascunho : itens;
+
+  // Exames lidos pela IA no pedido médico (sem repetidos), com status contra a
+  // lista ATUAL: o paciente adicionou (ok) ou não (o operador decide o que fazer).
+  const lidosIA: { codigo: string; nome: string; noPedido: boolean }[] = [];
+  for (const ex of (Array.isArray((pedido as any).exames_identificados_ia)
+    ? (pedido as any).exames_identificados_ia
+    : []) as any[]) {
+    const codigo = String(ex?.codigo_shift ?? "");
+    if (!codigo || lidosIA.some((l) => l.codigo === codigo)) continue;
+    lidosIA.push({
+      codigo,
+      nome: ex?.nome ?? codigo,
+      noPedido: lista.some((i) => String(i.codigoShift) === codigo),
+    });
+  }
+  const faltandoIA = lidosIA.filter((l) => !l.noPedido).length;
   const totalExibido = editando
     ? ehConvenio
       ? 0
@@ -341,6 +363,52 @@ export const EditorItensPedido = ({ pedido, nomeStaff, podeEditar, onSalvo }: Pr
         <span>Total</span>
         <span>{ehConvenio ? "Convênio" : formatarPreco(totalExibido)}</span>
       </div>
+
+      {lidosIA.length > 0 && (
+        <div
+          className={
+            "border-t " +
+            (faltandoIA > 0 ? "border-amber-300 bg-amber-50" : "border-green-200 bg-green-50/60")
+          }
+        >
+          <p
+            className={
+              "flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase " +
+              (faltandoIA > 0 ? "text-amber-800" : "text-green-800")
+            }
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Exames lidos pela IA no pedido médico
+            <span className="ml-auto normal-case font-medium">
+              {faltandoIA > 0
+                ? `${faltandoIA} não adicionado(s) pelo paciente`
+                : "todos estão no pedido"}
+            </span>
+          </p>
+          <ul className="divide-y divide-black/5">
+            {lidosIA.map((l) => (
+              <li key={l.codigo} className="flex items-center gap-2 px-3 py-1.5 text-sm">
+                {l.noPedido ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{l.nome}</span>
+                <span
+                  className={
+                    "shrink-0 text-xs " + (l.noPedido ? "text-green-700" : "font-semibold text-amber-800")
+                  }
+                >
+                  {l.noPedido ? "no pedido" : "paciente não adicionou"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="px-3 py-1.5 text-[11px] text-muted-foreground">
+            Leitura automática — confira com o documento anexado.
+            {faltandoIA > 0 && podeEditar && " Para incluir, use “Editar exames”."}
+          </p>
+        </div>
+      )}
     </div>
   );
 };

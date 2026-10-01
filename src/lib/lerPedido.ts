@@ -109,6 +109,8 @@ async function lerComCatalogo(arquivo: File, cat: any[]): Promise<LeituraPedido>
   for (const codigo of data.encontrados as string[]) {
     const it = cat.find((c) => String(c.codigo_shift) === String(codigo));
     if (!it) continue;
+    // A IA às vezes repete o mesmo exame (ex.: LIPASE 2x) — entra uma vez só.
+    if (itens.some((i) => String(i.codigoShift) === String(it.codigo_shift))) continue;
     itens.push({
       codigoShift: it.codigo_shift,
       tipo: it.tipo,
