@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, Copy, Loader2, QrCode, AlertCircle, CreditCard, FileText, ExternalLink, UserCog, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { marcarAvisoPedido } from "@/lib/avisoPedido";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -116,6 +117,7 @@ const Pagamento = () => {
       if ((data as any)?.status_pagamento === "pago") {
         clearInterval(timer);
         setEtapa("pago");
+        marcarAvisoPedido(protocolo);
         setTimeout(() => navigate(`/pronto/${protocolo}`, { replace: true, state: { recemFinalizado: true } }), 2000);
       }
     }, 8000);
@@ -139,6 +141,7 @@ const Pagamento = () => {
     if (!protocolo || !paciente?.id) return;
     setConfirming(true);
     await supabase.rpc("confirmar_pagamento_manual_auth", { p_protocolo: protocolo });
+    marcarAvisoPedido(protocolo);
     navigate(`/pronto/${protocolo}`, { replace: true, state: { recemFinalizado: true } });
   };
 

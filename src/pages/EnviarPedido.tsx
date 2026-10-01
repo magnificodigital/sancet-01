@@ -6,6 +6,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { usePaciente } from "@/hooks/usePaciente";
 import { useSacola } from "@/stores/sacola";
 import { supabase } from "@/integrations/supabase/client";
+import { marcarAvisoPedido } from "@/lib/avisoPedido";
 import { EtapaTipoAtendimento } from "@/components/envio/EtapaTipoAtendimento";
 import { EtapaUnidade } from "@/components/envio/EtapaUnidade";
 import { EtapaEndereco, EnderecoColeta } from "@/components/envio/EtapaEndereco";
@@ -189,6 +190,7 @@ const EnviarPedido = () => {
       if (tipoEfetivo === "particular") {
         navigate(`/pagamento/${protocolo}`, { replace: true });
       } else {
+        marcarAvisoPedido(protocolo);
         navigate(`/pronto/${protocolo}`, { replace: true, state: { recemFinalizado: true } });
       }
       setTimeout(() => {
