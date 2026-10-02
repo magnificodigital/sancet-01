@@ -26,7 +26,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          # Versão fixa: a v2.119.0 (30/09/2026) passou a falhar no deploy.
+          # Versão fixa (evita mudanças inesperadas do "latest").
           version: 2.118.0
 
       - name: Deploy todas as Edge Functions
