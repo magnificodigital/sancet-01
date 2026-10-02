@@ -15,6 +15,7 @@ on:
     paths:
       - "supabase/functions/**"
       - "supabase/config.toml"
+      - ".github/workflows/deploy-functions.yml"
   workflow_dispatch: {}
 
 jobs:
@@ -25,7 +26,8 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Versão fixa: a v2.119.0 (30/09/2026) passou a falhar no deploy.
+          version: 2.118.0
 
       - name: Deploy todas as Edge Functions
         env:

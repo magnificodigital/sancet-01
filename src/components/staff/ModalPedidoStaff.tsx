@@ -174,13 +174,16 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
   const marcarVisto = async () => {
     if (!pedido) return;
     setMarcandoVisto(true);
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("pedidos")
       .update({ staff_visto_em: new Date().toISOString() } as any)
-      .eq("id", pedido.id)
-      .select("id");
+      .eq("id", pedido.id);
     setMarcandoVisto(false);
-    if (error || !data?.length) return toast.error("Não foi possível marcar como visto.");
+    if (error) {
+      console.error("marcar visto", error);
+      return toast.error(`Não foi possível marcar como visto: ${error.message}`);
+    }
+    toast.success("Marcado como visto.");
     setVistoLocal(true);
     onSalvo?.();
   };
