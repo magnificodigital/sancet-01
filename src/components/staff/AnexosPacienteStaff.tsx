@@ -18,9 +18,15 @@ type Anexo = {
 export const AnexosPacienteStaff = ({
   pedidoId,
   pacienteId,
+  onCarregar,
+  atualizadoEm,
 }: {
   pedidoId: string;
+  /** Muda quando o paciente envia algo novo (recarrega a lista). */
+  atualizadoEm?: string | null;
   pacienteId: string | null;
+  /** Avisa quantos anexos o pedido tem (contador na aba Documentos). */
+  onCarregar?: (qtd: number) => void;
 }) => {
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [abrindo, setAbrindo] = useState<string | null>(null);
@@ -33,12 +39,14 @@ export const AnexosPacienteStaff = ({
       .eq("pedido_id", pedidoId)
       .order("created_at", { ascending: false })
       .then(({ data }: { data: Anexo[] | null }) => {
-        if (ativo) setAnexos(data ?? []);
+        if (!ativo) return;
+        setAnexos(data ?? []);
+        onCarregar?.((data ?? []).length);
       });
     return () => {
       ativo = false;
     };
-  }, [pedidoId]);
+  }, [pedidoId, atualizadoEm]);
 
   if (anexos.length === 0) return null;
 

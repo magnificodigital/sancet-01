@@ -188,6 +188,7 @@ const EnviarPedido = () => {
       // Navega ANTES de limpar contexto pra evitar que o guard
       // (if !tipo → /exames) intercepte o redirect.
       if (tipoEfetivo === "particular") {
+        marcarAvisoPedido(protocolo);
         navigate(`/pagamento/${protocolo}`, { replace: true });
       } else {
         marcarAvisoPedido(protocolo);

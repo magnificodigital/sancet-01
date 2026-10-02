@@ -3,7 +3,8 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, Copy, Loader2, QrCode, AlertCircle, CreditCard, FileText, ExternalLink, UserCog, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { marcarAvisoPedido } from "@/lib/avisoPedido";
+import { limparAvisoPedido, marcarAvisoPedido, temAvisoPedido } from "@/lib/avisoPedido";
+import { AvisoPedidoEnviado } from "@/components/pedido/AvisoPedidoEnviado";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,12 @@ const Pagamento = () => {
   const [gerando, setGerando] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // Lightbox de próximos passos ao chegar aqui logo após finalizar o pedido.
+  const [avisoAberto, setAvisoAberto] = useState(() => temAvisoPedido(protocolo));
+  const fecharAviso = () => {
+    limparAvisoPedido(protocolo);
+    setAvisoAberto(false);
+  };
 
   const camposPaciente = new Set(["nome", "cpf", "email", "celular"]);
 
@@ -150,6 +157,13 @@ const Pagamento = () => {
 
   return (
     <PageShell>
+      <AvisoPedidoEnviado
+        aberto={avisoAberto && etapa !== "pago"}
+        onFechar={fecharAviso}
+        protocolo={protocolo}
+        email={paciente?.email}
+        modo="particular_pagar"
+      />
       <div className="mx-auto w-full max-w-xl px-4 py-6">
         <Link to="/sacola" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Voltar

@@ -24,6 +24,7 @@ import {
   formatarData,
   formatarPreco,
   Pedido,
+  respostaPaciente,
   rotuloPeriodo,
   STATUS_OPTIONS,
   statusAgendamento,
@@ -161,6 +162,28 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
   const [mudandoTransicao, setMudandoTransicao] = useState<string | null>(null);
   // Confirmar dispara e-mails ao paciente: antes, abre o resumo de revisão.
   const [revisao, setRevisao] = useState<{ viaBotao: boolean } | null>(null);
+  // "Paciente respondeu": fica em destaque até a equipe marcar como visto.
+  const [qtdAnexos, setQtdAnexos] = useState(0);
+  const [vistoLocal, setVistoLocal] = useState(false);
+  const [marcandoVisto, setMarcandoVisto] = useState(false);
+  const respondeu = pedido && !vistoLocal ? respostaPaciente(pedido) : null;
+  useEffect(() => {
+    setVistoLocal(false);
+    setQtdAnexos(0);
+  }, [pedido?.id]);
+  const marcarVisto = async () => {
+    if (!pedido) return;
+    setMarcandoVisto(true);
+    const { data, error } = await supabase
+      .from("pedidos")
+      .update({ staff_visto_em: new Date().toISOString() } as any)
+      .eq("id", pedido.id)
+      .select("id");
+    setMarcandoVisto(false);
+    if (error || !data?.length) return toast.error("Não foi possível marcar como visto.");
+    setVistoLocal(true);
+    onSalvo?.();
+  };
 
   const carregarResultados = async (protocolo: string) => {
     const { data } = await supabase
@@ -434,11 +457,29 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
           <TabsList className="w-full">
             <TabsTrigger value="dados" className="flex-1">Dados do pedido</TabsTrigger>
             <TabsTrigger value="paciente" className="flex-1">Paciente</TabsTrigger>
-            <TabsTrigger value="docs" className="flex-1">Documentos</TabsTrigger>
+            <TabsTrigger value="docs" className="flex-1 gap-1">
+              Documentos
+              {qtdAnexos > 0 && (
+                <span className="rounded-full bg-violet-600 px-1.5 text-[10px] font-bold text-white">{qtdAnexos}</span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="resultados" className="flex-1">Resultados</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
+            {respondeu && (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">
+                <span className="flex-1 font-semibold">
+                  🔔 Paciente respondeu · {respondeu}
+                  {respondeu === "Enviou documento" && (
+                    <span className="block text-xs font-normal">Os arquivos estão logo abaixo e na aba Documentos.</span>
+                  )}
+                </span>
+                <Button size="sm" variant="outline" className="border-amber-400 bg-white" onClick={marcarVisto} disabled={marcandoVisto}>
+                  {marcandoVisto ? "Salvando..." : "Marcar como visto"}
+                </Button>
+              </div>
+            )}
             {pedido.data_agendamento && (
               <div
                 className={cn(
@@ -595,6 +636,8 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
               podeEditar={permissoes?.pedidos?.editar !== false}
               onSalvo={onSalvo}
             />
+
+            <AnexosPacienteStaff pedidoId={pedido.id} pacienteId={pedido.paciente_id ?? null} onCarregar={setQtdAnexos} atualizadoEm={pedido.anexo_paciente_em} />
 
             {pedido.observacoes && (
               <div className="rounded-lg bg-muted p-3 text-sm">
@@ -754,7 +797,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
           </TabsContent>
 
           <TabsContent value="docs" className="space-y-2 pt-4">
-            <AnexosPacienteStaff pedidoId={pedido.id} pacienteId={pedido.paciente_id ?? null} />
+            <AnexosPacienteStaff pedidoId={pedido.id} pacienteId={pedido.paciente_id ?? null} onCarregar={setQtdAnexos} atualizadoEm={pedido.anexo_paciente_em} />
             {!pedido.url_receita &&
               !pedido.url_pedido_medico &&
               !pedido.url_carteirinha &&

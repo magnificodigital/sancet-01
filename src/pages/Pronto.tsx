@@ -10,18 +10,11 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaciente } from "@/hooks/usePaciente";
 import { formatarAgendamento, parseDateOnly } from "@/lib/agendamento";
 import { limparAvisoPedido, temAvisoPedido } from "@/lib/avisoPedido";
+import { AvisoPedidoEnviado } from "@/components/pedido/AvisoPedidoEnviado";
 
 const Pronto = () => {
   const { protocolo } = useParams();
@@ -89,69 +82,13 @@ const Pronto = () => {
 
   return (
     <PageShell>
-      <Dialog open={avisoAberto} onOpenChange={(v) => (v ? setAvisoAberto(true) : fecharAviso())}>
-        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
-          <DialogHeader className="items-center text-center sm:text-center">
-            <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
-            </div>
-            <DialogTitle className="text-xl text-secondary">Pedido enviado com sucesso!</DialogTitle>
-            <DialogDescription className="text-sm">
-              Protocolo{" "}
-              {protocolo && <b className="font-mono text-secondary">{protocolo}</b>}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 text-left text-sm">
-            <p className="font-semibold text-secondary">Próximos passos</p>
-            <ol className="space-y-2.5">
-              {[
-                pedido?.tipo_solicitacao === "convenio"
-                  ? "Nossa equipe vai analisar o seu pedido e a autorização do convênio."
-                  : "Nossa equipe vai analisar o seu pedido.",
-                "Se precisarmos de algo (token do convênio, foto mais nítida ou outro documento), vamos pedir por e-mail — é só responder pelo link do e-mail ou em Meus agendamentos.",
-                "Com tudo certo, você recebe o e-mail de confirmação com a data e a unidade.",
-                "Junto com a confirmação vem o preparo dos exames (como o jejum). Siga as orientações antes de ir.",
-              ].map((texto, i) => (
-                <li key={i} className="flex gap-2.5">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
-                    {i + 1}
-                  </span>
-                  <span className="text-muted-foreground">{texto}</span>
-                </li>
-              ))}
-            </ol>
-
-            <div className="flex gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3">
-              <Mail className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
-              <div className="text-amber-900">
-                <p className="font-semibold">Fique de olho no seu e-mail</p>
-                <p className="text-xs leading-relaxed">
-                  Todas as informações serão enviadas para{" "}
-                  <b className="break-all">{emailPaciente || "o e-mail do seu cadastro"}</b>.
-                  Confira também a caixa de spam e as promoções.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
-            <Button onClick={fecharAviso} className="w-full bg-brand text-white hover:bg-brand-hover">
-              Entendi
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                fecharAviso();
-                navigate("/agendamentos");
-              }}
-              className="w-full"
-            >
-              Ver meus agendamentos
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AvisoPedidoEnviado
+        aberto={avisoAberto && !!pedido}
+        onFechar={fecharAviso}
+        protocolo={protocolo}
+        email={emailPaciente}
+        modo={pedido?.tipo_solicitacao === "convenio" ? "convenio" : "particular_pago"}
+      />
       <style>{`
         @media print {
           body * { visibility: hidden; }

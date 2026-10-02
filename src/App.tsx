@@ -10,6 +10,7 @@ import Home from "./pages/Home.tsx"; // eager: primeira pintura, sem flash
 import { RequireStaff } from "./components/staff/RequireStaff.tsx";
 import { BarraCheckoutFlutuante } from "./components/catalogo/BarraCheckoutFlutuante";
 import { AvisoPopup } from "./components/avisos/AvisoPopup";
+import { useNovaVersao } from "./hooks/useNovaVersao";
 
 // Demais páginas em code-splitting: cada rota vira um chunk sob demanda.
 // As libs pesadas (xlsx, recharts, html5-qrcode) ficam só nos chunks de
@@ -60,6 +61,7 @@ const App = () => {
   useEffect(() => {
     carregarTema();
   }, []);
+  useNovaVersao();
 
   return (
   <QueryClientProvider client={queryClient}>

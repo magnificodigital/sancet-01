@@ -83,6 +83,7 @@ export type Pedido = {
   doc_solicitado_em?: string | null;
   doc_solicitado_texto?: string | null;
   anexo_paciente_em?: string | null;
+  staff_visto_em?: string | null;
   periodo_agendamento: "manha" | "tarde" | null;
   emails_enviados?: any;
 };
@@ -140,24 +141,36 @@ export function formatarAgendamentoCurto(
 }
 
 // ---------- "Paciente respondeu" ----------
-// Destaque no Kanban/lista: o paciente respondeu algo que a equipe pediu e o
-// pedido ainda não foi tratado (confirmado/concluído/cancelado). Hoje: token do
-// convênio ou documentos anexados pelo paciente.
-const STATUS_TRATADOS = ["confirmado", "atendido", "concluido", "cancelado"];
+// Destaque no Kanban/lista: o paciente respondeu algo que a equipe pediu
+// (token do convênio ou documento anexado). Fica em destaque até a equipe
+// clicar em "Marcar como visto" no pedido (staff_visto_em) — inclusive em
+// pedidos já confirmados. Pedidos concluídos/cancelados nunca ficam em destaque.
+const STATUS_FINAIS = ["concluido", "cancelado"];
+const STATUS_TOKEN_TRATADO = ["confirmado", "atendido"];
+
+const ts = (v?: string | null) => (v ? Date.parse(v) : NaN);
 
 export function respostaPaciente(p: Pedido): string | null {
-  if (STATUS_TRATADOS.includes(p.status)) return null;
-  const preenchido = p.convenio_token_preenchido_em ? Date.parse(p.convenio_token_preenchido_em) : NaN;
-  const solicitado = p.convenio_token_solicitado_em ? Date.parse(p.convenio_token_solicitado_em) : NaN;
-  // Respondeu o token, e não houve novo pedido de token depois da resposta.
-  if (!Number.isNaN(preenchido) && (Number.isNaN(solicitado) || preenchido >= solicitado)) {
-    return "Token informado";
-  }
-  // Paciente anexou documento(s) — espontâneo ou após "Solicitar documento".
-  const anexo = p.anexo_paciente_em ? Date.parse(p.anexo_paciente_em) : NaN;
-  const docPedido = p.doc_solicitado_em ? Date.parse(p.doc_solicitado_em) : NaN;
-  if (!Number.isNaN(anexo) && (Number.isNaN(docPedido) || anexo >= docPedido)) {
+  if (STATUS_FINAIS.includes(p.status)) return null;
+  const visto = ts(p.staff_visto_em);
+  const naoVisto = (t: number) => !Number.isNaN(t) && (Number.isNaN(visto) || t > visto);
+
+  // Anexou documento(s) — espontâneo ou após "Solicitar documento".
+  const anexo = ts(p.anexo_paciente_em);
+  const docPedido = ts(p.doc_solicitado_em);
+  if (naoVisto(anexo) && (Number.isNaN(docPedido) || anexo >= docPedido)) {
     return "Enviou documento";
+  }
+
+  // Respondeu o token, sem novo pedido de token depois da resposta.
+  const preenchido = ts(p.convenio_token_preenchido_em);
+  const solicitado = ts(p.convenio_token_solicitado_em);
+  if (
+    !STATUS_TOKEN_TRATADO.includes(p.status) &&
+    naoVisto(preenchido) &&
+    (Number.isNaN(solicitado) || preenchido >= solicitado)
+  ) {
+    return "Token informado";
   }
   return null;
 }
