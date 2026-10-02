@@ -88,6 +88,7 @@ const Pronto = () => {
         protocolo={protocolo}
         email={emailPaciente}
         modo={pedido?.tipo_solicitacao === "convenio" ? "convenio" : "particular_pago"}
+        pedido={pedido}
       />
       <style>{`
         @media print {

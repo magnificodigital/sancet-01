@@ -163,6 +163,7 @@ const Pagamento = () => {
         protocolo={protocolo}
         email={paciente?.email}
         modo="particular_pagar"
+        pedido={pedido}
       />
       <div className="mx-auto w-full max-w-xl px-4 py-6">
         <Link to="/sacola" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
