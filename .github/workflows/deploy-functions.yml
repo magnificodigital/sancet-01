@@ -8,6 +8,8 @@ name: Deploy Supabase Edge Functions
 # Pré-requisito: criar o secret SUPABASE_ACCESS_TOKEN no GitHub
 # (Settings -> Secrets and variables -> Actions -> New repository secret).
 # O token sai de: Supabase -> Account -> Access Tokens -> Generate new token.
+# ATENÇÃO: se o token expirar, este deploy falha em ~1s (o log mostra erro de
+# autenticação) e as functions param de atualizar sem aviso. Renove o secret.
 
 on:
   push:
