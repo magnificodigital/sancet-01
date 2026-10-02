@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -42,8 +42,15 @@ const EnviarPedido = () => {
   const [agendamento, setAgendamento] = useState<Agendamento | null>(null);
   const [enviando, setEnviando] = useState(false);
 
+  // Pedido já enviado: o guard abaixo não pode mais redirecionar. A tela de
+  // destino (/pronto ou /pagamento) carrega sob demanda e, enquanto carrega,
+  // esta tela continua montada — ao limpar a sacola o guard via "!tipo" e
+  // jogava o paciente de volta para /exames (parecia recomeçar o convênio).
+  const finalizadoRef = useRef(false);
+
   // Guards
   useEffect(() => {
+    if (finalizadoRef.current) return;
     if (!tipo) {
       navigate("/exames", { replace: true });
       return;
@@ -184,6 +191,7 @@ const EnviarPedido = () => {
           );
       }
 
+      finalizadoRef.current = true;
       localStorage.setItem("sancet-ultimo-protocolo", protocolo);
       // Navega ANTES de limpar contexto pra evitar que o guard
       // (if !tipo → /exames) intercepte o redirect.

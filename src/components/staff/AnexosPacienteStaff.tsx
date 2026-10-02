@@ -30,6 +30,7 @@ export const AnexosPacienteStaff = ({
 }) => {
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [abrindo, setAbrindo] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -38,8 +39,14 @@ export const AnexosPacienteStaff = ({
       .select("id, arquivo_path, nome_arquivo, comentario, created_at")
       .eq("pedido_id", pedidoId)
       .order("created_at", { ascending: false })
-      .then(({ data }: { data: Anexo[] | null }) => {
+      .then(({ data, error }: { data: Anexo[] | null; error: any }) => {
         if (!ativo) return;
+        if (error) {
+          console.error("anexos do paciente", error);
+          setErro(error.message ?? "erro ao carregar");
+          return;
+        }
+        setErro(null);
         setAnexos(data ?? []);
         onCarregar?.((data ?? []).length);
       });
@@ -48,6 +55,13 @@ export const AnexosPacienteStaff = ({
     };
   }, [pedidoId, atualizadoEm]);
 
+  if (erro) {
+    return (
+      <p className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+        Não foi possível carregar os documentos enviados pelo paciente: {erro}
+      </p>
+    );
+  }
   if (anexos.length === 0) return null;
 
   const abrir = async (a: Anexo) => {
