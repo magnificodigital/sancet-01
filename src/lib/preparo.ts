@@ -8,6 +8,12 @@ export type JejumPedido = {
   exigidoPor: string[];
   /** Exames sem preparo cadastrado. */
   semPreparo: string[];
+  /** Orientações repetidas em 2+ exames (aparecem uma vez só, como no e-mail). */
+  gerais: string[];
+  /** Orientações próprias de cada exame. */
+  especificos: { nome: string; linhas: string[] }[];
+  /** Exames sem outras orientações além do jejum. */
+  semExtra: string[];
 };
 
 /**
@@ -37,26 +43,56 @@ export async function calcularJejumPedido(itens: any[]): Promise<JejumPedido> {
     return [c !== null ? nomePorCodigo[String(c)] : "", normalizeExameNome(it.nome)].filter(Boolean);
   };
   const chaves = [...new Set(exames.flatMap(candidatos))];
-  const mapa: Record<string, number> = {};
+  const mapa: Record<string, { horas: number; instrucoes: string[] | null }> = {};
   for (let i = 0; i < chaves.length; i += 15) {
     const { data } = await (supabase as any)
       .from("exame_preparo")
-      .select("nome_norm, jejum_horas")
+      .select("nome_norm, jejum_horas, instrucoes")
       .in("nome_norm", chaves.slice(i, i + 15));
-    (data ?? []).forEach((r: any) => (mapa[r.nome_norm] = Number(r.jejum_horas ?? 0) || 0));
+    (data ?? []).forEach(
+      (r: any) =>
+        (mapa[r.nome_norm] = {
+          horas: Number(r.jejum_horas ?? 0) || 0,
+          instrucoes: Array.isArray(r.instrucoes) ? r.instrucoes : null,
+        }),
+    );
   }
 
   let horas = 0;
   const porExame = exames.map((it) => {
     const k = candidatos(it).find((c) => c in mapa);
-    const h = k ? mapa[k] : null;
+    const h = k ? mapa[k].horas : null;
     if (h != null && h > horas) horas = h;
-    return { nome: it.nome as string, horas: h };
+    const instrucoes = k
+      ? mapa[k].instrucoes ?? []
+      : ["Sem preparo específico. Em caso de dúvida, confirme na recepção."];
+    return { nome: it.nome as string, horas: h, instrucoes };
   });
+
+  // Orientações: mesma regra do e-mail (sem frases de jejum; repetidas em 2+
+  // exames viram "gerais"; o resto fica por exame).
+  const limpar = (ls: string[]) => [
+    ...new Set(
+      ls
+        .map((l) => String(l).replace(/\s+/g, " ").trim())
+        .filter((l) => l && !/jejum/i.test(l) && !/^sem preparo espec/i.test(l) && !/vide informa/i.test(l)),
+    ),
+  ];
+  const linhasPorExame = porExame.map((e) => ({ nome: e.nome, linhas: limpar(e.instrucoes) }));
+  const conta = new Map<string, number>();
+  linhasPorExame.forEach((e) => e.linhas.forEach((l) => conta.set(l, (conta.get(l) ?? 0) + 1)));
+  const gerais = [...conta.entries()].filter(([, n]) => n >= 2).map(([l]) => l);
+  const geraisSet = new Set(gerais);
+  const especificos = linhasPorExame
+    .map((e) => ({ nome: e.nome, linhas: e.linhas.filter((l) => !geraisSet.has(l)) }))
+    .filter((e) => e.linhas.length > 0);
 
   return {
     horas,
     exigidoPor: horas > 0 ? porExame.filter((e) => e.horas === horas).map((e) => e.nome) : [],
     semPreparo: porExame.filter((e) => e.horas == null).map((e) => e.nome),
+    gerais,
+    especificos,
+    semExtra: linhasPorExame.filter((e) => !especificos.some((x) => x.nome === e.nome)).map((e) => e.nome),
   };
 }

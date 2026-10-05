@@ -191,6 +191,46 @@ export const RevisaoConfirmacao = ({
               )}
             </div>
 
+            {jejum && (jejum.gerais.length > 0 || jejum.especificos.length > 0) && (
+              <div className="rounded-lg border">
+                <p className="border-b px-3 py-2 text-xs font-semibold uppercase text-muted-foreground">
+                  Orientações de preparo (vão no e-mail)
+                </p>
+                <div className="max-h-80 space-y-3 overflow-y-auto px-3 py-2 text-sm">
+                  {jejum.gerais.length > 0 && (
+                    <div>
+                      <p className="font-semibold text-secondary">Orientações gerais</p>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                        {jejum.gerais.map((l) => (
+                          <li key={l}>{l}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {jejum.especificos.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="font-semibold text-secondary">Orientações específicas</p>
+                      {jejum.especificos.map((e) => (
+                        <div key={e.nome} className="rounded-md border bg-muted/30 px-2.5 py-1.5">
+                          <p className="text-xs font-semibold uppercase">{e.nome}</p>
+                          <ul className="mt-0.5 list-disc space-y-0.5 pl-5">
+                            {e.linhas.map((l) => (
+                              <li key={l}>{l}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {jejum.semExtra.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      <b>Sem outras orientações além do jejum:</b> {jejum.semExtra.join(", ")}.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-lg border">
               <p className="border-b px-3 py-2 text-xs font-semibold uppercase text-muted-foreground">
                 Exames ({itens.length})
