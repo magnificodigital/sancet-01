@@ -28,16 +28,21 @@ const hoje = () => {
 };
 
 // Antecedência mínima de agendamento (regra do laboratório):
-// - Mínimo de 2 dias à frente. Ex.: pedido na quarta → a partir de sexta.
+// - Dois dias livres entre o pedido e o atendimento. Ex.: pedido no dia 5 → a partir do dia 8.
 // - Pedido feito a partir das 16h conta como se fosse do dia seguinte.
-//   Ex.: quarta às 17h → conta como quinta → a partir de sábado.
+//   Ex.: dia 5 às 17h → conta como dia 6 → a partir do dia 9.
 const HORA_CORTE = 16;
-const DIAS_ANTECEDENCIA = 2;
+const DIAS_ANTECEDENCIA = 3;
 const minData = () => {
   const dias = DIAS_ANTECEDENCIA + (new Date().getHours() >= HORA_CORTE ? 1 : 0);
   const d = hoje();
   d.setDate(d.getDate() + dias);
   return d;
+};
+
+const formatarPrimeiroDia = () => {
+  const d = minData();
+  return `em ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
 const maxData = () => {
@@ -115,8 +120,8 @@ export const EtapaAgendamento = ({ onConfirmar, unidade }: Props) => {
             </PopoverContent>
           </Popover>
           <p className="mt-2 text-xs text-muted-foreground">
-            Agende com no mínimo 2 dias de antecedência (pedidos feitos a partir das 16h
-            contam como do dia seguinte), até 30 dias à frente.
+            A agenda começa {formatarPrimeiroDia()} (pedidos feitos a partir das 16h contam como
+            do dia seguinte), até 30 dias à frente.
           </p>
         </div>
 
