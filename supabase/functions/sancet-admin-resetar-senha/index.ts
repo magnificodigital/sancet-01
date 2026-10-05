@@ -1,4 +1,5 @@
-// Admin: define/altera a senha de um paciente (cria auth user se não existir).
+// Admin: define/altera a senha de um paciente (cria auth user se não existir)
+// ou de um usuário da equipe (body.user_id).
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -26,7 +27,22 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await admin.rpc("has_role", { _user_id: user.id, _role: "admin" });
     if (!isAdmin) return json({ error: "Apenas administradores podem alterar senhas." }, 403);
 
-    const { paciente_id, nova_senha } = await req.json();
+    const { paciente_id, user_id, nova_senha } = await req.json();
+
+    // Usuário da equipe (aba Equipe): só troca a senha de quem está em user_roles.
+    if (user_id) {
+      if (!nova_senha || String(nova_senha).length < 8) {
+        return json({ error: "A senha precisa ter pelo menos 8 caracteres." }, 400);
+      }
+      const { data: membro } = await admin.from("user_roles").select("user_id").eq("user_id", user_id).maybeSingle();
+      if (!membro) return json({ error: "Usuário da equipe não encontrado." }, 404);
+      const { error: uErr } = await admin.auth.admin.updateUserById(String(user_id), {
+        password: String(nova_senha),
+      });
+      if (uErr) return json({ error: "Falha ao alterar a senha.", detalhe: uErr.message }, 500);
+      return json({ ok: true });
+    }
+
     if (!paciente_id || !nova_senha || String(nova_senha).length < 6) {
       return json({ error: "Informe paciente e senha com ao menos 6 caracteres." }, 400);
     }

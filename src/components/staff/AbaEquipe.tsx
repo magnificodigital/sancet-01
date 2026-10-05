@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Shield, Building2, Trash2 } from "lucide-react";
+import { Plus, Pencil, Shield, Building2, Trash2, KeyRound } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,6 +80,11 @@ export const AbaEquipe = () => {
   const [meuUserId, setMeuUserId] = useState<string | null>(null);
   const [excluindo, setExcluindo] = useState<StaffUsuario | null>(null);
   const [deletando, setDeletando] = useState(false);
+  // Alterar senha de um usuário da equipe (só admin; conferido no servidor).
+  const [senhaDe, setSenhaDe] = useState<StaffUsuario | null>(null);
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmaSenha, setConfirmaSenha] = useState("");
+  const [salvandoSenha, setSalvandoSenha] = useState(false);
 
 
   useEffect(() => {
@@ -229,6 +234,39 @@ export const AbaEquipe = () => {
     }
   };
 
+  const abrirSenha = (u: StaffUsuario) => {
+    setSenhaDe(u);
+    setNovaSenha("");
+    setConfirmaSenha("");
+  };
+
+  const alterarSenha = async () => {
+    if (!senhaDe) return;
+    if (novaSenha.length < 8) return toast.error("A senha precisa ter pelo menos 8 caracteres.");
+    if (novaSenha !== confirmaSenha) return toast.error("As senhas não conferem.");
+    setSalvandoSenha(true);
+    try {
+      const { error } = await supabase.functions.invoke("sancet-admin-resetar-senha", {
+        body: { user_id: senhaDe.user_id, nova_senha: novaSenha },
+      });
+      if (error) {
+        let msg = "Erro ao alterar a senha";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      toast.success(`Senha de ${senhaDe.nome ?? senhaDe.email} alterada.`);
+      setSenhaDe(null);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao alterar a senha");
+    } finally {
+      setSalvandoSenha(false);
+    }
+  };
+
   const togglePerm = (secao: string, acao: string, valor: boolean) => {
     setPermEdit((prev: any) => ({
       ...prev,
@@ -261,7 +299,7 @@ export const AbaEquipe = () => {
               <TableHead>Perfil</TableHead>
               <TableHead>Unidades</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-44">Ações</TableHead>
+              <TableHead className="w-60">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -305,6 +343,9 @@ export const AbaEquipe = () => {
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => setGerenciando(u)} className="gap-1.5">
                         <Building2 className="h-3.5 w-3.5" /> Gerenciar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => abrirSenha(u)} className="gap-1.5">
+                        <KeyRound className="h-3.5 w-3.5" /> Senha
                       </Button>
                       {u.user_id !== meuUserId && (
                         <Button
@@ -514,6 +555,47 @@ export const AbaEquipe = () => {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={!!senhaDe} onOpenChange={(v) => !v && !salvandoSenha && setSenhaDe(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alterar senha</AlertDialogTitle>
+            <AlertDialogDescription>
+              Defina uma nova senha para <b>{senhaDe?.nome ?? senhaDe?.email}</b> ({senhaDe?.email}). Passe a
+              senha para a pessoa por um canal seguro; ela pode trocá-la depois em "Alterar senha".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="nova-senha-staff">Nova senha</Label>
+              <Input
+                id="nova-senha-staff"
+                type="password"
+                autoComplete="new-password"
+                value={novaSenha}
+                onChange={(e) => setNovaSenha(e.target.value)}
+                placeholder="Mínimo de 8 caracteres"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirma-senha-staff">Confirmar nova senha</Label>
+              <Input
+                id="confirma-senha-staff"
+                type="password"
+                autoComplete="new-password"
+                value={confirmaSenha}
+                onChange={(e) => setConfirmaSenha(e.target.value)}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={salvandoSenha}>Cancelar</AlertDialogCancel>
+            <Button onClick={alterarSenha} disabled={salvandoSenha} className="bg-brand-2 hover:bg-[#162f58] text-white">
+              {salvandoSenha ? "Salvando..." : "Salvar nova senha"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
