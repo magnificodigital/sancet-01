@@ -17,6 +17,8 @@ type StaffPerfil = {
   permissoes: Permissoes | null;
   isAdmin: boolean;
   carregando: boolean;
+  /** auth.uid() do usuário logado (responsável pelos pedidos). */
+  userId: string | null;
 };
 
 const PERMISSOES_ADMIN: Permissoes = {
@@ -31,7 +33,7 @@ const PERMISSOES_ADMIN: Permissoes = {
 
 export const useStaffPerfil = (): StaffPerfil => {
   const [perfil, setPerfil] = useState<StaffPerfil>({
-    role: null, nome: null, permissoes: null, isAdmin: false, carregando: true,
+    role: null, nome: null, permissoes: null, isAdmin: false, carregando: true, userId: null,
   });
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export const useStaffPerfil = (): StaffPerfil => {
       // SEGURANÇA: sem linha em user_roles = NÃO é da equipe (ex.: paciente logado).
       // Nunca assumir "staff" por padrão.
       if (!row) {
-        setPerfil({ role: null, nome: null, permissoes: null, isAdmin: false, carregando: false });
+        setPerfil({ role: null, nome: null, permissoes: null, isAdmin: false, carregando: false, userId: null });
         return;
       }
 
@@ -61,6 +63,7 @@ export const useStaffPerfil = (): StaffPerfil => {
         permissoes: isAdmin ? PERMISSOES_ADMIN : (row.permissoes as Permissoes) ?? null,
         isAdmin,
         carregando: false,
+        userId: uid,
       });
     });
   }, []);

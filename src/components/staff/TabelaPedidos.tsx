@@ -99,6 +99,9 @@ export const TabelaPedidos = ({ pedidos, onAbrir, vazioMsg = "Nenhum pedido." }:
                   </span>
                 )}
                 {p.paciente_nome ?? "—"}
+                {p.responsavel_nome && (
+                  <span className="block text-[11px] text-muted-foreground">👤 {p.responsavel_nome}</span>
+                )}
               </TableCell>
               <TableCell>
                 <span

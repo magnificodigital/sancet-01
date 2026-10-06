@@ -84,6 +84,9 @@ export type Pedido = {
   doc_solicitado_texto?: string | null;
   anexo_paciente_em?: string | null;
   staff_visto_em?: string | null;
+  responsavel_id?: string | null;
+  responsavel_nome?: string | null;
+  responsavel_em?: string | null;
   reagendado_em?: string | null;
   reagendado_de?: string | null;
   periodo_agendamento: "manha" | "tarde" | null;

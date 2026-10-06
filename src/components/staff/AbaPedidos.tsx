@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, UserRoundCog } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
 import { TabelaPedidos } from "./TabelaPedidos";
 import { KanbanPedidos } from "./KanbanPedidos";
 import { ModalPedidoStaff } from "./ModalPedidoStaff";
+import { TransferirPedido } from "./TransferirPedido";
 import { Pedido, respostaPaciente, STATUS_OPTIONS, statusAgendamento } from "./utils";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { cn } from "@/lib/utils";
@@ -42,7 +43,9 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     );
   }
   const podeEditar = permissoes?.pedidos?.editar !== false;
-  const { nome: nomeStaff, isAdmin } = useStaffPerfil();
+  const { nome: nomeStaff, isAdmin, userId: meuId } = useStaffPerfil();
+  const [responsavel, setResponsavel] = useState<string>("todos");
+  const [passandoTurno, setPassandoTurno] = useState(false);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [unidades, setUnidades] = useState<UnidadeOpt[]>([]);
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
@@ -129,6 +132,16 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Quando um colega assume um pedido, ele some da nossa visão e o tempo real
+  // não avisa (a RLS esconde a linha) — recarrega de tempos em tempos.
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible") carregar();
+    }, 30000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     carregar();
     carregarUnidades();
@@ -143,6 +156,12 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     em7.setDate(em7.getDate() + 7);
 
     const lista = pedidos.filter((p) => {
+      // Colaborador vê a fila (sem responsável) e os pedidos dele; confirmados de
+      // colegas continuam achando-se pelo check-in. Admin vê tudo.
+      if (!isAdmin && p.responsavel_id && p.responsavel_id !== meuId) return false;
+      if (isAdmin && responsavel !== "todos") {
+        if (responsavel === "sem" ? !!p.responsavel_id : p.responsavel_id !== responsavel) return false;
+      }
       if (status !== "todos" && p.status !== status) return false;
       if (tipo !== "todos" && p.tipo_solicitacao !== tipo) return false;
       if (modalidade !== "todos" && p.modalidade_coleta !== modalidade) return false;
@@ -172,7 +191,7 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     return [...lista].sort(
       (a, b) => Number(!!respostaPaciente(b)) - Number(!!respostaPaciente(a)),
     );
-  }, [pedidos, status, tipo, modalidade, unidade, agendamento, busca]);
+  }, [pedidos, status, tipo, modalidade, unidade, agendamento, busca, isAdmin, meuId, responsavel]);
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
   const paginaAtual = Math.min(pagina, totalPaginas);
@@ -184,9 +203,17 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     setModalidade("todos");
     setUnidade("todos");
     setAgendamento("todos");
+    setResponsavel("todos");
     setBusca("");
     setPagina(1);
   };
+
+  // Responsáveis presentes nos pedidos (filtro do admin).
+  const responsaveis = useMemo(() => {
+    const m = new Map<string, string>();
+    pedidos.forEach((p) => p.responsavel_id && m.set(p.responsavel_id, p.responsavel_nome ?? "—"));
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [pedidos]);
 
   const contadores = useMemo(() => {
     let hoje = 0, atrasados = 0, novos = 0;
@@ -203,6 +230,9 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-secondary">Pedidos</h1>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setPassandoTurno(true)}>
+          <UserRoundCog className="h-4 w-4" /> Passar meus pedidos
+        </Button>
         {largo && (
           <div className="inline-flex rounded-md border bg-white p-0.5 shadow-sm">
             <button
@@ -320,6 +350,21 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
             </SelectContent>
           </Select>
         </div>
+        {isAdmin && (
+          <div className="min-w-[180px]">
+            <p className="mb-1 text-xs text-muted-foreground">Responsável</p>
+            <Select value={responsavel} onValueChange={(v) => { setResponsavel(v); setPagina(1); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="sem">Sem responsável (fila)</SelectItem>
+                {responsaveis.map(([id, nome]) => (
+                  <SelectItem key={id} value={id}>{nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="relative min-w-[240px] flex-1">
           <p className="mb-1 text-xs text-muted-foreground">Buscar</p>
           <Search className="absolute left-3 top-[34px] h-4 w-4 text-muted-foreground" />
@@ -342,6 +387,8 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
           onAtualizado={carregar}
           nomeStaff={nomeStaff}
           podeEditar={podeEditar}
+          meuId={meuId}
+          isAdmin={isAdmin}
           onConfirmar={(p) => {
             setRevisarAoAbrir(true);
             setPedidoAberto(p);
@@ -378,6 +425,8 @@ export const AbaPedidos = ({ permissoes }: Props = {}) => {
           )}
         </>
       )}
+
+      <TransferirPedido aberto={passandoTurno} onFechar={() => setPassandoTurno(false)} onFeito={carregar} />
 
       <ModalPedidoStaff
         pedido={pedidoAberto}

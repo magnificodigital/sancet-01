@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -10,7 +10,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Building2, Home, Calendar } from "lucide-react";
+import { Building2, Home, Calendar, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -31,7 +31,12 @@ type Props = {
   podeEditar: boolean;
   /** Arrastar para "Confirmado" não confirma direto: abre o pedido na revisão. */
   onConfirmar?: (p: Pedido) => void;
+  meuId?: string | null;
+  isAdmin?: boolean;
 };
+
+// Quem está logado (para mostrar "Você" no responsável do card).
+const MeuIdCtx = createContext<string | null>(null);
 
 const COLUNAS: { id: string; label: string; emoji: string; bg: string; header: string }[] = [
   { id: "novo", label: "Novo", emoji: "🆕", bg: "bg-red-50/60", header: "bg-red-100/70 text-red-900" },
@@ -70,6 +75,7 @@ const CardPedido = ({
   const ag = statusAgendamento(p.data_agendamento, p.status);
   const nome = p.paciente_nome || p.paciente_cpf;
   const respondeu = respostaPaciente(p);
+  const meuId = useContext(MeuIdCtx);
 
   return (
     <div
@@ -89,6 +95,11 @@ const CardPedido = ({
         {nome}
       </p>
       <p className="font-mono text-[10px] text-muted-foreground">{p.protocolo}</p>
+      {p.responsavel_id && (
+        <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-700">
+          <UserRound className="h-3 w-3" /> {p.responsavel_id === meuId ? "Você" : p.responsavel_nome ?? "—"}
+        </p>
+      )}
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span
@@ -230,6 +241,7 @@ export const KanbanPedidos = ({
   nomeStaff,
   podeEditar,
   onConfirmar,
+  meuId = null,
 }: Props) => {
   // estado local pra otimistic UI
   const [override, setOverride] = useState<Record<string, string>>({});
@@ -316,8 +328,9 @@ export const KanbanPedidos = ({
       toast.error(
         error
           ? "Não foi possível alterar o status."
-          : "Sem permissão para alterar este pedido.",
+          : "Este pedido já foi assumido por outro colaborador.",
       );
+      onAtualizado();
       return;
     }
 
@@ -330,6 +343,7 @@ export const KanbanPedidos = ({
     : null;
 
   return (
+    <MeuIdCtx.Provider value={meuId}>
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-2">
         {COLUNAS.map((c) => (
@@ -354,5 +368,6 @@ export const KanbanPedidos = ({
         )}
       </DragOverlay>
     </DndContext>
+    </MeuIdCtx.Provider>
   );
 };

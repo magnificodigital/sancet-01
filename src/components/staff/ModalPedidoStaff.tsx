@@ -33,6 +33,7 @@ import { ConfirmarExclusao } from "./ConfirmarExclusao";
 import { EditorItensPedido } from "./EditorItensPedido";
 import { InfoPacienteStaff } from "./InfoPacienteStaff";
 import { SolicitarDocumentoStaff } from "./SolicitarDocumentoStaff";
+import { ResponsavelPedido } from "./TransferirPedido";
 import { AnexosPacienteStaff } from "./AnexosPacienteStaff";
 import { RevisaoConfirmacao } from "./RevisaoConfirmacao";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
@@ -155,7 +156,7 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
   const [confirmarExcluir, setConfirmarExcluir] = useState(false);
   const [excluindoPedido, setExcluindoPedido] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const { isAdmin, permissoes, nome: nomeStaff } = useStaffPerfil();
+  const { isAdmin, permissoes, nome: nomeStaff, userId: meuId } = useStaffPerfil();
   const [solicitandoToken, setSolicitandoToken] = useState(false);
   const [solicitadoAgora, setSolicitadoAgora] = useState(false);
   const podeExcluirPedido = isAdmin || permissoes?.pedidos?.excluir === true;
@@ -470,6 +471,15 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
+            <ResponsavelPedido
+              pedido={pedido}
+              meuId={meuId}
+              isAdmin={isAdmin}
+              onAlterado={() => {
+                onSalvo?.();
+                onClose();
+              }}
+            />
             {respondeu && (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">
                 <span className="flex-1 font-semibold">
