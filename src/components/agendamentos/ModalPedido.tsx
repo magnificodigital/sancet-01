@@ -11,9 +11,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Circle, CheckCircle2, Download, MessageSquareText, Plus, X } from "lucide-react";
+import { CalendarClock, Circle, CheckCircle2, Download, MessageSquareText, Plus, Ticket, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -26,10 +25,14 @@ import { Pedido } from "./CardPedido";
 import { usePaciente } from "@/hooks/usePaciente";
 import { precoItemReais } from "@/lib/preco";
 import { EnviarAnexosPaciente } from "./EnviarAnexosPaciente";
+import { ReagendarPedido } from "./ReagendarPedido";
+import { useNavigate } from "react-router-dom";
 
 type Props = {
   pedido: Pedido | null;
   onClose: () => void;
+  /** Vindo do menu (Reagendar / Cancelar agendamento): já abre a ação. */
+  acaoInicial?: "reagendar" | "cancelar" | null;
 };
 
 const ETAPAS = [
@@ -39,7 +42,7 @@ const ETAPAS = [
   { key: "concluido", label: "Concluído" },
 ];
 
-export const ModalPedido = ({ pedido, onClose }: Props) => {
+export const ModalPedido = ({ pedido, onClose, acaoInicial }: Props) => {
   const qc = useQueryClient();
   const { paciente } = usePaciente();
   const [resultados, setResultados] = useState<
@@ -49,6 +52,20 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
   const [salvandoTokens, setSalvandoTokens] = useState(false);
   const tokenRef = useRef<HTMLDivElement>(null);
   const anexoRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const [reagendando, setReagendando] = useState(false);
+  const [confirmarCancelar, setConfirmarCancelar] = useState(false);
+  useEffect(() => {
+    setReagendando(false);
+    setConfirmarCancelar(false);
+    if (!pedido || !acaoInicial) return;
+    const t = setTimeout(() => {
+      if (acaoInicial === "reagendar") setReagendando(true);
+      if (acaoInicial === "cancelar") setConfirmarCancelar(true);
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedido?.id, acaoInicial]);
   // Documento solicitado pela equipe e ainda não respondido pelo paciente.
   const docPendente =
     !!pedido?.doc_solicitado_em &&
@@ -153,6 +170,10 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
   });
 
   const podeCancelar = ["novo", "em_analise"].includes(pedido.status);
+  const podeReagendar =
+    pedido.modalidade_coleta !== "domicilio" &&
+    ["novo", "em_analise", "aguardando_pagamento", "confirmado"].includes(pedido.status);
+  const podeVerVoucher = pedido.status !== "cancelado";
   const idxAtual = ETAPAS.findIndex((e) => e.key === pedido.status);
   const dataPedido = pedido.created_at
     ? format(new Date(pedido.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
@@ -395,37 +416,71 @@ export const ModalPedido = ({ pedido, onClose }: Props) => {
           </section>
         </div>
 
-        {podeCancelar && (
-          <div className="p-6 border-t">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full border-brand text-brand hover:bg-brand/5 hover:text-brand"
-                >
-                  Cancelar agendamento
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Cancelar este agendamento?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação não pode ser desfeita.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Voltar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={cancelar}
-                    className="bg-brand hover:bg-brand-hover"
-                  >
-                    Sim, cancelar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+        {(podeVerVoucher || podeReagendar || podeCancelar) && (
+          <div className="space-y-2 border-t p-6">
+            {podeVerVoucher && (
+              <Button
+                className="w-full gap-2 bg-brand-2 text-white hover:bg-[#162f58]"
+                onClick={() => navigate(`/pronto/${pedido.protocolo}`)}
+              >
+                <Ticket className="h-4 w-4" /> Ver voucher
+              </Button>
+            )}
+            {podeReagendar && (
+              <Button variant="outline" className="w-full gap-2" onClick={() => setReagendando(true)}>
+                <CalendarClock className="h-4 w-4" /> Reagendar
+              </Button>
+            )}
+            {podeCancelar && (
+              <Button
+                variant="outline"
+                className="w-full border-brand text-brand hover:bg-brand/5 hover:text-brand"
+                onClick={() => setConfirmarCancelar(true)}
+              >
+                Cancelar agendamento
+              </Button>
+            )}
+            {acaoInicial === "cancelar" && !podeCancelar && (
+              <p className="text-center text-xs text-muted-foreground">
+                Este agendamento não pode mais ser cancelado pelo site. Fale com a recepção da Sancet.
+              </p>
+            )}
+            {acaoInicial === "reagendar" && !podeReagendar && (
+              <p className="text-center text-xs text-muted-foreground">
+                Este agendamento não pode ser reagendado pelo site. Fale com a recepção da Sancet.
+              </p>
+            )}
           </div>
         )}
+
+        <AlertDialog open={confirmarCancelar} onOpenChange={setConfirmarCancelar}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar este agendamento?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Pedido {pedido.protocolo}. Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Voltar</AlertDialogCancel>
+              <AlertDialogAction onClick={cancelar} className="bg-brand hover:bg-brand-hover">
+                Sim, cancelar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <ReagendarPedido
+          aberto={reagendando}
+          onFechar={(ok) => {
+            setReagendando(false);
+            if (ok) onClose();
+          }}
+          protocolo={pedido.protocolo}
+          unidadeNome={pedido.unidade_nome ?? null}
+          dataAtual={pedido.data_agendamento ?? null}
+          periodoAtual={(pedido.periodo_agendamento as any) ?? null}
+        />
       </SheetContent>
     </Sheet>
   );

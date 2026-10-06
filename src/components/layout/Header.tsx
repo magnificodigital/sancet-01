@@ -54,9 +54,9 @@ const makeNavLinkClass = (dark: boolean) =>
     );
 
 const agendamentosItens = [
-  { label: "Reagendar", to: "/agendamentos?aba=reagendar" },
+  { label: "Reagendar", to: "/agendamentos?acao=reagendar" },
   { label: "Ver agendamentos", to: "/agendamentos" },
-  { label: "Cancelar agendamento", to: "/agendamentos?aba=cancelar" },
+  { label: "Cancelar agendamento", to: "/agendamentos?acao=cancelar" },
 ];
 
 export const Header = () => {

@@ -99,6 +99,12 @@ const StaffDashboard = () => {
               `🔔 Paciente informou o token do convênio — pedido ${novo.protocolo}`,
             );
           }
+          if (recente(novo?.reagendado_em)) {
+            avisar(
+              `reag:${novo.id}:${novo.reagendado_em}`,
+              `📅 Paciente reagendou — pedido ${novo.protocolo}`,
+            );
+          }
           if (recente(novo?.anexo_paciente_em)) {
             avisar(
               `anexo:${novo.id}:${String(novo.anexo_paciente_em).slice(0, 16)}`,

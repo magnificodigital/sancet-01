@@ -84,6 +84,8 @@ export type Pedido = {
   doc_solicitado_texto?: string | null;
   anexo_paciente_em?: string | null;
   staff_visto_em?: string | null;
+  reagendado_em?: string | null;
+  reagendado_de?: string | null;
   periodo_agendamento: "manha" | "tarde" | null;
   emails_enviados?: any;
 };
@@ -142,7 +144,7 @@ export function formatarAgendamentoCurto(
 
 // ---------- "Paciente respondeu" ----------
 // Destaque no Kanban/lista: o paciente respondeu algo que a equipe pediu
-// (token do convênio ou documento anexado). Fica em destaque até a equipe
+// (token do convênio, documento anexado ou reagendamento). Fica em destaque até a equipe
 // clicar em "Marcar como visto" no pedido (staff_visto_em) — inclusive em
 // pedidos já confirmados. Pedidos concluídos/cancelados nunca ficam em destaque.
 const STATUS_FINAIS = ["concluido", "cancelado"];
@@ -154,6 +156,9 @@ export function respostaPaciente(p: Pedido): string | null {
   if (STATUS_FINAIS.includes(p.status)) return null;
   const visto = ts(p.staff_visto_em);
   const naoVisto = (t: number) => !Number.isNaN(t) && (Number.isNaN(visto) || t > visto);
+
+  // Reagendou pelo site (pedido confirmado volta para "em análise").
+  if (naoVisto(ts(p.reagendado_em))) return "Reagendou";
 
   // Anexou documento(s) — espontâneo ou após "Solicitar documento".
   const anexo = ts(p.anexo_paciente_em);

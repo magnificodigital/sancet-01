@@ -477,6 +477,12 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
                   {respondeu === "Enviou documento" && (
                     <span className="block text-xs font-normal">Os arquivos estão logo abaixo e na aba Documentos.</span>
                   )}
+                  {respondeu === "Reagendou" && (
+                    <span className="block text-xs font-normal">
+                      Antes: {pedido.reagendado_de ?? "—"} → agora: {formatarAgendamentoCurto(pedido.data_agendamento, pedido.periodo_agendamento)}.
+                      Confira a agenda e confirme de novo.
+                    </span>
+                  )}
                 </span>
                 <Button size="sm" variant="outline" className="border-amber-400 bg-white" onClick={marcarVisto} disabled={marcandoVisto}>
                   {marcandoVisto ? "Salvando..." : "Marcar como visto"}

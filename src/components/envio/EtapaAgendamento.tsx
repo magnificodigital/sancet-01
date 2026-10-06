@@ -19,6 +19,8 @@ export type Agendamento = {
 type Props = {
   onConfirmar: (a: Agendamento) => void;
   unidade?: Unidade | null;
+  /** Texto do botão final (padrão "Continuar"). */
+  textoBotao?: string;
 };
 
 const hoje = () => {
@@ -51,7 +53,7 @@ const maxData = () => {
   return d;
 };
 
-export const EtapaAgendamento = ({ onConfirmar, unidade }: Props) => {
+export const EtapaAgendamento = ({ onConfirmar, unidade, textoBotao = "Continuar" }: Props) => {
   const [data, setData] = useState<Date | undefined>(undefined);
   const [periodo, setPeriodo] = useState<Periodo | null>(null);
 
@@ -180,7 +182,7 @@ export const EtapaAgendamento = ({ onConfirmar, unidade }: Props) => {
         onClick={() => onConfirmar({ data: data!, periodo: periodo! })}
         className="w-full bg-brand hover:bg-brand-hover text-white"
       >
-        Continuar
+        {textoBotao}
       </Button>
     </div>
   );

@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { usePaciente, sincronizarPacienteAuth } from "@/hooks/usePaciente";
 import {
   SidebarAgendamentos,
@@ -25,13 +26,21 @@ const Agendamentos = () => {
   const { paciente, logado, carregando, logout } = usePaciente();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [aba, setAba] = useState<AbaKey>(() => {
     const p = searchParams.get("aba");
     if (p === "resultados" || p === "convenio" || p === "dados") return p as AbaKey;
     return "agendamentos";
   });
   const [detalhe, setDetalhe] = useState<Pedido | null>(null);
+  // Ação vinda do menu do topo (Reagendar / Cancelar agendamento).
+  const [acao, setAcao] = useState<"reagendar" | "cancelar" | null>(null);
+
+  // O menu do topo navega para esta mesma página: acompanha a URL.
+  useEffect(() => {
+    const p = searchParams.get("aba");
+    if (p === "resultados" || p === "convenio" || p === "dados" || p === "agendamentos") setAba(p as AbaKey);
+  }, [searchParams]);
 
   useEffect(() => {
     if (carregando || logado) return;
@@ -94,6 +103,35 @@ const Agendamentos = () => {
   }, [pedidos, searchParams]);
 
   const agendados = (pedidos ?? []).filter((p) => STATUS_AGENDADOS.includes(p.status));
+
+  // ?acao=reagendar|cancelar: com 1 agendamento elegível abre direto; com
+  // vários, pede para escolher (a ação já vem pronta ao abrir o pedido).
+  useEffect(() => {
+    const pedida = searchParams.get("acao");
+    if ((pedida !== "reagendar" && pedida !== "cancelar") || !pedidos) return;
+    const elegiveis = (pedidos ?? []).filter((p) =>
+      pedida === "cancelar"
+        ? ["novo", "em_analise"].includes(p.status)
+        : p.modalidade_coleta !== "domicilio" &&
+          ["novo", "em_analise", "aguardando_pagamento", "confirmado"].includes(p.status),
+    );
+    setAba("agendamentos");
+    const resto = new URLSearchParams(searchParams);
+    resto.delete("acao");
+    setSearchParams(resto, { replace: true });
+    if (elegiveis.length === 0) {
+      setAcao(null);
+      toast.message(
+        pedida === "cancelar"
+          ? "Nenhum agendamento pode ser cancelado pelo site agora. Fale com a recepção."
+          : "Nenhum agendamento pode ser reagendado pelo site agora. Fale com a recepção.",
+      );
+      return;
+    }
+    setAcao(pedida);
+    if (elegiveis.length === 1) setDetalhe(elegiveis[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidos, searchParams]);
   const cancelados = (pedidos ?? []).filter((p) => p.status === "cancelado");
   const concluidos = (pedidos ?? []).filter((p) => p.status === "concluido");
 
@@ -160,6 +198,17 @@ const Agendamentos = () => {
           {aba === "agendamentos" && (
             <>
               <h1 className="text-2xl font-bold text-secondary mb-4">Agendamentos</h1>
+              {acao && !detalhe && (
+                <div className="mb-4 flex items-center gap-3 rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm text-secondary">
+                  <span className="flex-1">
+                    Escolha o agendamento que você quer {acao === "reagendar" ? "reagendar" : "cancelar"} e clique em{" "}
+                    <b>Ver detalhes</b>.
+                  </span>
+                  <button className="text-xs text-muted-foreground hover:underline" onClick={() => setAcao(null)}>
+                    Fechar
+                  </button>
+                </div>
+              )}
               <Tabs defaultValue="agendados">
                 <TabsList>
                   <TabsTrigger value="agendados">Agendados</TabsTrigger>
@@ -253,7 +302,14 @@ const Agendamentos = () => {
         </section>
       </div>
 
-      <ModalPedido pedido={detalhe} onClose={() => setDetalhe(null)} />
+      <ModalPedido
+        pedido={detalhe}
+        acaoInicial={acao}
+        onClose={() => {
+          setDetalhe(null);
+          setAcao(null);
+        }}
+      />
     </PageShell>
   );
 };

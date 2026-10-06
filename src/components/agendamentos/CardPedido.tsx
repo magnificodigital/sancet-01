@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Home, Building2, Wallet, CreditCard } from "lucide-react";
+import { Home, Building2, Wallet, CreditCard, Ticket } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "./StatusBadge";
 
@@ -26,6 +27,8 @@ export type Pedido = {
   doc_solicitado_em?: string | null;
   doc_solicitado_texto?: string | null;
   anexo_paciente_em?: string | null;
+  data_agendamento?: string | null;
+  periodo_agendamento?: string | null;
 };
 
 type Props = {
@@ -84,12 +87,22 @@ export const CardPedido = ({ pedido, onVerDetalhes }: Props) => {
           )}
         </Badge>
 
-        <button
-          onClick={() => onVerDetalhes(pedido)}
-          className="ml-auto text-sm font-medium text-brand hover:underline"
-        >
-          Ver detalhes
-        </button>
+        <div className="ml-auto flex items-center gap-4">
+          {pedido.status !== "cancelado" && (
+            <Link
+              to={`/pronto/${pedido.protocolo}`}
+              className="flex items-center gap-1 text-sm font-medium text-secondary hover:underline"
+            >
+              <Ticket className="h-3.5 w-3.5" /> Voucher
+            </Link>
+          )}
+          <button
+            onClick={() => onVerDetalhes(pedido)}
+            className="text-sm font-medium text-brand hover:underline"
+          >
+            Ver detalhes
+          </button>
+        </div>
       </div>
     </div>
   );
