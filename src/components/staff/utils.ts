@@ -84,6 +84,7 @@ export type Pedido = {
   doc_solicitado_texto?: string | null;
   anexo_paciente_em?: string | null;
   staff_visto_em?: string | null;
+  urls_pedido_medico_extra?: string[] | null;
   responsavel_id?: string | null;
   responsavel_nome?: string | null;
   responsavel_em?: string | null;

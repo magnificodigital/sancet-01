@@ -92,6 +92,8 @@ type Props = {
     planoDescricao: string | null;
     arquivoCarteirinha: File | null;
     arquivoPedidoMedico: File | null;
+    /** Pedidos médicos adicionais (2º, 3º...). */
+    arquivosPedidoMedicoExtras: File[];
     arquivoRgFrente: File | null;
     arquivoRgVerso: File | null;
     arquivoRelatorioMedico: File | null;
@@ -225,25 +227,58 @@ export const EtapaConfirmacao = ({
   const [arquivoRelatorioMedico, setArquivoRelatorioMedico] = useState<File | null>(null);
 
   // IA lê o pedido médico assim que o paciente anexa (adianta etapas).
-  const [lendoPedido, setLendoPedido] = useState(false);
-  const [iaPedido, setIaPedido] = useState<{
-    itens: ItemSacola[];
-    naoEnc: string[];
-  } | null>(null);
+  // Paciente pode trazer vários pedidos médicos (um de cada médico): o 1º é
+  // obrigatório, os demais vão em "pedidosExtras". A IA lê cada um e junta.
+  const MAX_PEDIDOS = 5;
+  const [pedidosExtras, setPedidosExtras] = useState<File[]>([]);
+  const extraInputRef = useRef<HTMLInputElement>(null);
+  const chaveArq = (f: File) => `${f.name}-${f.size}-${f.lastModified}`;
+  const [leituras, setLeituras] = useState<Record<string, { itens: ItemSacola[]; naoEnc: string[] }>>({});
+  const [lendoQtd, setLendoQtd] = useState(0);
+  const lendoPedido = lendoQtd > 0;
 
   const lerPedidoAnexado = async (file: File) => {
-    setLendoPedido(true);
-    setIaPedido(null);
+    const k = chaveArq(file);
+    if (leituras[k]) return;
+    setLendoQtd((n) => n + 1);
     try {
       const r = await lerPedidoIA(file, tipo === "convenio" ? "convenio" : "loja");
-      setIaPedido({ itens: r.itens, naoEnc: r.naoEncontrados });
+      setLeituras((prev) => ({ ...prev, [k]: { itens: r.itens, naoEnc: r.naoEncontrados } }));
     } catch {
       // A leitura é um bônus e não bloqueia o envio — mas mostramos a caixa
       // (sem exames) para o paciente poder incluir o exame manualmente.
-      setIaPedido({ itens: [], naoEnc: [] });
+      setLeituras((prev) => ({ ...prev, [k]: { itens: [], naoEnc: [] } }));
     } finally {
-      setLendoPedido(false);
+      setLendoQtd((n) => n - 1);
     }
+  };
+
+  // Resultado somado de todos os pedidos médicos anexados (sem repetir exame).
+  const iaPedido = useMemo(() => {
+    const arquivos = [arquivoPedidoMedico, ...pedidosExtras].filter(Boolean) as File[];
+    const lidas = arquivos.map((f) => leituras[chaveArq(f)]).filter(Boolean);
+    if (lidas.length === 0) return null;
+    const itens = new Map<string, ItemSacola>();
+    const naoEnc = new Set<string>();
+    lidas.forEach((l) => {
+      l.itens.forEach((it) => itens.set(it.codigoShift, it));
+      l.naoEnc.forEach((n) => naoEnc.add(n));
+    });
+    return { itens: [...itens.values()], naoEnc: [...naoEnc] };
+  }, [arquivoPedidoMedico, pedidosExtras, leituras]);
+
+  const adicionarPedidosExtras = (lista: FileList | null) => {
+    const novos = Array.from(lista ?? []);
+    if (extraInputRef.current) extraInputRef.current.value = "";
+    const grandes = novos.filter((f) => f.size > MAX_BYTES);
+    if (grandes.length) toast.error(`Arquivo muito grande (máx. 10 MB): ${grandes.map((f) => f.name).join(", ")}`);
+    const validos = novos.filter((f) => f.size <= MAX_BYTES);
+    const cabem = Math.max(0, MAX_PEDIDOS - 1 - pedidosExtras.length);
+    if (validos.length > cabem) toast.error(`Você pode enviar até ${MAX_PEDIDOS} pedidos médicos.`);
+    const aceitos = validos.slice(0, cabem);
+    if (!aceitos.length) return;
+    setPedidosExtras((prev) => [...prev, ...aceitos]);
+    aceitos.forEach((f) => lerPedidoAnexado(f));
   };
 
   const adicionarIdentificados = () => {
@@ -409,6 +444,7 @@ export const EtapaConfirmacao = ({
       planoDescricao: planoSel?.descricao ?? null,
       arquivoCarteirinha,
       arquivoPedidoMedico,
+      arquivosPedidoMedicoExtras: pedidosExtras,
       arquivoRgFrente,
       arquivoRgVerso,
       arquivoRelatorioMedico,
@@ -736,11 +772,51 @@ export const EtapaConfirmacao = ({
           onChange={(f) => {
             setArquivoPedidoMedico(f);
             if (f) lerPedidoAnexado(f);
-            else setIaPedido(null);
           }}
           required
           invalid={hasErr("doc-pedido-medico")}
         />
+
+        {arquivoPedidoMedico && (
+          <div className="space-y-2 rounded-lg border border-dashed p-3">
+            <p className="text-sm font-medium text-secondary">Tem mais de um pedido médico?</p>
+            <p className="text-xs text-muted-foreground">
+              Se você tem pedidos de médicos diferentes, anexe todos aqui (até {MAX_PEDIDOS} no total).
+            </p>
+            {pedidosExtras.length > 0 && (
+              <ul className="space-y-1">
+                {pedidosExtras.map((f, i) => (
+                  <li key={chaveArq(f)} className="flex items-center gap-2 rounded-md bg-muted/40 px-2 py-1.5 text-sm">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                    <span className="min-w-0 flex-1 truncate">
+                      Pedido médico {i + 2}: {f.name}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-red-600"
+                      onClick={() => setPedidosExtras((prev) => prev.filter((_, idx) => idx !== i))}
+                    >
+                      Remover
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <input
+              ref={extraInputRef}
+              type="file"
+              multiple
+              accept={ACCEPT}
+              className="hidden"
+              onChange={(e) => adicionarPedidosExtras(e.target.files)}
+            />
+            {pedidosExtras.length < MAX_PEDIDOS - 1 && (
+              <Button type="button" variant="outline" size="sm" onClick={() => extraInputRef.current?.click()}>
+                + Adicionar outro pedido médico
+              </Button>
+            )}
+          </div>
+        )}
 
         {lendoPedido && (
           <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">

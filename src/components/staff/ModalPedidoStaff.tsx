@@ -824,7 +824,8 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
               !pedido.url_rg_frente &&
               !pedido.url_rg_verso &&
               !pedido.url_certidao_nascimento &&
-              !pedido.url_relatorio_medico ? (
+              !pedido.url_relatorio_medico &&
+              !(pedido.urls_pedido_medico_extra ?? []).length ? (
                 <p className="text-sm text-muted-foreground">Nenhum documento enviado</p>
               ) : (
                 <>
@@ -853,6 +854,9 @@ export const ModalPedidoStaff = ({ pedido, onClose, onSalvo, revisarAoAbrir }: P
                       pacienteId={pedido.paciente_id ?? null}
                       podeExcluir={isAdmin}
                     />
+                  ))}
+                  {(pedido.urls_pedido_medico_extra ?? []).map((url, i) => (
+                    <DocLink key={url} label={`Pedido médico ${i + 2}`} url={url} />
                   ))}
                   {isAdmin && (
                     <p className="pt-1 text-xs text-muted-foreground">

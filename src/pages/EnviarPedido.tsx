@@ -79,6 +79,7 @@ const EnviarPedido = () => {
     planoDescricao: string | null;
     arquivoCarteirinha: File | null;
     arquivoPedidoMedico: File | null;
+    arquivosPedidoMedicoExtras?: File[];
     arquivoRgFrente: File | null;
     arquivoRgVerso: File | null;
     arquivoRelatorioMedico: File | null;
@@ -131,6 +132,13 @@ const EnviarPedido = () => {
         uploadDoc(extras.arquivoRelatorioMedico, "relatorio-medico"),
       ]);
 
+      // Pedidos médicos adicionais (2º, 3º...): um arquivo por médico.
+      const urlsPedidoMedicoExtra = (
+        await Promise.all(
+          (extras.arquivosPedidoMedicoExtras ?? []).map((f, i) => uploadDoc(f, `pedido-medico-${i + 2}`)),
+        )
+      ).filter(Boolean);
+
       const ehConvenio = tipoEfetivo === "convenio";
 
       const payload: any = {
@@ -148,6 +156,7 @@ const EnviarPedido = () => {
         numero_carteirinha: ehConvenio ? extras.numeroCarteirinha : null,
         url_carteirinha: urlCarteirinha,
         url_pedido_medico: urlPedidoMedico,
+        urls_pedido_medico_extra: urlsPedidoMedicoExtra,
         url_rg_frente: urlRgFrente,
         url_rg_verso: urlRgVerso,
         url_relatorio_medico: urlRelatorioMedico,
