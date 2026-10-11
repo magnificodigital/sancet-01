@@ -37,6 +37,7 @@ import {
   CATEGORIAS_VACINAS,
 } from "@/components/catalogo/types";
 import { normalizeExameNome } from "@/lib/normalizeExame";
+import { CatalogoConvenio } from "./CatalogoConvenio";
 
 type Item = {
   id: string;
@@ -97,11 +98,19 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       tabela === "exames_cache"
         ? "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, preco_particular, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo"
         : "id, nome, codigo_shift, outros_nomes, categoria, preco_centavos, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa, ativo";
-    const { data } = await (supabase as any)
-      .from(tabela)
-      .select(campos)
-      .order("nome");
-    setItens((data as Item[]) ?? []);
+    // O banco devolve no máximo 1000 linhas por consulta: busca em páginas.
+    const todos: Item[] = [];
+    for (let de = 0; ; de += 1000) {
+      const { data, error } = await (supabase as any)
+        .from(tabela)
+        .select(campos)
+        .order("nome")
+        .range(de, de + 999);
+      if (error) break;
+      todos.push(...((data as Item[]) ?? []));
+      if (!data || data.length < 1000) break;
+    }
+    setItens(todos);
   };
 
   useEffect(() => {
@@ -712,9 +721,13 @@ export const AbaCatalogo = ({ permissoes }: AbaCatalogoProps = {}) => {
       <h1 className="text-2xl font-bold text-secondary">Catálogo</h1>
       <Tabs defaultValue="exames">
         <TabsList>
-          <TabsTrigger value="exames">Exames</TabsTrigger>
+          <TabsTrigger value="exames">Exames particular</TabsTrigger>
+          <TabsTrigger value="convenio">Exames convênio</TabsTrigger>
           <TabsTrigger value="vacinas">Vacinas</TabsTrigger>
         </TabsList>
+        <TabsContent value="convenio" className="mt-4">
+          <CatalogoConvenio podeEditar={podeEditar} />
+        </TabsContent>
         <TabsContent value="exames" className="mt-4">
           <Tabela tabela="exames_cache" podeEditar={podeEditar} />
         </TabsContent>
