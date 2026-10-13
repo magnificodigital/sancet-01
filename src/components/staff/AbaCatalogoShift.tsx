@@ -70,6 +70,14 @@ export const AbaCatalogoShift = () => {
   useEffect(() => { carregar(); }, []);
 
   const sincronizar = async () => {
+    if (
+      !window.confirm(
+        "Atenção: a sincronização com o Shift SOBRESCREVE nome, preparo, prazo e categoria do catálogo particular " +
+          "e reativa exames desativados. O catálogo oficial agora vem das planilhas (Catálogo → Baixar/Importar planilha). " +
+          "Deseja mesmo sincronizar?",
+      )
+    )
+      return;
     setRodando(true);
     try {
       const { data, error } = await supabase.functions.invoke("sancet-sync-shift");
@@ -91,6 +99,14 @@ export const AbaCatalogoShift = () => {
   };
 
   const atualizarDetalhes = async () => {
+    if (
+      !window.confirm(
+        "Atenção: a sincronização com o Shift SOBRESCREVE nome, preparo, prazo e categoria do catálogo particular " +
+          "e reativa exames desativados. O catálogo oficial agora vem das planilhas (Catálogo → Baixar/Importar planilha). " +
+          "Deseja mesmo sincronizar?",
+      )
+    )
+      return;
     if (!confirm("Atualizar os detalhes dos exames (preparo, jejum, prazo, material, metodologia) pode levar de 5 a 10 minutos. Deseja continuar?")) return;
     setRodandoDetalhes(true);
     try {

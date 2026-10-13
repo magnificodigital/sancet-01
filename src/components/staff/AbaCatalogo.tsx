@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Search, Upload, Download, DollarSign } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { lerCsvComEncoding, csvParaObjetos, parsePrecoBR } from "@/lib/csv-import";
 import { Input } from "@/components/ui/input";
@@ -38,6 +37,15 @@ import {
 } from "@/components/catalogo/types";
 import { normalizeExameNome } from "@/lib/normalizeExame";
 import { CatalogoConvenio } from "./CatalogoConvenio";
+import {
+  baixarPlanilha,
+  emLotes,
+  lerPlanilha,
+  PreviaImportacao,
+  ResumoImportacao,
+  simNao,
+  vazio,
+} from "./PreviaImportacao";
 
 type Item = {
   id: string;
@@ -255,67 +263,139 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
     return itens.filter((i) => i.nome.toLowerCase().includes(q));
   }, [itens, busca]);
 
+  // ---------- Planilha (fonte de verdade do catálogo particular) ----------
+  // "Baixar planilha" exporta o catálogo atual (já com os ajustes da tela);
+  // "Importar planilha" mostra a prévia e só aplica depois de confirmar.
+  const ehExame = tabela === "exames_cache";
+  const [resumoImport, setResumoImport] = useState<ResumoImportacao | null>(null);
+  const [aplicarImport, setAplicarImport] = useState<((desativar: boolean) => Promise<void>) | null>(null);
+  const COLUNAS = [
+    "codigo_shift", "nome", "outros_nomes", "categoria", "preco_reais", "prazo_resultado",
+    "preparo", "disponivel_na_unidade", "disponivel_em_casa", "ativo",
+  ];
+  const precoReais = (i: Item) =>
+    ehExame
+      ? i.preco_particular != null ? Number(i.preco_particular) : null
+      : i.preco_centavos != null ? i.preco_centavos / 100 : null;
+
   const baixarModelo = () => {
-    const colunas = [
-      "nome", "codigo_shift", "outros_nomes", "categoria",
-      "preco_reais", "prazo_resultado", "preparo",
-      "disponivel_na_unidade", "disponivel_em_casa", "ativo"
-    ];
-    const exemplo = [{
-      nome: "Hemograma Completo",
-      codigo_shift: "EX001",
-      outros_nomes: "Hemograma, CBC",
-      categoria: tabela === "exames_cache" ? "Sangue e urina" : "Adolescentes e Adultos",
-      preco_reais: "45.00",
-      prazo_resultado: "1 dia útil",
-      preparo: "Jejum não necessário.",
-      disponivel_na_unidade: "SIM",
-      disponivel_em_casa: "SIM",
-      ativo: "SIM",
-    }];
-    const ws = XLSX.utils.json_to_sheet(exemplo, { header: colunas });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Modelo");
-    XLSX.writeFile(wb, `modelo-${tabela === "exames_cache" ? "exames" : "vacinas"}.xlsx`);
+    const linhas = itens.map((i) => ({
+      codigo_shift: i.codigo_shift,
+      nome: i.nome,
+      outros_nomes: (i.outros_nomes ?? []).join(", "),
+      categoria: i.categoria ?? "",
+      preco_reais: precoReais(i) ?? "",
+      prazo_resultado: i.prazo_resultado ?? "",
+      preparo: i.preparo ?? "",
+      disponivel_na_unidade: i.disponivel_na_unidade ? "SIM" : "NAO",
+      disponivel_em_casa: i.disponivel_em_casa ? "SIM" : "NAO",
+      ativo: i.ativo ? "SIM" : "NAO",
+    }));
+    baixarPlanilha(
+      `catalogo-${ehExame ? "exames-particular" : "vacinas"}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      COLUNAS,
+      linhas,
+      [
+        `Catálogo de ${ehExame ? "EXAMES PARTICULAR" : "VACINAS"} — Sancet`,
+        "codigo_shift e nome são obrigatórios. O codigo_shift liga a linha ao item.",
+        "preco_reais: valor em reais (ex.: 45,00). Vazio = não altera.",
+        "outros_nomes: separados por vírgula. Campos de texto vazios = não alteram.",
+        "disponivel_na_unidade / disponivel_em_casa / ativo: SIM ou NAO.",
+        "Itens que não estiverem na planilha podem ser desativados na importação (nada é apagado).",
+      ],
+    );
   };
 
   const importarPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    let linhas: Record<string, any>[];
+    try {
+      linhas = await lerPlanilha(file);
+    } catch (err: any) {
+      toast.error(`Não foi possível ler a planilha: ${err?.message ?? err}`);
+      return;
+    }
+    if (!linhas.length) { toast.error("Planilha vazia."); return; }
+    if (!("codigo_shift" in linhas[0]) || !("nome" in linhas[0])) {
+      toast.error('A planilha precisa das colunas "codigo_shift" e "nome". Use "Baixar planilha" como base.');
+      return;
+    }
 
-    const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer, { type: "array" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows: any[] = XLSX.utils.sheet_to_json(ws);
+    const porCodigo = new Map(itens.map((i) => [String(i.codigo_shift), i]));
+    const ignorados: string[] = [];
+    const vistos = new Map<string, Record<string, any>>();
+    const agora = new Date().toISOString();
+    linhas.forEach((r, idx) => {
+      const codigo = String(r.codigo_shift ?? "").trim();
+      const nome = String(r.nome ?? "").trim();
+      if (!codigo || !nome) { ignorados.push(`Linha ${idx + 2}: sem código ou nome`); return; }
+      if (vistos.has(codigo)) ignorados.push(`Linha ${idx + 2}: código ${codigo} repetido (vale a última)`);
+      const atual = porCodigo.get(codigo);
+      const reg: Record<string, any> = {
+        codigo_shift: codigo,
+        nome,
+        disponivel_na_unidade: simNao(r.disponivel_na_unidade, atual?.disponivel_na_unidade ?? true),
+        disponivel_em_casa: simNao(r.disponivel_em_casa, atual?.disponivel_em_casa ?? false),
+        ativo: simNao(r.ativo, true),
+        atualizado_em: agora,
+      };
+      if (!vazio(r.outros_nomes)) reg.outros_nomes = String(r.outros_nomes).split(",").map((x) => x.trim()).filter(Boolean);
+      if (!vazio(r.categoria)) reg.categoria = String(r.categoria).trim();
+      if (!vazio(r.prazo_resultado)) reg.prazo_resultado = String(r.prazo_resultado).trim();
+      if (!vazio(r.preparo)) reg.preparo = String(r.preparo).trim();
+      if (!vazio(r.preco_reais)) {
+        const n = typeof r.preco_reais === "number" ? r.preco_reais : parsePrecoBR(String(r.preco_reais));
+        if (n == null || Number.isNaN(n)) ignorados.push(`Linha ${idx + 2}: preço inválido (${r.preco_reais}) — preço não alterado`);
+        else {
+          reg.preco_centavos = Math.round(n * 100);
+          if (ehExame) reg.preco_particular = Math.round(n * 100) / 100;
+        }
+      }
+      vistos.set(codigo, reg);
+    });
 
-    if (rows.length === 0) { toast.error("Planilha vazia."); return; }
+    const novos: Record<string, any>[] = [];
+    const alterados: Record<string, any>[] = [];
+    const comparar = ["nome", "outros_nomes", "categoria", "prazo_resultado", "preparo", "disponivel_na_unidade", "disponivel_em_casa", "ativo", ehExame ? "preco_particular" : "preco_centavos"];
+    vistos.forEach((reg, codigo) => {
+      const atual = porCodigo.get(codigo) as any;
+      if (!atual) return void novos.push(reg);
+      const mudou = comparar.some((c) => c in reg && JSON.stringify(reg[c] ?? null) !== JSON.stringify(c === "preco_particular" && atual[c] != null ? Number(atual[c]) : atual[c] ?? null));
+      if (mudou) alterados.push(reg);
+    });
+    const semPlanilha = itens.filter((i) => i.ativo && !vistos.has(String(i.codigo_shift)));
 
-    const registros = rows.map((r) => ({
-      nome:                  String(r.nome ?? "").trim(),
-      codigo_shift:          String(r.codigo_shift ?? "").trim(),
-      outros_nomes:          r.outros_nomes
-                               ? String(r.outros_nomes).split(",").map((s: string) => s.trim()).filter(Boolean)
-                               : [],
-      categoria:             r.categoria ? String(r.categoria).trim() : null,
-      preco_centavos:        r.preco_reais ? Math.round(parseFloat(String(r.preco_reais).replace(",", ".")) * 100) : null,
-      prazo_resultado:       r.prazo_resultado ? String(r.prazo_resultado).trim() : null,
-      preparo:               r.preparo ? String(r.preparo).trim() : null,
-      disponivel_na_unidade: String(r.disponivel_na_unidade ?? "").toUpperCase() === "SIM",
-      disponivel_em_casa:    String(r.disponivel_em_casa ?? "").toUpperCase() === "SIM",
-      ativo:                 String(r.ativo ?? "SIM").toUpperCase() !== "NAO",
-      atualizado_em:         new Date().toISOString(),
-    })).filter((r) => r.nome && r.codigo_shift);
-
-    if (registros.length === 0) { toast.error("Nenhum registro válido encontrado."); return; }
-
-    const { error } = await supabase
-      .from(tabela)
-      .upsert(registros, { onConflict: "codigo_shift" });
-
-    if (error) { toast.error("Erro ao importar: " + error.message); return; }
-    toast.success(`${registros.length} itens importados com sucesso!`);
-    carregar();
+    setResumoImport({
+      novos: novos.map((n) => `${n.codigo_shift} — ${n.nome}`),
+      alterados: alterados.map((n) => `${n.codigo_shift} — ${n.nome}`),
+      semPlanilha: semPlanilha.map((i) => `${i.codigo_shift} — ${i.nome}`),
+      ignorados,
+    });
+    setAplicarImport(() => async (desativar: boolean) => {
+      try {
+        // Upsert por código: só as colunas presentes em cada linha são gravadas.
+        for (const reg of [...novos, ...alterados]) {
+          const { error } = await (supabase as any).from(tabela).upsert(reg, { onConflict: "codigo_shift" });
+          if (error) throw error;
+        }
+        if (desativar) {
+          for (const lote of emLotes(semPlanilha.map((i) => i.id), 300)) {
+            const { error } = await (supabase as any).from(tabela).update({ ativo: false }).in("id", lote);
+            if (error) throw error;
+          }
+        }
+        toast.success(
+          `Catálogo atualizado: ${novos.length} novos, ${alterados.length} alterados` +
+            (desativar && semPlanilha.length ? `, ${semPlanilha.length} desativados.` : "."),
+        );
+        setResumoImport(null);
+        carregar();
+      } catch (err: any) {
+        toast.error(`Erro ao aplicar: ${err?.message ?? err}. Parte pode ter sido gravada; importe de novo para concluir.`);
+      }
+    });
   };
   const importarPrecosCsv = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -429,6 +509,13 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
 
   return (
     <div className="space-y-4">
+      <PreviaImportacao
+        resumo={resumoImport}
+        onCancelar={() => setResumoImport(null)}
+        onAplicar={async (d) => {
+          if (aplicarImport) await aplicarImport(d);
+        }}
+      />
       <div className="flex flex-wrap gap-2 items-center justify-between">
         <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -443,7 +530,7 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
         {podeEditar && (
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={baixarModelo} className="gap-1.5">
-              <Download className="h-4 w-4" /> Baixar modelo
+              <Download className="h-4 w-4" /> Baixar planilha
             </Button>
 
             <label>

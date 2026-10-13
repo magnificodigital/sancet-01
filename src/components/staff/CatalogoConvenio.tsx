@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Search } from "lucide-react";
+import { Download, Pencil, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { normalizeExameNome } from "@/lib/normalizeExame";
+import {
+  baixarPlanilha,
+  buscarTodos,
+  emLotes,
+  lerPlanilha,
+  PreviaImportacao,
+  ResumoImportacao,
+  simNao,
+  vazio,
+} from "./PreviaImportacao";
 
 const POR_PAGINA = 50;
+
+// Compara orientações pelo conteúdo (a planilha quebra uma orientação com
+// várias linhas em itens separados; não é mudança real).
+const textoPreparo = (l: any) =>
+  (Array.isArray(l) ? l : []).join(" ").replace(/\s+/g, " ").trim();
 
 type ExameConvenio = { codigo_shift: number; nome: string; nome_norm: string; ativo: boolean };
 type Preparo = { jejum_horas: number; instrucoes: string[] };
@@ -144,6 +159,148 @@ export const CatalogoConvenio = ({ podeEditar }: { podeEditar: boolean }) => {
     }
   };
 
+  // ---------- Planilha (fonte de verdade do catálogo de convênio) ----------
+  const [processando, setProcessando] = useState(false);
+  const [resumo, setResumo] = useState<ResumoImportacao | null>(null);
+  const [aplicar, setAplicar] = useState<((desativar: boolean) => Promise<void>) | null>(null);
+
+  const carregarTudo = async () => {
+    const exames = await buscarTodos<ExameConvenio>((de, ate) =>
+      (supabase as any).from("exames_convenio").select("codigo_shift, nome, nome_norm, ativo").order("nome").range(de, ate),
+    );
+    const preparos = await buscarTodos<{ nome_norm: string } & Preparo>((de, ate) =>
+      (supabase as any).from("exame_preparo").select("nome_norm, jejum_horas, instrucoes").order("nome_norm").range(de, ate),
+    );
+    const prepPorNorm = new Map(preparos.map((p) => [p.nome_norm, p]));
+    return { exames, prepPorNorm };
+  };
+
+  const exportar = async () => {
+    setProcessando(true);
+    try {
+      const { exames, prepPorNorm } = await carregarTudo();
+      const linhas = exames.map((e) => {
+        const p = prepPorNorm.get(e.nome_norm);
+        return {
+          codigo_shift: e.codigo_shift,
+          nome: e.nome,
+          ativo: e.ativo ? "SIM" : "NAO",
+          jejum_horas: p ? p.jejum_horas : "",
+          preparo: p && Array.isArray(p.instrucoes) ? p.instrucoes.join("\n") : "",
+        };
+      });
+      baixarPlanilha(
+        `catalogo-convenio-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        ["codigo_shift", "nome", "ativo", "jejum_horas", "preparo"],
+        linhas,
+        [
+          "Catálogo de exames do CONVÊNIO — Sancet",
+          "codigo_shift: código do exame (número, obrigatório). É ele que liga a linha ao exame.",
+          "nome: nome do exame como aparece para o paciente (obrigatório).",
+          "ativo: SIM ou NAO. NAO tira o exame da busca do paciente.",
+          "jejum_horas: horas de jejum (0 = sem jejum). Vazio = não altera.",
+          "preparo: orientações, uma por linha dentro da célula (Alt+Enter no Excel). Vazio = não altera.",
+          "Exames que não estiverem na planilha podem ser desativados na importação (nada é apagado).",
+        ],
+      );
+    } catch {
+      toast.error("Não foi possível gerar a planilha.");
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const importar = async (file: File) => {
+    setProcessando(true);
+    try {
+      const [linhas, atual] = await Promise.all([lerPlanilha(file), carregarTudo()]);
+      if (!linhas.length) return toast.error("Planilha vazia.");
+      if (!("codigo_shift" in linhas[0]) || !("nome" in linhas[0])) {
+        return toast.error('A planilha precisa das colunas "codigo_shift" e "nome". Use "Baixar planilha" como base.');
+      }
+      const porCodigo = new Map(atual.exames.map((e) => [e.codigo_shift, e]));
+      const ignorados: string[] = [];
+      const vistos = new Map<number, any>();
+      linhas.forEach((r, i) => {
+        const codigo = parseInt(String(r.codigo_shift ?? "").replace(/\D/g, ""), 10);
+        const nomeL = String(r.nome ?? "").trim();
+        if (!Number.isFinite(codigo) || !nomeL) {
+          ignorados.push(`Linha ${i + 2}: sem código ou nome`);
+          return;
+        }
+        if (vistos.has(codigo)) ignorados.push(`Linha ${i + 2}: código ${codigo} repetido (vale a última)`);
+        const horas = vazio(r.jejum_horas) ? null : Math.max(0, parseInt(String(r.jejum_horas), 10) || 0);
+        const prep = vazio(r.preparo)
+          ? null
+          : String(r.preparo)
+              .split(/\r?\n|\s\|\s/)
+              .map((l) => l.trim())
+              .filter(Boolean);
+        vistos.set(codigo, { codigo, nome: nomeL, ativo: simNao(r.ativo, true), horas, prep });
+      });
+
+      const novos: any[] = [];
+      const alterados: any[] = [];
+      const preparos = new Map<string, any>();
+      vistos.forEach((l) => {
+        const norm = normalizeExameNome(l.nome);
+        const ex = porCodigo.get(l.codigo);
+        const prepAtual = atual.prepPorNorm.get(ex?.nome_norm ?? norm) ?? atual.prepPorNorm.get(norm);
+        const horas = l.horas ?? prepAtual?.jejum_horas ?? 0;
+        const instr = l.prep ?? (Array.isArray(prepAtual?.instrucoes) ? prepAtual!.instrucoes : []);
+        const prepMudou =
+          (l.horas !== null || l.prep !== null) &&
+          (!prepAtual || prepAtual.jejum_horas !== horas || textoPreparo(prepAtual.instrucoes) !== textoPreparo(instr));
+        const linha = { codigo_shift: l.codigo, nome: l.nome, nome_norm: norm, ativo: l.ativo };
+        if (!ex) novos.push(linha);
+        else if (ex.nome !== l.nome || ex.ativo !== l.ativo || prepMudou || (ex.nome_norm !== norm && prepAtual))
+          alterados.push(linha);
+        // Preparo acompanha o nome (nome_norm): grava quando muda ou quando o nome mudou.
+        if (prepMudou || (ex && ex.nome_norm !== norm && prepAtual) || (!ex && (l.horas !== null || l.prep !== null))) {
+          preparos.set(norm, { nome_norm: norm, jejum_horas: horas, instrucoes: instr, atualizado_em: new Date().toISOString() });
+        }
+      });
+      const semPlanilha = atual.exames.filter((e) => e.ativo && !vistos.has(e.codigo_shift));
+
+      setResumo({
+        novos: novos.map((n) => `${n.codigo_shift} — ${n.nome}`),
+        alterados: alterados.map((n) => `${n.codigo_shift} — ${n.nome}`),
+        semPlanilha: semPlanilha.map((e) => `${e.codigo_shift} — ${e.nome}`),
+        ignorados,
+      });
+      setAplicar(() => async (desativar: boolean) => {
+        try {
+          for (const lote of emLotes([...novos, ...alterados], 500)) {
+            const { error } = await (supabase as any).from("exames_convenio").upsert(lote, { onConflict: "codigo_shift" });
+            if (error) throw error;
+          }
+          for (const lote of emLotes([...preparos.values()], 500)) {
+            const { error } = await (supabase as any).from("exame_preparo").upsert(lote, { onConflict: "nome_norm" });
+            if (error) throw error;
+          }
+          if (desativar) {
+            for (const lote of emLotes(semPlanilha.map((e) => e.codigo_shift), 300)) {
+              const { error } = await (supabase as any).from("exames_convenio").update({ ativo: false }).in("codigo_shift", lote);
+              if (error) throw error;
+            }
+          }
+          toast.success(
+            `Catálogo atualizado: ${novos.length} novos, ${alterados.length} alterados` +
+              (desativar && semPlanilha.length ? `, ${semPlanilha.length} desativados.` : "."),
+          );
+          setResumo(null);
+          carregar();
+        } catch (e: any) {
+          toast.error(`Erro ao aplicar: ${e?.message ?? e}. Parte pode ter sido gravada; importe de novo para concluir.`);
+        }
+      });
+    } catch (e: any) {
+      toast.error(`Não foi possível ler a planilha: ${e?.message ?? e}`);
+    } finally {
+      setProcessando(false);
+    }
+  };
+
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
   return (
@@ -152,6 +309,31 @@ export const CatalogoConvenio = ({ podeEditar }: { podeEditar: boolean }) => {
         Exames que o paciente vê ao buscar pelo <b>convênio</b> (importados do Shift). O preparo editado aqui
         aparece para o paciente e vai no e-mail de preparo.
       </p>
+      {podeEditar && (
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={exportar} disabled={processando}>
+            <Download className="h-4 w-4" /> Baixar planilha
+          </Button>
+          <label>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              disabled={processando}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) importar(f);
+              }}
+            />
+            <Button variant="outline" size="sm" className="cursor-pointer gap-1.5" asChild>
+              <span>
+                <Upload className="h-4 w-4" /> {processando ? "Processando..." : "Importar planilha"}
+              </span>
+            </Button>
+          </label>
+        </div>
+      )}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -218,6 +400,14 @@ export const CatalogoConvenio = ({ podeEditar }: { podeEditar: boolean }) => {
           </Button>
         </div>
       </div>
+
+      <PreviaImportacao
+        resumo={resumo}
+        onCancelar={() => setResumo(null)}
+        onAplicar={async (d) => {
+          if (aplicar) await aplicar(d);
+        }}
+      />
 
       <Sheet open={!!editando} onOpenChange={(v) => !v && !salvando && setEditando(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-[520px]">
