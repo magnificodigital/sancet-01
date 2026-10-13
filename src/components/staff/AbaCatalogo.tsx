@@ -346,7 +346,14 @@ const Tabela = ({ tabela, podeEditar }: { tabela: "exames_cache" | "vacinas_cach
       if (!vazio(r.prazo_resultado)) reg.prazo_resultado = String(r.prazo_resultado).trim();
       if (!vazio(r.preparo)) reg.preparo = String(r.preparo).trim();
       if (!vazio(r.preco_reais)) {
-        const n = typeof r.preco_reais === "number" ? r.preco_reais : parsePrecoBR(String(r.preco_reais));
+        const txt = String(r.preco_reais).trim();
+        // "45.00" (ponto decimal) ≠ "1.234,56" (milhar BR): o parser BR removeria o ponto.
+        const n =
+          typeof r.preco_reais === "number"
+            ? r.preco_reais
+            : /^\d+\.\d{1,2}$/.test(txt)
+              ? parseFloat(txt)
+              : parsePrecoBR(txt);
         if (n == null || Number.isNaN(n)) ignorados.push(`Linha ${idx + 2}: preço inválido (${r.preco_reais}) — preço não alterado`);
         else {
           reg.preco_centavos = Math.round(n * 100);
