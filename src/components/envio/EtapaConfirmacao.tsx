@@ -43,6 +43,7 @@ import {
   Phone,
 } from "lucide-react";
 import { usePaciente } from "@/hooks/usePaciente";
+import { useConveniosSalvos } from "@/hooks/useConveniosSalvos";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -100,6 +101,10 @@ type Props = {
     tipoDocumentoIdentidade: TipoDocumento;
     deficiencias: string;
     examesIdentificadosIA: { codigo_shift: string; nome: string }[];
+    /** Foto da carteirinha já salva na conta (dispensa novo anexo). */
+    urlCarteirinhaSalva: string | null;
+    /** Salvar convênio + carteirinha na conta do paciente após o pedido. */
+    salvarConvenioNaConta: boolean;
   }) => void;
 };
 
@@ -313,6 +318,19 @@ export const EtapaConfirmacao = ({
   const [planoOpen, setPlanoOpen] = useState(false);
   const [planoQuery, setPlanoQuery] = useState("");
 
+  // Convênio salvo na conta com o mesmo convênio + número: reaproveita a foto.
+  const { data: conveniosSalvos = [] } = useConveniosSalvos();
+  const salvoIgual = conveniosSalvos.find(
+    (c) =>
+      !!convSel &&
+      c.convenio_id === convSel.id &&
+      c.numero_carteirinha.replace(/\D/g, "") === numeroCarteirinha.replace(/\D/g, ""),
+  );
+  const fotoSalva = salvoIgual?.url_carteirinha ?? null;
+  const [usarFotoSalva, setUsarFotoSalva] = useState(true);
+  const [salvarNaConta, setSalvarNaConta] = useState(true);
+  const usandoFotoSalva = tipo === "convenio" && !!fotoSalva && usarFotoSalva && !arquivoCarteirinha;
+
   const [erros, setErros] = useState<string[]>([]);
   const [modalErros, setModalErros] = useState<{ label: string; id: string }[]>([]);
   const [showErros, setShowErros] = useState(false);
@@ -415,7 +433,7 @@ export const EtapaConfirmacao = ({
         faltas.push({ label: "Plano do convênio", id: "campo-plano" });
       if (!numeroCarteirinha.trim())
         faltas.push({ label: "Número da carteirinha", id: "campo-numero-carteirinha" });
-      if (!arquivoCarteirinha)
+      if (!arquivoCarteirinha && !usandoFotoSalva)
         faltas.push({ label: "Carteirinha do convênio", id: "doc-carteirinha" });
     }
 
@@ -450,6 +468,8 @@ export const EtapaConfirmacao = ({
       arquivoRelatorioMedico,
       tipoDocumentoIdentidade: tipoDoc,
       deficiencias: deficiencias.trim(),
+      urlCarteirinhaSalva: usandoFotoSalva ? fotoSalva : null,
+      salvarConvenioNaConta: tipo === "convenio" && !salvoIgual && salvarNaConta,
       examesIdentificadosIA:
         iaPedido?.itens.map((it) => ({
           codigo_shift: it.codigoShift,
@@ -879,7 +899,19 @@ export const EtapaConfirmacao = ({
           onChange={setArquivoRelatorioMedico}
         />
 
-        {tipo === "convenio" && (
+        {tipo === "convenio" && fotoSalva && !arquivoCarteirinha && (
+          <label className="flex items-start gap-2 rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-900">
+            <Checkbox
+              checked={usarFotoSalva}
+              onCheckedChange={(v) => setUsarFotoSalva(!!v)}
+              className="mt-0.5"
+            />
+            <span>
+              <b>Usar a foto da carteirinha salva na sua conta.</b> Desmarque para enviar uma foto nova.
+            </span>
+          </label>
+        )}
+        {tipo === "convenio" && !usandoFotoSalva && (
           <UploadField
             id="doc-carteirinha"
             label="Carteirinha do convênio"
@@ -888,6 +920,16 @@ export const EtapaConfirmacao = ({
             required
             invalid={hasErr("doc-carteirinha")}
           />
+        )}
+        {tipo === "convenio" && !salvoIgual && (
+          <label className="flex items-start gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={salvarNaConta}
+              onCheckedChange={(v) => setSalvarNaConta(!!v)}
+              className="mt-0.5"
+            />
+            <span>Salvar este convênio e a carteirinha na minha conta para os próximos pedidos.</span>
+          </label>
         )}
       </div>
 

@@ -80,6 +80,8 @@ const EnviarPedido = () => {
     arquivoCarteirinha: File | null;
     arquivoPedidoMedico: File | null;
     arquivosPedidoMedicoExtras?: File[];
+    urlCarteirinhaSalva?: string | null;
+    salvarConvenioNaConta?: boolean;
     arquivoRgFrente: File | null;
     arquivoRgVerso: File | null;
     arquivoRelatorioMedico: File | null;
@@ -154,7 +156,7 @@ const EnviarPedido = () => {
         plano_codigo: ehConvenio ? extras.planoCodigo : null,
         plano_descricao: ehConvenio ? extras.planoDescricao : null,
         numero_carteirinha: ehConvenio ? extras.numeroCarteirinha : null,
-        url_carteirinha: urlCarteirinha,
+        url_carteirinha: urlCarteirinha ?? extras.urlCarteirinhaSalva ?? null,
         url_pedido_medico: urlPedidoMedico,
         urls_pedido_medico_extra: urlsPedidoMedicoExtra,
         url_rg_frente: urlRgFrente,
@@ -193,6 +195,27 @@ const EnviarPedido = () => {
           .rpc("registrar_exames_ia_auth", {
             p_protocolo: protocolo,
             p_exames: extras.examesIdentificadosIA,
+          })
+          .then(
+            () => {},
+            () => {},
+          );
+      }
+
+      // Guarda convênio + carteirinha na conta (próximos pedidos já preenchidos).
+      // Melhor esforço: não atrapalha o pedido se falhar.
+      if (ehConvenio && extras.salvarConvenioNaConta && extras.convenioId && extras.numeroCarteirinha?.trim()) {
+        (supabase as any)
+          .from("paciente_convenios")
+          .insert({
+            paciente_id: paciente.id,
+            convenio_id: extras.convenioId,
+            convenio_nome: extras.convenioNome,
+            convenio_codigo_shift: extras.convenioCodigoShift,
+            plano_codigo: extras.planoCodigo,
+            plano_descricao: extras.planoDescricao,
+            numero_carteirinha: extras.numeroCarteirinha.trim(),
+            url_carteirinha: urlCarteirinha ?? extras.urlCarteirinhaSalva ?? null,
           })
           .then(
             () => {},

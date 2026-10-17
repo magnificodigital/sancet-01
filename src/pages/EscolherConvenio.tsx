@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, ChevronsUpDown, CreditCard } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 import { useSacola } from "@/stores/sacola";
+import { ConvenioSalvo, useConveniosSalvos } from "@/hooks/useConveniosSalvos";
 import { cn } from "@/lib/utils";
 import { useAtendimento } from "@/lib/tema";
 
@@ -40,6 +41,17 @@ const EscolherConvenio = () => {
 
   const [carteirinha, setCarteirinha] = useState("");
   const [erros, setErros] = useState<string[]>([]);
+
+  // Convênios salvos na conta: um clique preenche convênio, plano e carteirinha.
+  const { data: salvos = [] } = useConveniosSalvos();
+  const planoPendente = useRef<string | null>(null);
+  const usarSalvo = (c: ConvenioSalvo) => {
+    if (!c.convenio_id) return;
+    planoPendente.current = c.plano_codigo;
+    setConvSel({ id: c.convenio_id, nome: c.convenio_nome, codigo_shift: c.convenio_codigo_shift ?? "" });
+    setCarteirinha(c.numero_carteirinha);
+    setErros([]);
+  };
 
   useEffect(() => {
     supabase
@@ -68,7 +80,13 @@ const EscolherConvenio = () => {
       .order("codigo_item")
       .limit(1000)
       .then(({ data }) => {
-        setPlanos((data as Plano[]) ?? []);
+        const lista = (data as Plano[]) ?? [];
+        setPlanos(lista);
+        if (planoPendente.current) {
+          const p = lista.find((x) => x.codigo_item === planoPendente.current);
+          if (p) setPlanoSel(p);
+          planoPendente.current = null;
+        }
         setPlanosCarregando(false);
       });
   }, [convSel]);
@@ -140,6 +158,33 @@ const EscolherConvenio = () => {
             Plano de Saúde.
           </p>
         </div>
+
+        {salvos.length > 0 && (
+          <div className="mb-4 space-y-2">
+            <p className="text-sm font-semibold text-secondary">Seus convênios salvos</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {salvos.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => usarSalvo(c)}
+                  className={cn(
+                    "flex items-start gap-2 rounded-lg border bg-card p-3 text-left text-sm transition hover:border-brand",
+                    convSel?.id === c.convenio_id && carteirinha === c.numero_carteirinha && "border-brand ring-2 ring-brand/20",
+                  )}
+                >
+                  <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-brand-2" />
+                  <span className="min-w-0">
+                    <span className="block font-medium text-secondary">{c.convenio_nome}</span>
+                    {c.plano_descricao && <span className="block truncate text-xs text-muted-foreground">{c.plano_descricao}</span>}
+                    <span className="block text-xs text-muted-foreground">Carteirinha ****{c.numero_carteirinha.slice(-4)}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">Ou preencha outro convênio abaixo.</p>
+          </div>
+        )}
 
         <div className="space-y-4 rounded-xl border bg-card p-5">
           <div>
