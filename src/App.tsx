@@ -10,6 +10,7 @@ import Home from "./pages/Home.tsx"; // eager: primeira pintura, sem flash
 import { RequireStaff } from "./components/staff/RequireStaff.tsx";
 import { BarraCheckoutFlutuante } from "./components/catalogo/BarraCheckoutFlutuante";
 import { AvisoPopup } from "./components/avisos/AvisoPopup";
+import { ChatAssistente } from "./components/chat/ChatAssistente";
 import { useNovaVersao } from "./hooks/useNovaVersao";
 
 // Demais páginas em code-splitting: cada rota vira um chunk sob demanda.
@@ -114,6 +115,7 @@ const App = () => {
         </Suspense>
         <BarraCheckoutFlutuante />
         <AvisoPopup />
+        <ChatAssistente />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.sancet-recall]
 verify_jwt = false
+
+[functions.sancet-assistente]
+verify_jwt = false
