@@ -12,6 +12,7 @@ import {
   LifeBuoy,
   LogOut,
   Menu,
+  MessageSquare,
   QrCode,
   Settings2,
   Shield,
@@ -37,6 +38,7 @@ import { useLogos } from "@/lib/tema";
 export type StaffTab =
   | "visao"
   | "pedidos"
+  | "conversas"
   | "pacientes"
   | "catalogo"
   | "unidades"
@@ -51,6 +53,7 @@ export type StaffTab =
 const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "visao", label: "Visão Geral", icon: LayoutDashboard },
   { id: "pedidos", label: "Pedidos", icon: ClipboardList },
+  { id: "conversas", label: "Conversas", icon: MessageSquare },
   { id: "pacientes", label: "Pacientes", icon: Users },
   { id: "catalogo", label: "Catálogo", icon: FlaskConical },
   { id: "unidades", label: "Unidades", icon: Building2 },
@@ -82,6 +85,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
   const checkinAtivo = location.pathname.startsWith("/staff/checkin");
   const [mobileAberto, setMobileAberto] = useState(false);
   const [pedidosNovos, setPedidosNovos] = useState<number>(0);
+  const [conversasPendentes, setConversasPendentes] = useState<number>(0);
 
   useEffect(() => {
     let cancelado = false;
@@ -91,9 +95,17 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
         .select("id", { count: "exact", head: true })
         .eq("status", "novo");
       if (!cancelado) setPedidosNovos(count ?? 0);
+      // Conversas: fila (pediram atendente) + minhas com mensagem não lida.
+      const uid = (await supabase.auth.getSession()).data.session?.user.id;
+      if (!uid) return;
+      const { count: conv } = await (supabase as any)
+        .from("chat_conversas")
+        .select("id", { count: "exact", head: true })
+        .or(`status.eq.aguardando,and(responsavel_id.eq.${uid},nao_lidas.gt.0,status.neq.encerrada)`);
+      if (!cancelado) setConversasPendentes(conv ?? 0);
     };
     fetchCount();
-    const iv = setInterval(fetchCount, 30000);
+    const iv = setInterval(fetchCount, 15000);
     return () => {
       cancelado = true;
       clearInterval(iv);
@@ -134,6 +146,11 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
             >
               <Icon className="h-4 w-4" />
               <span className="flex-1 text-left">{item.label}</span>
+              {item.id === "conversas" && conversasPendentes > 0 && (
+                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                  {conversasPendentes > 99 ? "99+" : conversasPendentes}
+                </span>
+              )}
               {item.id === "pedidos" && pedidosNovos > 0 && (
                 <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
                   {pedidosNovos > 99 ? "99+" : pedidosNovos}

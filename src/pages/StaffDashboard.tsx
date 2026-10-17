@@ -14,6 +14,7 @@ import { AbaEquipe } from "@/components/staff/AbaEquipe";
 import { AbaSites } from "@/components/staff/AbaSites";
 import { AbaAjuda } from "@/components/staff/AbaAjuda";
 import { AbaRecall } from "@/components/staff/AbaRecall";
+import { AbaConversas } from "@/components/staff/AbaConversas";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { toast } from "sonner";
 
@@ -78,6 +79,13 @@ const StaffDashboard = () => {
       }
     };
     const avisados = new Set<string>();
+    // Evita alertar várias vezes pelo mesmo evento (ex.: vários anexos seguidos).
+    const avisar = (chave: string, msg: string) => {
+      if (avisados.has(chave)) return;
+      avisados.add(chave);
+      beep();
+      toast.success(msg, { duration: 12000 });
+    };
     const channel = supabase
       .channel("alerta-token-convenio")
       .on(
@@ -86,13 +94,6 @@ const StaffDashboard = () => {
         (payload) => {
           const novo = payload.new as any;
           const recente = (ts?: string | null) => !!ts && Date.now() - new Date(ts).getTime() < 15000;
-          // Evita alertar várias vezes pelo mesmo evento (ex.: vários anexos seguidos).
-          const avisar = (chave: string, msg: string) => {
-            if (avisados.has(chave)) return;
-            avisados.add(chave);
-            beep();
-            toast.success(msg, { duration: 12000 });
-          };
           if (recente(novo?.convenio_token_preenchido_em)) {
             avisar(
               `token:${novo.id}:${novo.convenio_token_preenchido_em}`,
@@ -114,8 +115,32 @@ const StaffDashboard = () => {
         },
       )
       .subscribe();
+
+    // Chat: paciente pediu atendente, conversa transferida para mim, ou
+    // mensagem nova em conversa que está comigo.
+    const canalChat = (supabase as any)
+      .channel("alerta-chat")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_mensagens" }, async (payload: any) => {
+        const m = payload.new;
+        const meuId = (await supabase.auth.getSession()).data.session?.user.id;
+        if (!meuId) return;
+        if (m.autor === "sistema" && m.meta?.evento === "pediu_humano") {
+          avisar(`fila:${m.id}`, "💬 Paciente pediu atendimento no chat — veja em Conversas");
+        } else if (m.autor === "sistema" && m.meta?.evento === "transferida" && m.meta?.para === meuId) {
+          avisar(`transf:${m.id}`, "💬 Uma conversa do chat foi transferida para você");
+        } else if (m.autor === "paciente") {
+          const { data: c } = await (supabase as any)
+            .from("chat_conversas")
+            .select("responsavel_id, ia_ativa")
+            .eq("id", m.conversa_id)
+            .maybeSingle();
+          if (c && c.responsavel_id === meuId && !c.ia_ativa) avisar(`msg:${m.id}`, "💬 Nova mensagem do paciente no chat");
+        }
+      })
+      .subscribe();
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(canalChat);
     };
   }, []);
 
@@ -131,6 +156,7 @@ const StaffDashboard = () => {
     <StaffShell abaAtiva={aba} onTrocarAba={trocarAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin}>
       {aba === "visao" && <AbaVisaoGeral />}
       {aba === "pedidos" && <AbaPedidos permissoes={staffPerfil.permissoes} />}
+      {aba === "conversas" && <AbaConversas userId={staffPerfil.userId} isAdmin={staffPerfil.isAdmin} />}
       {aba === "pacientes" && <AbaPacientes permissoes={staffPerfil.permissoes} />}
       {aba === "catalogo" && <AbaCatalogo permissoes={staffPerfil.permissoes} />}
       {aba === "unidades" && <AbaUnidades permissoes={staffPerfil.permissoes} />}

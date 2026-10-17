@@ -71,6 +71,7 @@ O que você faz:
 - Reagendar/cancelar: oriente a ir em "Meus agendamentos" (menu do topo > Reagendar / Cancelar agendamento).
 
 Regras OBRIGATÓRIAS:
+- Consulte as ferramentas por conta própria, sem pedir licença, e NUNCA cite nomes de ferramentas, códigos internos ou "sistema" para o paciente.
 - NUNCA invente exames, preços, preparos, endereços ou horários: use SEMPRE as ferramentas. Se a ferramenta não encontrar, diga que não encontrou e sugira falar com a equipe.
 - NUNCA dê orientação médica, diagnóstico, interpretação de resultado ou indicação de exame. Nesses casos, recomende procurar o médico.
 - Preço só existe para particular. No convênio, a cobertura depende do plano (a equipe confirma).
@@ -78,7 +79,7 @@ Regras OBRIGATÓRIAS:
 - Não peça CPF, senha ou dados de cartão no chat.
 - montar_carrinho só aceita códigos vindos de buscar_exames ou da leitura do pedido (linhas "[Exames citados: ...]" do histórico). NUNCA invente código: se não tiver, chame buscar_exames antes. Ponha TODOS os exames numa única chamada.
 - Ao confirmar o carrinho, cite SOMENTE os exames da lista "adicionados" do resultado; se houver "nao_encontrados", avise o paciente.
-- Se o paciente quiser falar com uma pessoa, use contato_atendimento.${voz ? `
+- Se o paciente pedir para falar com uma pessoa/atendente (ou o assunto fugir do que você resolve, ex.: reclamação, problema com pedido, resultado, cobrança), use chamar_atendente: a equipe responde AQUI MESMO no chat. Telefones das unidades: contato_atendimento.${voz ? `
 
 Você está numa LIGAÇÃO DE VOZ: frases curtas e naturais, sem listas, sem markdown, sem emojis. Diga valores por extenso ("vinte e quatro reais"). Ao citar muitas unidades ou exames, resuma e ofereça detalhar. Para montar o carrinho, diga que o botão "Continuar agendamento" apareceu na tela do chat.` : ""}${extras.trim() ? `
 
@@ -154,7 +155,15 @@ const FERRAMENTAS = [
   },
   {
     type: "function",
-    function: { name: "contato_atendimento", description: "Telefones/contato da equipe para falar com uma pessoa.", parameters: { type: "object", properties: {} } },
+    function: { name: "contato_atendimento", description: "Telefones das unidades.", parameters: { type: "object", properties: {} } },
+  },
+  {
+    type: "function",
+    function: {
+      name: "chamar_atendente",
+      description: "Transfere a conversa para um atendente humano da equipe Sancet, que responde aqui no chat. A IA para de responder depois disso.",
+      parameters: { type: "object", properties: { motivo: { type: "string", description: "Resumo curto do que o paciente precisa." } } },
+    },
   },
 ];
 
@@ -233,6 +242,7 @@ Deno.serve(async (req) => {
     // ---- Voz ao vivo: chave temporária da OpenAI Realtime ----
     if (acao === "voz_iniciar") {
       if (!cfg?.voz_liberada) return json({ error: "Atendimento por voz indisponível." }, 403);
+      if (!conversa.ia_ativa) return json({ error: "Você está em atendimento com a nossa equipe aqui no chat.", conversa_id: conversaId, token: tokenNovo }, 409);
       const openai = Deno.env.get("OPENAI_API_KEY");
       if (!openai) return json({ error: "Atendimento por voz indisponível." }, 503);
       if ((await contarMeta("voz_inicio")) >= MAX_VOZ_POR_HORA) {
@@ -288,7 +298,7 @@ Deno.serve(async (req) => {
       if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = {}; } }
       const acoesF: any[] = [];
       const citadosF = new Map<string, { codigo: string; nome: string; tipo: string }>();
-      const resultado = await executar(admin, nomeF, args ?? {}, paciente, acoesF, citadosF).catch((e) => ({ erro: String(e?.message ?? e) }));
+      const resultado = await executar(admin, nomeF, args ?? {}, paciente, acoesF, citadosF, conversaId).catch((e) => ({ erro: String(e?.message ?? e) }));
       if (nomeF === "montar_carrinho" && !(resultado as any)?.erro) {
         await admin.from("chat_conversas").update({ contexto: { ...(conversa.contexto ?? {}), tipo: args?.tipo } }).eq("id", conversaId);
       }
@@ -317,6 +327,44 @@ Deno.serve(async (req) => {
       await admin.from("chat_conversas").update({ updated_at: new Date().toISOString() }).eq("id", conversaId);
       return json({ conversa_id: conversaId, token: tokenNovo, ok: true });
     }
+    // ---- Site do paciente busca respostas da equipe e avisos ----
+    if (acao === "sincronizar") {
+      const desde = typeof body.desde === "string" && !isNaN(Date.parse(body.desde)) ? body.desde : null;
+      let qy = admin
+        .from("chat_mensagens")
+        .select("id, autor, autor_nome, texto, anexo_path, anexo_nome, anexo_mime, meta, created_at")
+        .eq("conversa_id", conversaId)
+        .in("autor", ["equipe", "sistema"])
+        .order("created_at", { ascending: true })
+        .limit(100);
+      if (desde) qy = qy.gt("created_at", desde);
+      const { data: novas } = await qy;
+      const visiveis = (novas ?? []).filter((m: any) => m.autor === "equipe" || m.meta?.publico === true);
+      const mensagens = await Promise.all(
+        visiveis.map(async (m: any) => ({
+          id: m.id,
+          autor: m.autor,
+          autor_nome: m.autor === "equipe" ? m.autor_nome : null,
+          texto: m.texto,
+          anexo: m.anexo_path
+            ? {
+                nome: m.anexo_nome ?? "anexo",
+                mime: m.anexo_mime ?? "",
+                url: (await admin.storage.from("chat-anexos").createSignedUrl(m.anexo_path, 3600)).data?.signedUrl ?? null,
+              }
+            : null,
+          created_at: m.created_at,
+        })),
+      );
+      const ultimo = (novas ?? []).length ? novas![novas!.length - 1].created_at : desde;
+      return json({ conversa_id: conversaId, token: tokenNovo, mensagens, ultimo, ...(await estadoPublico(admin, conversaId)) });
+    }
+
+    if (acao === "pedir_humano") {
+      await chamarHumano(admin, conversaId, "Paciente clicou em falar com atendente");
+      return json({ conversa_id: conversaId, token: tokenNovo, ok: true, ...(await estadoPublico(admin, conversaId)) });
+    }
+
     if (acao !== "mensagem") return json({ error: "Ação inválida." }, 400);
 
     // Limite de uso
@@ -331,9 +379,26 @@ Deno.serve(async (req) => {
       return json({ conversa_id: conversaId, token: tokenNovo, resposta: "Recebemos muitas mensagens em pouco tempo. Aguarde alguns minutos, por favor." });
     }
 
+    if (conversa.status === "encerrada") {
+      await admin.from("chat_conversas").update({ status: "ia", ia_ativa: true, responsavel_id: null }).eq("id", conversaId);
+      conversa = { ...conversa, status: "ia", ia_ativa: true, responsavel_id: null };
+    }
+    const iaResponde = conversa.ia_ativa && conversa.status !== "aguardando";
+
+    // Anexo do paciente fica guardado para a equipe ver
+    let anexoPath: string | null = null;
+    if (anexo?.base64) {
+      const ext = /pdf/.test(String(anexo.mime)) ? "pdf" : (String(anexo.mime).split("/")[1] || "jpg").replace(/[^a-z0-9]/gi, "").slice(0, 5);
+      const caminho = `${conversaId}/${crypto.randomUUID()}.${ext}`;
+      const bytes = Uint8Array.from(atob(anexo.base64), (ch) => ch.charCodeAt(0));
+      const { error: upErr } = await admin.storage.from("chat-anexos").upload(caminho, bytes, { contentType: anexo.mime, upsert: false });
+      if (!upErr) anexoPath = caminho;
+      else console.error("anexo chat:", upErr.message);
+    }
+
     // Leitura do pedido médico enviado no chat (reaproveita a função de leitura)
     let notaAnexo = "";
-    if (anexo?.base64) {
+    if (anexo?.base64 && iaResponde) {
       const tipoCtx = (conversa.contexto?.tipo as string) || "particular";
       const catalogo = await catalogoParaLeitura(admin, tipoCtx);
       const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sancet-ler-receita`, {
@@ -359,26 +424,30 @@ Deno.serve(async (req) => {
     await admin.from("chat_mensagens").insert({
       conversa_id: conversaId,
       autor: "paciente",
-      texto: texto || (anexo ? "📎 Pedido médico enviado" : ""),
-      meta: anexo ? { anexo: anexo.nome ?? "arquivo", leitura: notaAnexo } : {},
+      texto: texto || null,
+      anexo_path: anexoPath,
+      anexo_nome: anexo ? String(anexo.nome ?? "arquivo").slice(0, 200) : null,
+      anexo_mime: anexo ? String(anexo.mime ?? "").slice(0, 100) : null,
+      meta: anexo ? { anexo: anexo.nome ?? "arquivo", ...(notaAnexo ? { leitura: notaAnexo } : {}) } : {},
     });
 
-    if (conversa.status === "humano") {
-      await admin.from("chat_conversas").update({ updated_at: new Date().toISOString() }).eq("id", conversaId);
-      return json({ conversa_id: conversaId, token: tokenNovo, resposta: null, aguardando_humano: true });
+    if (!iaResponde) {
+      return json({ conversa_id: conversaId, token: tokenNovo, resposta: null, aguardando_humano: true, ...(await estadoPublico(admin, conversaId)) });
     }
 
     // Histórico recente
     const { data: hist } = await admin
       .from("chat_mensagens")
-      .select("autor, texto, meta")
+      .select("autor, autor_nome, texto, meta")
       .eq("conversa_id", conversaId)
+      .neq("autor", "nota") // nota interna da equipe nunca vai para a IA
       .order("created_at", { ascending: false })
       .limit(20);
-    const historico = (hist ?? []).reverse().filter((m: any) => m.texto || m.meta?.leitura).map((m: any) => ({
+    const historico = (hist ?? []).reverse().filter((m: any) => m.texto || m.meta?.leitura || m.meta?.anexo).map((m: any) => ({
       role: m.autor === "paciente" ? "user" : "assistant",
       content: [
-        m.texto ?? "",
+        (m.autor === "equipe" ? `[Atendente ${m.autor_nome ?? ""} da equipe]: ` : "") +
+          (m.texto ?? (m.meta?.anexo ? `📎 ${m.meta.anexo}` : "")),
         m.meta?.leitura ?? "",
         Array.isArray(m.meta?.exames_citados) && m.meta.exames_citados.length
           ? `[Exames citados: ${m.meta.exames_citados.map((e: any) => `${e.nome} (código ${e.codigo}, ${e.tipo})`).join("; ")}]`
@@ -419,7 +488,7 @@ Deno.serve(async (req) => {
         try {
           args = JSON.parse(c.function?.arguments || "{}");
         } catch { /* args inválidos */ }
-        const resultado = await executar(admin, c.function?.name, args, paciente, acoes, citados).catch((e) => ({
+        const resultado = await executar(admin, c.function?.name, args, paciente, acoes, citados, conversaId).catch((e) => ({
           erro: String(e?.message ?? e),
         }));
         if (c.function?.name === "montar_carrinho" && !(resultado as any)?.erro) contexto = { ...contexto, tipo: args.tipo };
@@ -434,7 +503,7 @@ Deno.serve(async (req) => {
     } });
     await admin.from("chat_conversas").update({ contexto, updated_at: new Date().toISOString() }).eq("id", conversaId);
 
-    return json({ conversa_id: conversaId, token: tokenNovo, resposta, acoes });
+    return json({ conversa_id: conversaId, token: tokenNovo, resposta, acoes, ...(await estadoPublico(admin, conversaId)) });
   } catch (e) {
     console.error("assistente:", e);
     return json({ error: "Não consegui responder agora. Tente de novo em instantes." }, 500);
@@ -458,6 +527,7 @@ async function catalogoParaLeitura(admin: any, tipo: string) {
 async function executar(
   admin: any, nome: string, a: any, paciente: any, acoes: any[],
   citados: Map<string, { codigo: string; nome: string; tipo: string }>,
+  conversaId = "",
 ): Promise<unknown> {
   switch (nome) {
     case "buscar_exames": {
@@ -632,6 +702,14 @@ async function executar(
         instrucao: 'Diga ao paciente para clicar em "Continuar agendamento" no chat.',
       };
     }
+    case "chamar_atendente": {
+      if (!conversaId) return { erro: "conversa inválida" };
+      await chamarHumano(admin, conversaId, String(a.motivo ?? "").slice(0, 300));
+      return {
+        ok: true,
+        instrucao: "Avise que um atendente da equipe vai responder aqui mesmo no chat assim que possível (em horário de atendimento). Não faça mais perguntas.",
+      };
+    }
     case "contato_atendimento": {
       const { data } = await admin.from("unidades_cache").select("nome, telefone").eq("ativo", true).not("telefone", "is", null);
       return { telefones: data ?? [], obs: "Atendimento humano pelos telefones das unidades." };
@@ -639,4 +717,34 @@ async function executar(
     default:
       return { erro: `ferramenta desconhecida: ${nome}` };
   }
+}
+
+/** Passa a conversa para a fila da equipe (a IA para de responder). */
+async function chamarHumano(admin: any, conversaId: string, motivo = "") {
+  const { data: c } = await admin.from("chat_conversas").select("status, ia_ativa, responsavel_id").eq("id", conversaId).maybeSingle();
+  if (!c || (c.status === "humano" && !c.ia_ativa) || c.status === "aguardando") return;
+  await admin.from("chat_conversas").update({ status: c.responsavel_id ? "humano" : "aguardando", ia_ativa: false }).eq("id", conversaId);
+  await admin.from("chat_mensagens").insert({
+    conversa_id: conversaId,
+    autor: "sistema",
+    texto: "Chamamos um atendente da equipe Sancet. Assim que possível, alguém responde por aqui. 🙂",
+    meta: { publico: true, evento: "pediu_humano", ...(motivo ? { motivo } : {}) },
+  });
+}
+
+async function nomeEquipe(admin: any, uid: string | null) {
+  if (!uid) return null;
+  const { data } = await admin.from("user_roles").select("nome, email").eq("user_id", uid).maybeSingle();
+  return (data?.nome || "").trim() || (data?.email ? String(data.email).split("@")[0] : "Atendente");
+}
+
+/** Estado da conversa que o site do paciente precisa conhecer. */
+async function estadoPublico(admin: any, conversaId: string) {
+  const { data: c } = await admin.from("chat_conversas").select("status, ia_ativa, responsavel_id, canal_chave").eq("id", conversaId).maybeSingle();
+  return {
+    status: c?.status ?? "ia",
+    ia_ativa: c?.ia_ativa ?? true,
+    atendente: c && !c.ia_ativa ? await nomeEquipe(admin, c.responsavel_id) : null,
+    canal: c?.canal_chave ?? null,
+  };
 }

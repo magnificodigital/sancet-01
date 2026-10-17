@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Loader2, MessageCircle, Mic, MicOff, Paperclip, Phone, PhoneOff, Send, X } from "lucide-react";
+import { FileText, Headset, Loader2, MessageCircle, Mic, MicOff, Paperclip, Phone, PhoneOff, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSacola, type ItemSacola } from "@/stores/sacola";
@@ -8,7 +8,16 @@ import { cn } from "@/lib/utils";
 import { useLigacaoVoz, type SessaoVoz } from "./useLigacaoVoz";
 
 type Acao = { tipo: "carrinho"; tipo_compra: "particular" | "convenio"; itens: ItemSacola[] };
-type Msg = { autor: "paciente" | "assistente"; texto: string; acoes?: Acao[]; voz?: boolean };
+type Msg = {
+  id?: string;
+  autor: "paciente" | "assistente" | "equipe" | "sistema";
+  texto: string;
+  acoes?: Acao[];
+  voz?: boolean;
+  autor_nome?: string | null;
+  anexo?: { nome: string; mime: string; url: string | null } | null;
+};
+type Atendimento = { status: "ia" | "aguardando" | "humano" | "encerrada"; ia_ativa: boolean; atendente: string | null };
 type Status = { chat: "desligado" | "teste" | "ligado"; voz: boolean };
 
 const CHAVE = "sancet_chat_v1";
@@ -20,7 +29,15 @@ const SAUDACAO: Msg = {
     "Olá! Sou a assistente virtual da Sancet. 😊\nPosso tirar dúvidas sobre exames, preços, preparo e unidades, ou ajudar você a agendar.\nSe tiver o pedido médico, é só mandar a foto pelo clipe 📎.",
 };
 
-type Estado = { conversa_id?: string; token?: string; mensagens: Msg[] };
+type Estado = {
+  conversa_id?: string;
+  token?: string;
+  canal?: string | null;
+  ultimo?: string | null; // última novidade da equipe já recebida
+  atendimento?: Atendimento;
+  nao_lidas?: number;
+  mensagens: Msg[];
+};
 const ler = (): Estado => {
   try {
     const s = JSON.parse(localStorage.getItem(CHAVE) ?? "null");
@@ -110,8 +127,12 @@ export const ChatAssistente = () => {
       }
       if (data?.error) throw new Error(data.error);
       if (data?.conversa_id) {
-        setEstado((s) => ({ ...s, conversa_id: data.conversa_id, token: data.token ?? s.token }));
-        estadoRef.current = { ...estadoRef.current, conversa_id: data.conversa_id, token: data.token ?? estadoRef.current.token };
+        const extra: Partial<Estado> = { conversa_id: data.conversa_id };
+        if (data.token) extra.token = data.token;
+        if (data.canal) extra.canal = data.canal;
+        if (data.status) extra.atendimento = { status: data.status, ia_ativa: data.ia_ativa, atendente: data.atendente ?? null };
+        setEstado((s) => ({ ...s, ...extra }));
+        estadoRef.current = { ...estadoRef.current, ...extra };
       }
       return data;
     },
@@ -119,6 +140,62 @@ export const ChatAssistente = () => {
   );
 
   const addMsg = (m: Msg) => setEstado((s) => ({ ...s, mensagens: [...s.mensagens, m] }));
+
+  const abertoRef = useRef(aberto);
+  abertoRef.current = aberto;
+  const sincronizando = useRef(false);
+  /** Busca respostas da equipe e avisos (o servidor valida o token da conversa). */
+  const sincronizar = useCallback(async () => {
+    if (!estadoRef.current.conversa_id || sincronizando.current) return;
+    sincronizando.current = true;
+    try {
+      const d = await chamar({ acao: "sincronizar", desde: estadoRef.current.ultimo ?? undefined });
+      const novas: Msg[] = (d?.mensagens ?? []).map((m: any) => ({
+        id: m.id,
+        autor: m.autor,
+        autor_nome: m.autor_nome,
+        texto: m.texto ?? "",
+        anexo: m.anexo,
+      }));
+      setEstado((s) => {
+        const ids = new Set(s.mensagens.map((m) => m.id).filter(Boolean));
+        const add = novas.filter((m) => !ids.has(m.id));
+        const daEquipe = add.filter((m) => m.autor === "equipe").length;
+        return {
+          ...s,
+          ultimo: d?.ultimo ?? s.ultimo,
+          mensagens: add.length ? [...s.mensagens, ...add] : s.mensagens,
+          nao_lidas: abertoRef.current ? 0 : (s.nao_lidas ?? 0) + daEquipe,
+        };
+      });
+      estadoRef.current = { ...estadoRef.current, ultimo: d?.ultimo ?? estadoRef.current.ultimo };
+    } catch {
+      /* tenta de novo no próximo ciclo */
+    } finally {
+      sincronizando.current = false;
+    }
+  }, [chamar]);
+
+  // Aviso instantâneo (canal secreto da conversa) + conferência periódica.
+  useEffect(() => {
+    if (!estado.canal || !status || status.chat === "desligado") return;
+    const ch = supabase
+      .channel(`chat-${estado.canal}`)
+      .on("broadcast", { event: "nova" }, () => sincronizar())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [estado.canal, status, sincronizar]);
+  useEffect(() => {
+    if (!estado.conversa_id || !status || status.chat === "desligado") return;
+    sincronizar();
+    const iv = window.setInterval(sincronizar, aberto ? 15_000 : 60_000);
+    return () => window.clearInterval(iv);
+  }, [estado.conversa_id, aberto, status, sincronizar]);
+  useEffect(() => {
+    if (aberto && estado.nao_lidas) setEstado((s) => ({ ...s, nao_lidas: 0 }));
+  }, [aberto, estado.nao_lidas]);
 
   const ligacao = useLigacaoVoz({
     obterSessao: useCallback(async () => (await chamar({ acao: "voz_iniciar" })) as SessaoVoz, [chamar]),
@@ -150,6 +227,8 @@ export const ChatAssistente = () => {
   const visivel = status && (status.chat === "ligado" || (status.chat === "teste" && !!codigoTeste));
   if (location.pathname.startsWith("/staff") || !visivel) return null;
   const emLigacao = ligacao.estado !== "inativa";
+  const atend = estado.atendimento;
+  const comHumano = !!atend && !atend.ia_ativa;
 
   const enviar = async (mensagem: string, anexo?: File) => {
     if ((!mensagem.trim() && !anexo) || enviando) return;
@@ -161,14 +240,10 @@ export const ChatAssistente = () => {
       const corpo: any = { mensagem };
       if (anexo) corpo.anexo = { base64: await paraBase64(anexo), mime: anexo.type, nome: anexo.name };
       const data = await chamar(corpo);
-      setEstado((s) => ({
-        ...s,
-        mensagens: data.resposta
-          ? [...s.mensagens, { autor: "assistente", texto: data.resposta, acoes: data.acoes ?? [] }]
-          : data.aguardando_humano
-            ? [...s.mensagens, { autor: "assistente", texto: "Sua mensagem foi encaminhada para a nossa equipe. 🙂" }]
-            : s.mensagens,
-      }));
+      if (data.resposta) {
+        setEstado((s) => ({ ...s, mensagens: [...s.mensagens, { autor: "assistente", texto: data.resposta, acoes: data.acoes ?? [] }] }));
+      }
+      sincronizar();
     } catch (e: any) {
       setEstado((s) => ({
         ...s,
@@ -189,6 +264,15 @@ export const ChatAssistente = () => {
     toast.success(`${a.itens.length} exame(s) no seu carrinho. Vamos continuar!`);
   };
 
+  const pedirAtendente = async () => {
+    try {
+      await chamar({ acao: "pedir_humano" });
+      await sincronizar();
+    } catch {
+      toast.error("Não foi possível chamar um atendente agora.");
+    }
+  };
+
   const novaConversa = () => {
     if (emLigacao) return toast.info("Encerre a ligação antes de começar outra conversa.");
     if (!window.confirm("Começar uma nova conversa?")) return;
@@ -204,6 +288,11 @@ export const ChatAssistente = () => {
           aria-label="Abrir assistente virtual"
         >
           <MessageCircle className="h-5 w-5" /> <span className="hidden sm:inline">Fale com a Sancet</span>
+          {!!estado.nao_lidas && (
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold">
+              {estado.nao_lidas}
+            </span>
+          )}
         </button>
       )}
 
@@ -212,10 +301,16 @@ export const ChatAssistente = () => {
           <div className="flex items-center gap-2 bg-brand px-4 py-3 text-white">
             <MessageCircle className="h-5 w-5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold">Assistente Sancet</p>
-              <p className="text-[11px] opacity-90">Respostas automáticas · não substitui orientação médica</p>
+              <p className="text-sm font-semibold">{comHumano && atend?.atendente ? atend.atendente : "Assistente Sancet"}</p>
+              <p className="text-[11px] opacity-90">
+                {atend?.status === "aguardando"
+                  ? "Aguardando um atendente da equipe..."
+                  : comHumano
+                    ? "Equipe Sancet · atendimento humano"
+                    : "Respostas automáticas · não substitui orientação médica"}
+              </p>
             </div>
-            {status.voz && !emLigacao && (
+            {status.voz && !emLigacao && !comHumano && (
               <button
                 onClick={ligacao.iniciar}
                 className="rounded-full bg-white/15 p-1.5 hover:bg-white/25"
@@ -270,16 +365,34 @@ export const ChatAssistente = () => {
           )}
 
           <div className="flex-1 space-y-3 overflow-y-auto bg-muted/30 p-3 text-sm">
-            {estado.mensagens.map((m, i) => (
-              <div key={i} className={cn("flex", m.autor === "paciente" ? "justify-end" : "justify-start")}>
+            {estado.mensagens.map((m, i) =>
+              m.autor === "sistema" ? (
+                <div key={m.id ?? i} className="flex justify-center">
+                  <span className="rounded-full bg-muted px-3 py-1 text-center text-[11px] text-muted-foreground">{m.texto}</span>
+                </div>
+              ) : (
+              <div key={m.id ?? i} className={cn("flex", m.autor === "paciente" ? "justify-end" : "justify-start")}>
                 <div
                   className={cn(
                     "max-w-[85%] rounded-2xl px-3 py-2",
-                    m.autor === "paciente" ? "bg-brand text-white" : "border bg-white text-secondary",
+                    m.autor === "paciente" ? "bg-brand text-white" : m.autor === "equipe" ? "bg-brand-2 text-white" : "border bg-white text-secondary",
                   )}
                 >
+                  {m.autor === "equipe" && (
+                    <p className="mb-0.5 text-[11px] font-semibold opacity-80">{m.autor_nome ?? "Atendente"} · Equipe Sancet</p>
+                  )}
                   {m.voz && <Mic className="mr-1 inline h-3 w-3 opacity-60" aria-label="por voz" />}
-                  <Formatado texto={m.texto} />
+                  {m.texto && <Formatado texto={m.texto} />}
+                  {m.anexo?.url &&
+                    (m.anexo.mime.startsWith("image/") ? (
+                      <a href={m.anexo.url} target="_blank" rel="noreferrer" className="mt-1 block">
+                        <img src={m.anexo.url} alt={m.anexo.nome} className="max-h-48 rounded-lg" />
+                      </a>
+                    ) : (
+                      <a href={m.anexo.url} target="_blank" rel="noreferrer" className="mt-1 flex items-center gap-1.5 text-xs underline">
+                        <FileText className="h-4 w-4" /> {m.anexo.nome}
+                      </a>
+                    ))}
                   {(m.acoes ?? []).map((a, j) =>
                     a.tipo === "carrinho" ? (
                       <button
@@ -293,8 +406,9 @@ export const ChatAssistente = () => {
                   )}
                 </div>
               </div>
-            ))}
-            {enviando && (
+              ),
+            )}
+            {enviando && !comHumano && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> digitando...
               </div>
@@ -303,6 +417,14 @@ export const ChatAssistente = () => {
           </div>
 
           <div className="border-t bg-background p-2">
+            {!comHumano && (
+              <button
+                onClick={pedirAtendente}
+                className="mb-1 flex items-center gap-1 px-1 text-[11px] font-medium text-brand-2 hover:underline"
+              >
+                <Headset className="h-3.5 w-3.5" /> Falar com um atendente
+              </button>
+            )}
             <p className="px-1 pb-1 text-[10px] text-muted-foreground">
               Não envie senha nem dados de cartão. As conversas ficam registradas para atendimento (LGPD).
             </p>
