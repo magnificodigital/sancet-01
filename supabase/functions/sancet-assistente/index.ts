@@ -68,6 +68,8 @@ Regras OBRIGATÓRIAS:
 - Preço só existe para particular. No convênio, a cobertura depende do plano (a equipe confirma).
 - Agendamento: o primeiro dia disponível segue a regra do laboratório (datas_agendamento informa). Domingo e dias em que a unidade fecha não têm atendimento.
 - Não peça CPF, senha ou dados de cartão no chat.
+- montar_carrinho só aceita códigos vindos de buscar_exames ou da leitura do pedido (linhas "[Exames citados: ...]" do histórico). NUNCA invente código: se não tiver, chame buscar_exames antes. Ponha TODOS os exames numa única chamada.
+- Ao confirmar o carrinho, cite SOMENTE os exames da lista "adicionados" do resultado; se houver "nao_encontrados", avise o paciente.
 - Se o paciente quiser falar com uma pessoa, use contato_atendimento.`;
 
 const FERRAMENTAS = [
@@ -251,7 +253,13 @@ Deno.serve(async (req) => {
       .limit(20);
     const historico = (hist ?? []).reverse().map((m: any) => ({
       role: m.autor === "paciente" ? "user" : "assistant",
-      content: [m.texto ?? "", m.meta?.leitura ?? ""].filter(Boolean).join("\n"),
+      content: [
+        m.texto ?? "",
+        m.meta?.leitura ?? "",
+        Array.isArray(m.meta?.exames_citados) && m.meta.exames_citados.length
+          ? `[Exames citados: ${m.meta.exames_citados.map((e: any) => `${e.nome} (código ${e.codigo}, ${e.tipo})`).join("; ")}]`
+          : "",
+      ].filter(Boolean).join("\n"),
     }));
 
     const sp = agoraSP();
@@ -259,6 +267,7 @@ Deno.serve(async (req) => {
     const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null) }, ...historico];
 
     const acoes: any[] = [];
+    const citados = new Map<string, { codigo: string; nome: string; tipo: string }>();
     let contexto = { ...(conversa.contexto ?? {}) };
     let resposta = "";
     for (let volta = 0; volta < 6; volta++) {
@@ -286,7 +295,7 @@ Deno.serve(async (req) => {
         try {
           args = JSON.parse(c.function?.arguments || "{}");
         } catch { /* args inválidos */ }
-        const resultado = await executar(admin, c.function?.name, args, paciente, acoes, contexto).catch((e) => ({
+        const resultado = await executar(admin, c.function?.name, args, paciente, acoes, citados).catch((e) => ({
           erro: String(e?.message ?? e),
         }));
         if (c.function?.name === "montar_carrinho" && !(resultado as any)?.erro) contexto = { ...contexto, tipo: args.tipo };
@@ -295,7 +304,10 @@ Deno.serve(async (req) => {
     }
     if (!resposta) resposta = "Desculpe, não consegui concluir agora. Pode reformular ou falar com nossa equipe?";
 
-    await admin.from("chat_mensagens").insert({ conversa_id: conversaId, autor: "assistente", texto: resposta, meta: acoes.length ? { acoes } : {} });
+    await admin.from("chat_mensagens").insert({ conversa_id: conversaId, autor: "assistente", texto: resposta, meta: {
+      ...(acoes.length ? { acoes } : {}),
+      ...(citados.size ? { exames_citados: [...citados.values()].slice(0, 40) } : {}),
+    } });
     await admin.from("chat_conversas").update({ contexto, updated_at: new Date().toISOString() }).eq("id", conversaId);
 
     return json({ conversa_id: conversaId, token: tokenNovo, resposta, acoes });
@@ -319,7 +331,10 @@ async function catalogoParaLeitura(admin: any, tipo: string) {
   return data ?? [];
 }
 
-async function executar(admin: any, nome: string, a: any, paciente: any, acoes: any[], _contexto: any): Promise<unknown> {
+async function executar(
+  admin: any, nome: string, a: any, paciente: any, acoes: any[],
+  citados: Map<string, { codigo: string; nome: string; tipo: string }>,
+): Promise<unknown> {
   switch (nome) {
     case "buscar_exames": {
       const termo = limparBusca(a.termo);
@@ -332,18 +347,31 @@ async function executar(admin: any, nome: string, a: any, paciente: any, acoes: 
           .ilike("nome_norm", `%${normalizar(termo)}%`)
           .order("nome")
           .limit(12);
+        (data ?? []).forEach((e: any) => citados.set(`convenio:${e.codigo_shift}`, { codigo: String(e.codigo_shift), nome: e.nome, tipo: "convenio" }));
         return { tipo: "convenio", exames: data ?? [], obs: "Cobertura depende do plano do convênio." };
       }
-      const { data } = await admin
+      // Particular: ~500 exames ativos; filtra em memória por nome E sinônimos
+      // (ex.: "glicose" acha "GLICEMIA DE JEJUM").
+      const { data: todos } = await admin
         .from("exames_cache")
         .select("codigo_shift, nome, outros_nomes, preco_particular, prazo_resultado")
         .eq("ativo", true)
-        .ilike("nome", `%${termo}%`)
-        .order("nome")
-        .limit(12);
+        .limit(2000);
+      const alvo = normalizar(termo);
+      const achados = (todos ?? [])
+        .map((e: any) => {
+          const noNome = normalizar(e.nome).includes(alvo);
+          const noSinonimo = (e.outros_nomes ?? []).some((o: string) => normalizar(o).includes(alvo));
+          return { e, peso: noNome ? (normalizar(e.nome).startsWith(alvo) ? 0 : 1) : noSinonimo ? 2 : -1 };
+        })
+        .filter((x: any) => x.peso >= 0)
+        .sort((x: any, y: any) => x.peso - y.peso || x.e.nome.localeCompare(y.e.nome))
+        .slice(0, 12)
+        .map((x: any) => x.e);
+      achados.forEach((e: any) => citados.set(`particular:${e.codigo_shift}`, { codigo: String(e.codigo_shift), nome: e.nome, tipo: "particular" }));
       return {
         tipo: "particular",
-        exames: (data ?? []).map((e: any) => ({
+        exames: achados.map((e: any) => ({
           codigo_shift: e.codigo_shift,
           nome: e.nome,
           preco: brl(e.preco_particular != null ? Number(e.preco_particular) : null),
@@ -462,9 +490,23 @@ async function executar(admin: any, nome: string, a: any, paciente: any, acoes: 
           preparo: e.preparo ?? null, disponivelNaUnidade: e.disponivel_na_unidade ?? true, disponivelEmCasa: e.disponivel_em_casa ?? false,
         }));
       }
-      if (!itens.length) return { erro: "Nenhum dos códigos foi encontrado no catálogo." };
-      acoes.push({ tipo: "carrinho", tipo_compra: a.tipo, itens });
-      return { ok: true, adicionados: itens.map((i) => i.nome), instrucao: 'Diga ao paciente para clicar em "Continuar agendamento" no chat.' };
+      const achadosCod = new Set(itens.map((i) => i.codigoShift));
+      const naoEncontrados = codigos.filter((c: string) => !achadosCod.has(String(parseInt(c, 10))) && !achadosCod.has(c));
+      if (!itens.length) return { erro: "Nenhum dos códigos foi encontrado no catálogo. Chame buscar_exames para obter os códigos certos.", nao_encontrados: naoEncontrados };
+      const existente = acoes.find((x) => x.tipo === "carrinho" && x.tipo_compra === a.tipo);
+      if (existente) {
+        const ja = new Set(existente.itens.map((i: any) => i.codigoShift));
+        existente.itens.push(...itens.filter((i) => !ja.has(i.codigoShift)));
+      } else {
+        acoes.push({ tipo: "carrinho", tipo_compra: a.tipo, itens });
+      }
+      const carrinho = existente ?? acoes[acoes.length - 1];
+      return {
+        ok: true,
+        adicionados: carrinho.itens.map((i: any) => i.nome),
+        ...(naoEncontrados.length ? { nao_encontrados: naoEncontrados, aviso: "Estes códigos NÃO entraram no carrinho; busque-os com buscar_exames." } : {}),
+        instrucao: 'Diga ao paciente para clicar em "Continuar agendamento" no chat.',
+      };
     }
     case "contato_atendimento": {
       const { data } = await admin.from("unidades_cache").select("nome, telefone").eq("ativo", true).not("telefone", "is", null);
