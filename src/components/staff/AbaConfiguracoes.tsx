@@ -18,6 +18,7 @@ import {
   Palette,
   ShieldAlert,
   SlidersHorizontal,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ConfirmarExclusao } from "./ConfirmarExclusao";
+import { ConfigAssistente } from "./ConfigAssistente";
 
 const MODELOS_OPENROUTER = [
   { value: "google/gemini-2.5-flash-preview:free", label: "Gemini Flash 2.5 (gratuito — padrão)" },
@@ -96,7 +98,7 @@ const SENSIVEIS = new Set([
   "RESEND_API_KEY",
 ]);
 
-type SecaoId = "shift" | "ia" | "pagamento" | "email" | "atendimento" | "aparencia" | "auditoria" | "risco";
+type SecaoId = "shift" | "ia" | "assistente" | "pagamento" | "email" | "atendimento" | "aparencia" | "auditoria" | "risco";
 
 type Secao = {
   id: SecaoId;
@@ -126,6 +128,13 @@ const SECOES: Secao[] = [
     brand: "openrouter",
     icone: Sparkles,
     chavesRequeridas: ["OPENROUTER_API_KEY"],
+  },
+  {
+    id: "assistente",
+    titulo: "Assistente virtual",
+    descricao: "Chat do site e atendimento por voz",
+    icone: Bot,
+    adminOnly: true,
   },
   {
     id: "pagamento",
@@ -564,7 +573,7 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                       <Database className="h-5 w-5 text-secondary" />
                       Integração Shift LIS
                     </CardTitle>
-                    {statusSecao(SECOES[0]) && <Badge variant="secondary">Conectado</Badge>}
+                    {statusSecao(SECOES.find((s) => s.id === "shift")!) && <Badge variant="secondary">Conectado</Badge>}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -777,7 +786,7 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                   <CardTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-secondary" /> Modelo de IA
                   </CardTitle>
-                  {statusSecao(SECOES[1]) && <Badge variant="secondary">Conectado</Badge>}
+                  {statusSecao(SECOES.find((s) => s.id === "ia")!) && <Badge variant="secondary">Conectado</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Um único API key dá acesso a Claude, GPT-4o, Gemini e DeepSeek via OpenRouter.
@@ -924,7 +933,7 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
                     <BrandIcon name="resend" className="h-5 w-5" />
                     Notificações por Email
                   </CardTitle>
-                  {statusSecao(SECOES[3]) && <Badge variant="secondary">Conectado</Badge>}
+                  {statusSecao(SECOES.find((s) => s.id === "email")!) && <Badge variant="secondary">Conectado</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Configure o envio automático de emails via Resend.
@@ -947,6 +956,8 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
               </CardContent>
             </Card>
           )}
+
+          {secaoAtiva === "assistente" && isAdmin && <ConfigAssistente podeEditar={podeEditar} />}
 
           {secaoAtiva === "risco" && isAdmin && (
             <Card className="border-destructive/40">

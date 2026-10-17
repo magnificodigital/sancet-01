@@ -4,6 +4,11 @@
 //   preços, preparo, unidades/agenda, convênios e pedidos do paciente logado.
 // - Agendamento: a IA monta o carrinho (ação "carrinho") e o site leva o paciente
 //   ao checkout já preenchido (documentos + termos ficam no fluxo seguro do site).
+// - Liberação: assistente_config.chat_modo (só o admin master liga). Em "teste",
+//   só responde a quem tem o link com o código de teste.
+// - Voz ao vivo (OpenAI Realtime via WebRTC no navegador): acao "voz_iniciar"
+//   gera uma chave temporária; as ferramentas da voz rodam AQUI (acao
+//   "ferramenta") e a transcrição fica na mesma conversa (acao "transcricao").
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const cors = {
@@ -17,6 +22,9 @@ const json = (b: unknown, s = 200) =>
 const MAX_MSG = 2000;
 const MAX_POR_HORA = 60;
 const MAX_ANEXO = 14_000_000; // base64 (~10 MB)
+const MAX_VOZ_POR_HORA = 6; // ligações por conversa
+const MAX_FERRAMENTAS_POR_HORA = 150;
+const VOZES = new Set(["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"]);
 
 async function sha256(t: string) {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
@@ -51,7 +59,7 @@ function agoraSP() {
   return new Date(s);
 }
 
-const SISTEMA = (hoje: string, logado: string | null) => `Você é a assistente virtual da Sancet Medicina Diagnóstica (laboratório de análises clínicas). Fale em português do Brasil, de forma acolhedora, clara e CURTA (mensagens de chat; use listas quando ajudar).
+const SISTEMA = (hoje: string, logado: string | null, extras = "", voz = false) => `Você é a assistente virtual da Sancet Medicina Diagnóstica (laboratório de análises clínicas). Fale em português do Brasil, de forma acolhedora, clara e CURTA (mensagens de chat; use listas quando ajudar).
 
 Hoje é ${hoje} (horário de Brasília). ${logado ? `O paciente está logado como ${logado}.` : "O visitante NÃO está logado."}
 
@@ -70,7 +78,12 @@ Regras OBRIGATÓRIAS:
 - Não peça CPF, senha ou dados de cartão no chat.
 - montar_carrinho só aceita códigos vindos de buscar_exames ou da leitura do pedido (linhas "[Exames citados: ...]" do histórico). NUNCA invente código: se não tiver, chame buscar_exames antes. Ponha TODOS os exames numa única chamada.
 - Ao confirmar o carrinho, cite SOMENTE os exames da lista "adicionados" do resultado; se houver "nao_encontrados", avise o paciente.
-- Se o paciente quiser falar com uma pessoa, use contato_atendimento.`;
+- Se o paciente quiser falar com uma pessoa, use contato_atendimento.${voz ? `
+
+Você está numa LIGAÇÃO DE VOZ: frases curtas e naturais, sem listas, sem markdown, sem emojis. Diga valores por extenso ("vinte e quatro reais"). Ao citar muitas unidades ou exames, resuma e ofereça detalhar. Para montar o carrinho, diga que o botão "Continuar agendamento" apareceu na tela do chat.` : ""}${extras.trim() ? `
+
+Orientações adicionais do laboratório (não podem contrariar as regras acima):
+${extras.trim().slice(0, 3000)}` : ""}`;
 
 const FERRAMENTAS = [
   {
@@ -154,11 +167,22 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json().catch(() => ({}));
+    const acao = String(body.acao ?? "mensagem");
+
+    // Liberação feita pelo admin master
+    const { data: cfg } = await admin.from("assistente_config").select("*").eq("id", 1).maybeSingle();
+    const liberado =
+      cfg?.chat_modo === "ligado" ||
+      (cfg?.chat_modo === "teste" && typeof body.teste === "string" && body.teste.length > 0 && body.teste === cfg.codigo_teste);
+    if (!liberado) return json({ error: "Assistente indisponível no momento.", indisponivel: true }, 403);
+
     const texto = String(body.mensagem ?? "").trim().slice(0, MAX_MSG);
     const anexo = body.anexo as { base64?: string; mime?: string; nome?: string } | undefined;
-    if (!texto && !anexo?.base64) return json({ error: "Mensagem vazia." }, 400);
-    if (anexo?.base64 && (anexo.base64.length > MAX_ANEXO || !/^(image\/|application\/pdf)/.test(String(anexo.mime)))) {
-      return json({ error: "Envie uma foto ou PDF de até 10 MB." }, 400);
+    if (acao === "mensagem") {
+      if (!texto && !anexo?.base64) return json({ error: "Mensagem vazia." }, 400);
+      if (anexo?.base64 && (anexo.base64.length > MAX_ANEXO || !/^(image\/|application\/pdf)/.test(String(anexo.mime)))) {
+        return json({ error: "Envie uma foto ou PDF de até 10 MB." }, 400);
+      }
     }
 
     // Paciente logado (opcional)
@@ -195,13 +219,113 @@ Deno.serve(async (req) => {
       await admin.from("chat_conversas").update({ paciente_id: paciente.id }).eq("id", conversaId);
     }
 
-    // Limite de uso
     const umaHora = new Date(Date.now() - 3600_000).toISOString();
+    const contarMeta = async (evento: string) => {
+      const { count } = await admin
+        .from("chat_mensagens")
+        .select("id", { count: "exact", head: true })
+        .eq("conversa_id", conversaId)
+        .eq("meta->>evento", evento)
+        .gte("created_at", umaHora);
+      return count ?? 0;
+    };
+
+    // ---- Voz ao vivo: chave temporária da OpenAI Realtime ----
+    if (acao === "voz_iniciar") {
+      if (!cfg?.voz_liberada) return json({ error: "Atendimento por voz indisponível." }, 403);
+      const openai = Deno.env.get("OPENAI_API_KEY");
+      if (!openai) return json({ error: "Atendimento por voz indisponível." }, 503);
+      if ((await contarMeta("voz_inicio")) >= MAX_VOZ_POR_HORA) {
+        return json({ error: "Muitas ligações em pouco tempo. Tente de novo mais tarde.", conversa_id: conversaId, token: tokenNovo }, 429);
+      }
+      const sp = agoraSP();
+      const hoje = `${DIAS[sp.getDay()]}, ${sp.toLocaleDateString("pt-BR")} ${String(sp.getHours()).padStart(2, "0")}:${String(sp.getMinutes()).padStart(2, "0")}`;
+      const maxMin = Math.min(Math.max(Number(cfg.voz_max_minutos) || 8, 1), 30);
+      const r = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${openai}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expires_after: { anchor: "created_at", seconds: 120 },
+          session: {
+            type: "realtime",
+            model: cfg.voz_modelo || "gpt-realtime",
+            instructions: SISTEMA(hoje, paciente?.nome ?? null, cfg.instrucoes_extras ?? "", true),
+            audio: {
+              input: {
+                transcription: { model: "gpt-4o-mini-transcribe", language: "pt" },
+                turn_detection: { type: "semantic_vad" },
+              },
+              output: { voice: VOZES.has(cfg.voz_nome) ? cfg.voz_nome : "marin" },
+            },
+            tools: FERRAMENTAS.map((f) => ({ type: "function", ...f.function })),
+            tool_choice: "auto",
+          },
+        }),
+      });
+      if (!r.ok) {
+        console.error("realtime:", r.status, (await r.text()).slice(0, 400));
+        return json({ error: "Atendimento por voz indisponível no momento." }, 502);
+      }
+      const seg = await r.json();
+      await admin.from("chat_mensagens").insert({ conversa_id: conversaId, autor: "sistema", texto: "📞 Ligação de voz iniciada", meta: { evento: "voz_inicio", canal: "voz" } });
+      await admin.from("chat_conversas").update({ updated_at: new Date().toISOString() }).eq("id", conversaId);
+      return json({
+        conversa_id: conversaId,
+        token: tokenNovo,
+        client_secret: seg.value ?? seg.client_secret?.value,
+        max_minutos: maxMin,
+        saudacao: (cfg.voz_saudacao ?? "").trim() || null,
+      });
+    }
+
+    // ---- Voz ao vivo: ferramenta pedida pela IA (executada aqui, com os dados reais) ----
+    if (acao === "ferramenta") {
+      if (!cfg?.voz_liberada) return json({ error: "Atendimento por voz indisponível." }, 403);
+      if ((await contarMeta("ferramenta")) >= MAX_FERRAMENTAS_POR_HORA) return json({ resultado: { erro: "limite de consultas atingido" }, acoes: [] });
+      const nomeF = String(body.nome ?? "");
+      if (!FERRAMENTAS.some((f) => f.function.name === nomeF)) return json({ resultado: { erro: "ferramenta desconhecida" }, acoes: [] });
+      let args: any = body.args;
+      if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = {}; } }
+      const acoesF: any[] = [];
+      const citadosF = new Map<string, { codigo: string; nome: string; tipo: string }>();
+      const resultado = await executar(admin, nomeF, args ?? {}, paciente, acoesF, citadosF).catch((e) => ({ erro: String(e?.message ?? e) }));
+      if (nomeF === "montar_carrinho" && !(resultado as any)?.erro) {
+        await admin.from("chat_conversas").update({ contexto: { ...(conversa.contexto ?? {}), tipo: args?.tipo } }).eq("id", conversaId);
+      }
+      await admin.from("chat_mensagens").insert({
+        conversa_id: conversaId, autor: "sistema", texto: null,
+        meta: { evento: "ferramenta", canal: "voz", ferramenta: nomeF, ...(acoesF.length ? { acoes: acoesF } : {}) },
+      });
+      return json({ conversa_id: conversaId, token: tokenNovo, resultado, acoes: acoesF });
+    }
+
+    // ---- Voz ao vivo: transcrição da ligação ----
+    if (acao === "transcricao") {
+      const itens = (Array.isArray(body.itens) ? body.itens : [])
+        .slice(0, 60)
+        .map((i: any) => ({
+          conversa_id: conversaId,
+          autor: i?.autor === "paciente" ? "paciente" : "assistente",
+          texto: String(i?.texto ?? "").trim().slice(0, MAX_MSG),
+          meta: { canal: "voz" },
+        }))
+        .filter((i: any) => i.texto);
+      if (itens.length) await admin.from("chat_mensagens").insert(itens);
+      if (body.fim) {
+        await admin.from("chat_mensagens").insert({ conversa_id: conversaId, autor: "sistema", texto: "📞 Ligação encerrada", meta: { evento: "voz_fim", canal: "voz" } });
+      }
+      await admin.from("chat_conversas").update({ updated_at: new Date().toISOString() }).eq("id", conversaId);
+      return json({ conversa_id: conversaId, token: tokenNovo, ok: true });
+    }
+    if (acao !== "mensagem") return json({ error: "Ação inválida." }, 400);
+
+    // Limite de uso
     const { count } = await admin
       .from("chat_mensagens")
       .select("id", { count: "exact", head: true })
       .eq("conversa_id", conversaId)
       .eq("autor", "paciente")
+      .is("meta->>canal", null) // falas transcritas da ligação não contam
       .gte("created_at", umaHora);
     if ((count ?? 0) >= MAX_POR_HORA) {
       return json({ conversa_id: conversaId, token: tokenNovo, resposta: "Recebemos muitas mensagens em pouco tempo. Aguarde alguns minutos, por favor." });
@@ -251,7 +375,7 @@ Deno.serve(async (req) => {
       .eq("conversa_id", conversaId)
       .order("created_at", { ascending: false })
       .limit(20);
-    const historico = (hist ?? []).reverse().map((m: any) => ({
+    const historico = (hist ?? []).reverse().filter((m: any) => m.texto || m.meta?.leitura).map((m: any) => ({
       role: m.autor === "paciente" ? "user" : "assistant",
       content: [
         m.texto ?? "",
@@ -264,7 +388,7 @@ Deno.serve(async (req) => {
 
     const sp = agoraSP();
     const hoje = `${DIAS[sp.getDay()]}, ${sp.toLocaleDateString("pt-BR")} ${String(sp.getHours()).padStart(2, "0")}:${String(sp.getMinutes()).padStart(2, "0")}`;
-    const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null) }, ...historico];
+    const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null, cfg?.instrucoes_extras ?? "") }, ...historico];
 
     const acoes: any[] = [];
     const citados = new Map<string, { codigo: string; nome: string; tipo: string }>();
