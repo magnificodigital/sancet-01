@@ -51,13 +51,22 @@ type Config = {
   respostas_rapidas: RespostaRapida[];
   qualificar_obrigatorio: boolean;
   qualificar_campos: Record<string, boolean>;
+  fila_distribuir: boolean;
+  fila_incluir_admins: boolean;
+  fila_max_por_atendente: number;
+  fila_prazo_min: number;
+  fila_sem_resposta_min: number;
+  fila_sem_resposta_acao: "avisar" | "ia" | "nada";
+  msg_fila_demora: string | null;
   atualizado_em: string | null;
 };
 
 const COLUNAS_EDITAVEIS = [
   "voz_nome", "voz_max_minutos", "voz_saudacao", "voz_velocidade", "voz_paciencia", "instrucoes_extras",
   "nome_assistente", "boas_vindas", "texto_botao", "posicao", "cor_widget", "abrir_auto_seg", "sugestoes", "paginas_ocultas",
-  "qualificar_obrigatorio", "qualificar_campos", "tom", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
+  "qualificar_obrigatorio", "qualificar_campos", "tom",
+  "fila_distribuir", "fila_incluir_admins", "fila_max_por_atendente", "fila_prazo_min", "fila_sem_resposta_min",
+  "fila_sem_resposta_acao", "msg_fila_demora", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
   "humano_horario", "fora_horario_acao", "msg_chamar_atendente", "msg_fora_horario", "msg_encerramento",
   "notificar_email", "emails_notificacao", "respostas_rapidas",
 ] as const;
@@ -219,6 +228,10 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
       voz_max_minutos: Math.min(Math.max(Math.round(cfg.voz_max_minutos) || 8, 1), 30),
       abrir_auto_seg: Math.min(Math.max(Math.round(cfg.abrir_auto_seg) || 0, 0), 600),
       limite_msgs_hora: Math.min(Math.max(Math.round(cfg.limite_msgs_hora) || 60, 5), 500),
+      fila_max_por_atendente: Math.min(Math.max(Math.round(cfg.fila_max_por_atendente) || 6, 1), 50),
+      fila_prazo_min: Math.min(Math.max(Math.round(cfg.fila_prazo_min) || 5, 1), 240),
+      fila_sem_resposta_min: Math.min(Math.max(Math.round(cfg.fila_sem_resposta_min) || 15, 1), 1440),
+      msg_fila_demora: limpo(cfg.msg_fila_demora),
       voz_velocidade: Math.min(Math.max(Number(cfg.voz_velocidade) || 1, 0.5), 1.5),
       sugestoes: cfg.sugestoes.map((s) => s.trim()).filter(Boolean),
       paginas_ocultas: cfg.paginas_ocultas.map((s) => s.trim()).filter(Boolean).map((s) => (s.startsWith("/") ? s : `/${s}`)),
@@ -538,6 +551,65 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
 
             {/* Atendimento humano */}
             <TabsContent value="humano" className="space-y-4 pt-4">
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-semibold">Fila e distribuição</p>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Distribuir automaticamente (rodízio)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Quem pede atendente vai direto para um atendente Online da unidade, o que estiver com menos conversas.
+                    </p>
+                  </div>
+                  <Switch checked={cfg.fila_distribuir} disabled={d} onCheckedChange={(v) => mudar("fila_distribuir", v)} />
+                </div>
+                {cfg.fila_distribuir && (
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium">Incluir admins no rodízio</p>
+                      <p className="text-xs text-muted-foreground">Desligado: só atendentes (staff) recebem conversas automaticamente.</p>
+                    </div>
+                    <Switch checked={cfg.fila_incluir_admins} disabled={d} onCheckedChange={(v) => mudar("fila_incluir_admins", v)} />
+                  </div>
+                )}
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label>Máx. conversas por atendente</Label>
+                    <Input type="number" min={1} max={50} value={cfg.fila_max_por_atendente} disabled={d} onChange={(e) => mudar("fila_max_por_atendente", Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Alerta de espera (min)</Label>
+                    <Input type="number" min={1} max={240} value={cfg.fila_prazo_min} disabled={d} onChange={(e) => mudar("fila_prazo_min", Number(e.target.value))} />
+                    <p className="text-[11px] text-muted-foreground">O tempo fica vermelho na tela Conversas.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Ninguém assumiu em (min)</Label>
+                    <Input type="number" min={1} max={1440} value={cfg.fila_sem_resposta_min} disabled={d} onChange={(e) => mudar("fila_sem_resposta_min", Number(e.target.value))} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Então...</Label>
+                  <Select value={cfg.fila_sem_resposta_acao} disabled={d} onValueChange={(v) => mudar("fila_sem_resposta_acao", v as Config["fila_sem_resposta_acao"])}>
+                    <SelectTrigger className="max-w-md">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="avisar">Avisa o paciente que está na fila (uma vez)</SelectItem>
+                      <SelectItem value="ia">Devolve para a IA continuar atendendo</SelectItem>
+                      <SelectItem value="nada">Não faz nada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {cfg.fila_sem_resposta_acao === "avisar" && (
+                  <Textarea
+                    rows={2}
+                    maxLength={400}
+                    value={cfg.msg_fila_demora ?? ""}
+                    disabled={d}
+                    placeholder="Nossa equipe está com bastante movimento agora, mas sua conversa está na fila e será respondida assim que possível. Obrigado pela paciência! 🙏"
+                    onChange={(e) => mudar("msg_fila_demora", e.target.value)}
+                  />
+                )}
+              </div>
               <div className="space-y-2">
                 <Label>Horário de atendimento da equipe no chat</Label>
                 <div className="space-y-1.5">
@@ -607,7 +679,10 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
 
             {/* Respostas rápidas */}
             <TabsContent value="rapidas" className="space-y-4 pt-4">
-              <p className="text-sm text-muted-foreground">Textos prontos que a equipe insere com um clique na tela Conversas.</p>
+              <p className="text-sm text-muted-foreground">
+                Textos prontos para a equipe. Na tela Conversas, digite <b>/</b> no campo de mensagem para buscar. Variáveis:{" "}
+                <code>{"{nome}"}</code>, <code>{"{primeiro_nome}"}</code>, <code>{"{unidade}"}</code>, <code>{"{protocolo}"}</code>, <code>{"{atendente}"}</code>.
+              </p>
               {cfg.respostas_rapidas.map((r, i) => (
                 <div key={i} className="space-y-2 rounded-md border p-3">
                   <div className="flex gap-2">

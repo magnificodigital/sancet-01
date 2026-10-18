@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.sancet-integracoes]
 verify_jwt = false
+
+[functions.sancet-copiloto]
+verify_jwt = false

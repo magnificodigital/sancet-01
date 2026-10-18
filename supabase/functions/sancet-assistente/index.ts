@@ -914,6 +914,8 @@ async function chamarHumano(admin: any, conversaId: string, motivo = "") {
     conversa_id: conversaId, autor: "sistema", texto: msg,
     meta: { publico: true, evento: "pediu_humano", ...(motivo ? { motivo } : {}), ...(fora ? { fora_horario: true } : {}) },
   });
+  // Rodízio: entrega na hora para um atendente online da unidade (se houver).
+  if (!c.responsavel_id) await admin.rpc("chat_distribuir", { _conversa: conversaId }).catch(() => null);
   if (cfg?.notificar_email) await avisarEquipePorEmail(admin, cfg, conversaId, motivo).catch((e) => console.error("email chat:", e));
   return { na_fila: true, fora_horario: fora, mensagem: msg };
 }

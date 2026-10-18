@@ -14,7 +14,7 @@ import { AbaEquipe } from "@/components/staff/AbaEquipe";
 import { AbaSites } from "@/components/staff/AbaSites";
 import { AbaAjuda } from "@/components/staff/AbaAjuda";
 import { AbaRecall } from "@/components/staff/AbaRecall";
-import { AbaConversas } from "@/components/staff/AbaConversas";
+import { AbaConversas, lerStatusAtendente } from "@/components/staff/AbaConversas";
 import { AbaSuperAdmin } from "@/components/staff/AbaSuperAdmin";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { toast } from "sonner";
@@ -59,6 +59,15 @@ const StaffDashboard = () => {
       sub.data.subscription.unsubscribe();
     };
   }, [navigate]);
+
+  // Presença no chat: enquanto o painel está aberto, avisa a cada minuto que o
+  // atendente está disponível (Online/Ausente) — é o que permite o rodízio.
+  useEffect(() => {
+    const ping = () => (supabase as any).rpc("chat_ping", { _status: lerStatusAtendente() }).then(() => {}, () => {});
+    ping();
+    const iv = window.setInterval(ping, 60_000);
+    return () => window.clearInterval(iv);
+  }, []);
 
   // Alerta ao vivo: paciente informou o token do convênio ou enviou documentos (som + notificação na tela).
   useEffect(() => {
@@ -127,6 +136,8 @@ const StaffDashboard = () => {
         if (!meuId) return;
         if (m.autor === "sistema" && m.meta?.evento === "pediu_humano") {
           avisar(`fila:${m.id}`, "💬 Paciente pediu atendimento no chat — veja em Conversas");
+        } else if (m.autor === "sistema" && m.meta?.evento === "atribuida" && m.meta?.para === meuId) {
+          avisar(`atrib:${m.id}`, "💬 Uma conversa do chat foi direcionada para você — veja em Conversas");
         } else if (m.autor === "sistema" && m.meta?.evento === "transferida" && m.meta?.para === meuId) {
           avisar(`transf:${m.id}`, "💬 Uma conversa do chat foi transferida para você");
         } else if (m.autor === "paciente") {

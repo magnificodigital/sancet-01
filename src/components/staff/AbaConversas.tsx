@@ -1,6 +1,10 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  Clock,
+  PanelRight,
+  RefreshCw,
+  Sparkles,
   ClipboardList,
   MapPin,
   Bot,
@@ -26,6 +30,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { FichaPacienteChat } from "./FichaPacienteChat";
+import { ModalPedidoStaff } from "./ModalPedidoStaff";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,6 +59,9 @@ type Conversa = {
   unidade_codigo_shift: string | null;
   unidade_nome: string | null;
   pedido_protocolo: string | null;
+  fila_desde: string | null;
+  resumo: string | null;
+  resumo_em: string | null;
 };
 type Mensagem = {
   id: string;
@@ -84,13 +94,30 @@ const STATUS_LABEL: Record<Conversa["status"], { label: string; cls: string }> =
 };
 
 const COLS_CONVERSA =
-  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo";
+  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo, fila_desde, resumo, resumo_em";
 
 const nomeConversa = (c: Conversa) =>
   c.pacientes?.nome_social || c.pacientes?.nome || c.lead_nome || `Visitante ${c.id.slice(0, 4).toUpperCase()}`;
 const telefone = (c: Conversa) => {
   const t = (c.pacientes?.celular || c.lead_telefone || "").replace(/\D/g, "");
   return t.length >= 10 ? `(${t.slice(0, 2)}) ${t.slice(2, -4)}-${t.slice(-4)}` : t || null;
+};
+
+const CHAVE_STATUS = "sancet_status_atendente";
+export const lerStatusAtendente = (): "online" | "ausente" => {
+  try {
+    return localStorage.getItem(CHAVE_STATUS) === "ausente" ? "ausente" : "online";
+  } catch {
+    return "online";
+  }
+};
+const minutosDesde = (iso: string | null) => (iso ? Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000)) : null);
+const fmtMin = (m: number) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}`);
+/** Tempo que o paciente está esperando: na fila, ou sem resposta da equipe. */
+const espera = (c: Conversa) => {
+  if (c.status === "aguardando") return minutosDesde(c.fila_desde ?? c.ultima_msg_em);
+  if (c.status === "humano" && c.ultima_msg_autor === "paciente") return minutosDesde(c.ultima_msg_em);
+  return null;
 };
 
 const hora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -162,6 +189,13 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   const [transferir, setTransferir] = useState<{ para: string; obs: string } | null>(null);
   const [rapidas, setRapidas] = useState<{ titulo: string; texto: string }[]>([]);
   const [rapidasAberto, setRapidasAberto] = useState(false);
+  const [filaCfg, setFilaCfg] = useState<{ prazo_min: number; sem_resposta_min: number } | null>(null);
+  const [, setTick] = useState(0);
+  const [meuStatus, setMeuStatus] = useState<"online" | "ausente">(lerStatusAtendente);
+  const [fichaAberta, setFichaAberta] = useState(false);
+  const [pedidoModal, setPedidoModal] = useState<any | null>(null);
+  const [resumo, setResumo] = useState<{ texto: string | null; carregando: boolean }>({ texto: null, carregando: false });
+  const [sugerindo, setSugerindo] = useState(false);
   const fimRef = useRef<HTMLDivElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
   const anexoUrl = useAnexoUrl();
@@ -199,6 +233,9 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
     carregarConversas();
     db.rpc("chat_atendentes").then(({ data }: any) => setAtendentes(data ?? []));
     db.rpc("chat_respostas_rapidas").then(({ data }: any) => setRapidas(Array.isArray(data) ? data : []));
+    db.rpc("chat_fila_config").then(({ data }: any) => data && setFilaCfg(data));
+    const iv = window.setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(iv);
   }, [carregarConversas]);
 
   // Tempo real: lista de conversas + mensagens da conversa aberta.
@@ -279,12 +316,82 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
         .includes(q);
     });
   }, [conversas, filtro, busca, userId, unidadeFiltro]);
+  const listaOrdenada = useMemo(
+    () =>
+      filtro === "fila"
+        ? [...lista].sort((a, b) => (a.fila_desde ?? a.ultima_msg_em ?? "").localeCompare(b.fila_desde ?? b.ultima_msg_em ?? ""))
+        : lista,
+    [lista, filtro],
+  );
 
   const unidadesNaLista = useMemo(() => {
     const m = new Map<string, string>();
     conversas.forEach((c) => m.set(c.unidade_codigo_shift ?? "_sem", c.unidade_nome ?? "Sem unidade (não qualificado)"));
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [conversas]);
+
+  // ---------- copiloto ----------
+  const gerarResumo = useCallback(async (id: string, forcar = false) => {
+    setResumo((r) => ({ ...r, carregando: true }));
+    const { data } = await supabase.functions.invoke("sancet-copiloto", { body: { acao: "resumo", conversa_id: id, forcar } });
+    setResumo({ texto: data?.resumo ?? null, carregando: false });
+  }, []);
+  const qtdTextos = mensagens.filter((m) => m.texto && (m.autor === "paciente" || m.autor === "assistente" || m.autor === "equipe")).length;
+  useEffect(() => {
+    setResumo({ texto: null, carregando: false });
+  }, [selId]);
+  useEffect(() => {
+    if (selId && !carregandoMsgs && qtdTextos >= 3) gerarResumo(selId);
+  }, [selId, carregandoMsgs, qtdTextos >= 3, gerarResumo]);
+
+  const sugerirResposta = async () => {
+    if (!sel) return;
+    setSugerindo(true);
+    const { data, error } = await supabase.functions.invoke("sancet-copiloto", {
+      body: { acao: "sugerir", conversa_id: sel.id, instrucao: texto.trim() || undefined },
+    });
+    setSugerindo(false);
+    if (error || !data?.sugestao) return toast.error("Não foi possível sugerir agora.");
+    setTexto(data.sugestao);
+  };
+
+  // Variáveis das respostas rápidas.
+  const aplicarVariaveis = (t: string) => {
+    if (!sel) return t;
+    const nome = nomeConversa(sel);
+    return t
+      .replace(/\{nome\}/g, nome)
+      .replace(/\{primeiro_nome\}/g, nome.split(" ")[0])
+      .replace(/\{unidade\}/g, sel.unidade_nome ?? "")
+      .replace(/\{protocolo\}/g, sel.pedido_protocolo ?? "")
+      .replace(/\{atendente\}/g, (nomeAtendente(userId) ?? "").split(" ")[0]);
+  };
+  const atalho = texto.startsWith("/") && !texto.includes("\n") ? texto.slice(1).toLowerCase() : null;
+  const rapidasFiltradas = atalho === null ? [] : rapidas.filter((r) => r.titulo.toLowerCase().includes(atalho) || r.texto.toLowerCase().includes(atalho)).slice(0, 6);
+  const usarRapida = (r: { texto: string }) => {
+    setTexto((t) => {
+      const base = t.startsWith("/") ? "" : t.trim();
+      return base ? `${base}\n${aplicarVariaveis(r.texto)}` : aplicarVariaveis(r.texto);
+    });
+    setRapidasAberto(false);
+  };
+
+  const mudarMeuStatus = async (st: "online" | "ausente") => {
+    setMeuStatus(st);
+    try {
+      localStorage.setItem(CHAVE_STATUS, st);
+    } catch {
+      /* sem storage */
+    }
+    await db.rpc("chat_ping", { _status: st });
+    toast.success(st === "online" ? "Você está online: novas conversas podem ser direcionadas a você." : "Você está ausente: não recebe novas conversas.");
+  };
+
+  const abrirPedido = async (id: string) => {
+    const { data, error } = await db.from("pedidos").select("*").eq("id", id).maybeSingle();
+    if (error || !data) return toast.error("Não foi possível abrir o pedido.");
+    setPedidoModal(data);
+  };
 
   const rpc = async (fn: string, args: Record<string, unknown>, ok?: string) => {
     const { error } = await db.rpc(fn, args);
@@ -418,9 +525,24 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
           <h1 className="text-2xl font-bold text-secondary">Conversas</h1>
           <p className="text-sm text-muted-foreground">Chat do site: veja a conversa com a IA, assuma, responda e transfira.</p>
         </div>
+        <div className="ml-auto flex items-center gap-1 rounded-full border p-1 text-xs">
+          {(["online", "ausente"] as const).map((st) => (
+            <button
+              key={st}
+              onClick={() => mudarMeuStatus(st)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1",
+                meuStatus === st ? (st === "online" ? "bg-green-600 text-white" : "bg-amber-500 text-white") : "hover:bg-muted",
+              )}
+            >
+              <span className={cn("h-2 w-2 rounded-full", st === "online" ? "bg-green-300" : "bg-amber-200")} />
+              {st === "online" ? "Online" : "Ausente"}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid h-[calc(100vh-190px)] min-h-[520px] overflow-hidden rounded-xl border bg-background md:grid-cols-[340px_1fr]">
+      <div className="grid h-[calc(100vh-190px)] min-h-[520px] overflow-hidden rounded-xl border bg-background md:grid-cols-[340px_1fr] xl:grid-cols-[320px_1fr_300px]">
         {/* Lista */}
         <div className={cn("flex min-h-0 flex-col border-r", sel && "hidden md:flex")}>
           <div className="space-y-2 border-b p-3">
@@ -471,7 +593,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
             ) : lista.length === 0 ? (
               <p className="px-4 py-10 text-center text-sm text-muted-foreground">Nenhuma conversa aqui.</p>
             ) : (
-              lista.map((c) => (
+              listaOrdenada.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => setSelId(c.id)}
@@ -504,8 +626,21 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                           {c.responsavel_id === userId ? "com você" : `com ${nomeAtendente(c.responsavel_id)}`}
                         </span>
                       )}
+                      {(() => {
+                        const m = espera(c);
+                        if (m === null) return null;
+                        const atrasado = m >= (filaCfg?.prazo_min ?? 5);
+                        return (
+                          <span
+                            className={cn("ml-auto flex shrink-0 items-center gap-0.5 rounded px-1 text-[10px] font-semibold", atrasado ? "bg-red-100 text-red-700" : "text-muted-foreground")}
+                            title={c.status === "aguardando" ? "Esperando na fila" : "Paciente sem resposta"}
+                          >
+                            <Clock className="h-2.5 w-2.5" /> {fmtMin(m)}
+                          </span>
+                        );
+                      })()}
                       {c.nao_lidas > 0 && (
-                        <span className="ml-auto rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{c.nao_lidas}</span>
+                        <span className={cn("rounded-full bg-brand px-1.5 text-[10px] font-bold text-white", espera(c) === null && "ml-auto")}>{c.nao_lidas}</span>
                       )}
                     </div>
                   </div>
@@ -551,6 +686,9 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                   {sel.responsavel_id && ` · ${ehMinha ? "com você" : `com ${nomeAtendente(sel.responsavel_id)}`}`}
                 </p>
               </div>
+              <Button size="sm" variant="outline" className="xl:hidden" onClick={() => setFichaAberta(true)}>
+                <PanelRight className="mr-1 h-4 w-4" /> Ficha
+              </Button>
               <label className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs" title="Quando ligada, a IA responde o paciente">
                 <Bot className="h-4 w-4" /> IA
                 <Switch
@@ -580,6 +718,17 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
             </div>
 
             <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-muted/30 p-3">
+              {(resumo.texto || resumo.carregando) && (
+                <div className="sticky top-0 z-10 rounded-lg border border-violet-200 bg-violet-50/95 p-2.5 text-xs text-violet-950 shadow-sm backdrop-blur">
+                  <div className="mb-1 flex items-center gap-1 font-semibold">
+                    <Sparkles className="h-3.5 w-3.5" /> Resumo da IA
+                    <button className="ml-auto opacity-70 hover:opacity-100" onClick={() => sel && gerarResumo(sel.id, true)} aria-label="Atualizar resumo" title="Atualizar">
+                      <RefreshCw className={cn("h-3.5 w-3.5", resumo.carregando && "animate-spin")} />
+                    </button>
+                  </div>
+                  {resumo.texto ? <p className="whitespace-pre-line">{resumo.texto}</p> : <p className="opacity-70">Resumindo a conversa...</p>}
+                </div>
+              )}
               {carregandoMsgs ? (
                 <div className="flex justify-center py-10">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -624,8 +773,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                         <button
                           key={i}
                           onClick={() => {
-                            setTexto((t) => (t.trim() ? `${t.trim()}\n${r.texto}` : r.texto));
-                            setRapidasAberto(false);
+                            usarRapida(r);
                           }}
                           className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-muted"
                         >
@@ -637,6 +785,16 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                   </Popover>
                 )}
               </div>
+              {rapidasFiltradas.length > 0 && (
+                <div className="mb-1.5 max-h-48 overflow-y-auto rounded-md border bg-background p-1 shadow-sm">
+                  {rapidasFiltradas.map((r, i) => (
+                    <button key={i} onClick={() => usarRapida(r)} className="block w-full rounded px-2 py-1.5 text-left hover:bg-muted">
+                      <span className="text-xs font-medium">/{r.titulo}</span>
+                      <span className="ml-2 line-clamp-1 text-[11px] text-muted-foreground">{aplicarVariaveis(r.texto)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex items-end gap-1.5">
                 <input
                   ref={arquivoRef}
@@ -664,6 +822,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
+                      if (rapidasFiltradas.length) return usarRapida(rapidasFiltradas[0]);
                       enviar();
                     }
                   }}
@@ -673,6 +832,18 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                   placeholder={interna ? "Nota visível só para a equipe..." : "Escreva a resposta (Enter envia, Shift+Enter quebra linha)"}
                   className={cn("min-h-[44px] flex-1 resize-none", interna && "border-amber-300 bg-amber-50")}
                 />
+                {!interna && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={sugerirResposta}
+                    disabled={sugerindo || !podeMexer}
+                    title="Sugerir resposta com IA (se houver texto, ela usa como orientação)"
+                    aria-label="Sugerir resposta"
+                  >
+                    {sugerindo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  </Button>
+                )}
                 <Button onClick={() => enviar()} disabled={enviando || !texto.trim() || (!podeMexer && !interna)} size="icon" aria-label="Enviar">
                   {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
@@ -680,7 +851,45 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
             </div>
           </div>
         )}
+        {sel && (
+          <div className="hidden min-h-0 overflow-y-auto border-l xl:block">
+            <FichaPacienteChat
+              conversa={sel}
+              anexosNaConversa={mensagens.filter((m) => m.anexo_path).length}
+              onAbrirPedido={abrirPedido}
+              onAbrirConversa={(id) => {
+                setFiltro("todas");
+                setSelId(id);
+              }}
+            />
+          </div>
+        )}
       </div>
+
+      <Sheet open={fichaAberta} onOpenChange={setFichaAberta}>
+        <SheetContent className="w-[340px] overflow-y-auto p-0 sm:max-w-[340px]">
+          <SheetHeader className="border-b p-3">
+            <SheetTitle>Ficha do paciente</SheetTitle>
+          </SheetHeader>
+          {sel && (
+            <FichaPacienteChat
+              conversa={sel}
+              anexosNaConversa={mensagens.filter((m) => m.anexo_path).length}
+              onAbrirPedido={(id) => {
+                setFichaAberta(false);
+                abrirPedido(id);
+              }}
+              onAbrirConversa={(id) => {
+                setFichaAberta(false);
+                setFiltro("todas");
+                setSelId(id);
+              }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <ModalPedidoStaff pedido={pedidoModal} onClose={() => setPedidoModal(null)} />
 
       <Dialog open={!!transferir} onOpenChange={(o) => !o && setTransferir(null)}>
         <DialogContent>
