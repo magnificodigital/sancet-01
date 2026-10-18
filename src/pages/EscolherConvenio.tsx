@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { useAtendimento } from "@/lib/tema";
 
 type Convenio = { id: string; nome: string; codigo_shift: string };
-type Plano = { codigo_item: string; descricao: string };
+import { SeletorPlano, type Plano } from "@/components/convenio/SeletorPlano";
 
 const EscolherConvenio = () => {
   const navigate = useNavigate();
@@ -36,8 +36,6 @@ const EscolherConvenio = () => {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [planosCarregando, setPlanosCarregando] = useState(false);
   const [planoSel, setPlanoSel] = useState<Plano | null>(null);
-  const [planoOpen, setPlanoOpen] = useState(false);
-  const [planoQuery, setPlanoQuery] = useState("");
 
   const [carteirinha, setCarteirinha] = useState("");
   const [erros, setErros] = useState<string[]>([]);
@@ -96,14 +94,6 @@ const EscolherConvenio = () => {
     return q ? convenios.filter((c) => c.nome.toLowerCase().includes(q)) : convenios;
   }, [convenios, convQuery]);
 
-  const planosFiltrados = useMemo(() => {
-    const q = planoQuery.trim().toLowerCase();
-    if (!q) return planos;
-    return planos.filter(
-      (p) =>
-        p.codigo_item.toLowerCase().includes(q) || p.descricao.toLowerCase().includes(q),
-    );
-  }, [planos, planoQuery]);
 
   const exigePlano = planos.length > 0;
 
@@ -251,64 +241,13 @@ const EscolherConvenio = () => {
               {planosCarregando ? (
                 <p className="text-xs text-muted-foreground mt-1">Carregando planos...</p>
               ) : exigePlano ? (
-                <Popover open={planoOpen} onOpenChange={setPlanoOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className={cn(
-                        "w-full justify-between font-normal mt-1",
-                        hasErr("plano") && "border-red-500",
-                      )}
-                    >
-                      <span className={cn(!planoSel && "text-muted-foreground")}>
-                        {planoSel
-                          ? `${planoSel.codigo_item} — ${planoSel.descricao}`
-                          : "Selecione o plano"}
-                      </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="p-0 w-[--radix-popover-trigger-width] pointer-events-auto"
-                    align="start"
-                  >
-                    <Command shouldFilter={false}>
-                      <CommandInput
-                        placeholder="Buscar plano..."
-                        value={planoQuery}
-                        onValueChange={setPlanoQuery}
-                      />
-                      <CommandList className="max-h-[360px]">
-                        <CommandEmpty>Nenhum plano encontrado.</CommandEmpty>
-                        <CommandGroup>
-                          {planosFiltrados.map((p) => (
-                            <CommandItem
-                              key={p.codigo_item}
-                              value={p.codigo_item}
-                              onSelect={() => {
-                                setPlanoSel(p);
-                                setPlanoOpen(false);
-                                setPlanoQuery("");
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  planoSel?.codigo_item === p.codigo_item
-                                    ? "opacity-100"
-                                    : "opacity-0",
-                                )}
-                              />
-                              <span className="font-mono mr-2">{p.codigo_item}</span>
-                              <span className="truncate">{p.descricao}</span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <SeletorPlano
+                  className="mt-1"
+                  planos={planos}
+                  valor={planoSel}
+                  erro={hasErr("plano")}
+                  onChange={setPlanoSel}
+                />
               ) : (
                 <p className="text-xs text-muted-foreground mt-1">
                   Este convênio não exige seleção de plano.

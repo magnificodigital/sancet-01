@@ -18,12 +18,27 @@ type Msg = {
   anexo?: { nome: string; mime: string; url: string | null } | null;
 };
 type Atendimento = { status: "ia" | "aguardando" | "humano" | "encerrada"; ia_ativa: boolean; atendente: string | null };
-type Status = { chat: "desligado" | "teste" | "ligado"; voz: boolean };
+type Status = {
+  chat: "desligado" | "teste" | "ligado";
+  voz: boolean;
+  nome?: string;
+  boas_vindas?: string | null;
+  texto_botao?: string;
+  posicao?: "direita" | "esquerda";
+  cor?: string | null;
+  abrir_auto_seg?: number;
+  sugestoes?: string[];
+  paginas_ocultas?: string[];
+  anexos?: boolean;
+  atendente?: boolean;
+};
 
 const CHAVE = "sancet_chat_v1";
 const CHAVE_TESTE = "sancet_chat_teste";
 const MAX_BYTES = 10 * 1024 * 1024;
+const CHAVE_AUTO = "sancet_chat_auto_aberto";
 const SAUDACAO: Msg = {
+  id: "saudacao",
   autor: "assistente",
   texto:
     "Olá! Sou a assistente virtual da Sancet. 😊\nPosso tirar dúvidas sobre exames, preços, preparo e unidades, ou ajudar você a agendar.\nSe tiver o pedido médico, é só mandar a foto pelo clipe 📎.",
@@ -214,6 +229,24 @@ export const ChatAssistente = () => {
   });
 
   useEffect(() => gravar(estado), [estado]);
+  useEffect(() => {
+    const seg = status?.abrir_auto_seg ?? 0;
+    if (!seg || status?.chat === "desligado") return;
+    try {
+      if (localStorage.getItem(CHAVE_AUTO)) return;
+    } catch {
+      return;
+    }
+    const t = window.setTimeout(() => {
+      try {
+        localStorage.setItem(CHAVE_AUTO, "1");
+      } catch {
+        /* sem storage */
+      }
+      setAberto(true);
+    }, seg * 1000);
+    return () => window.clearTimeout(t);
+  }, [status]);
   // Saiu para o painel da equipe ou o admin desligou: encerra a ligação.
   const desligar = ligacao.encerrar;
   useEffect(() => {
@@ -225,7 +258,12 @@ export const ChatAssistente = () => {
 
   // Painel da equipe não mostra o chat; e só aparece se o admin master liberou.
   const visivel = status && (status.chat === "ligado" || (status.chat === "teste" && !!codigoTeste));
-  if (location.pathname.startsWith("/staff") || !visivel) return null;
+  const oculta = (status?.paginas_ocultas ?? []).some((p) => p && location.pathname.startsWith(p));
+  if (location.pathname.startsWith("/staff") || !visivel || oculta) return null;
+  const cor = status.cor || undefined;
+  const lado = status.posicao === "esquerda" ? "left-4" : "right-4";
+  const ladoSm = status.posicao === "esquerda" ? "sm:left-4" : "sm:right-4";
+  const semConversa = !estado.mensagens.some((m) => m.autor === "paciente");
   const emLigacao = ligacao.estado !== "inativa";
   const atend = estado.atendimento;
   const comHumano = !!atend && !atend.ia_ativa;
@@ -284,10 +322,14 @@ export const ChatAssistente = () => {
       {!aberto && (
         <button
           onClick={() => setAberto(true)}
-          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-hover md:bottom-6"
+          className={cn(
+            "fixed bottom-24 z-50 flex items-center gap-2 rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:brightness-110 md:bottom-6",
+            lado,
+          )}
+          style={cor ? { backgroundColor: cor } : undefined}
           aria-label="Abrir assistente virtual"
         >
-          <MessageCircle className="h-5 w-5" /> <span className="hidden sm:inline">Fale com a Sancet</span>
+          <MessageCircle className="h-5 w-5" /> <span className="hidden sm:inline">{status.texto_botao || "Fale com a Sancet"}</span>
           {!!estado.nao_lidas && (
             <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold">
               {estado.nao_lidas}
@@ -297,11 +339,14 @@ export const ChatAssistente = () => {
       )}
 
       {aberto && (
-        <div className="fixed inset-x-2 bottom-2 top-16 z-50 flex flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl sm:inset-x-auto sm:right-4 sm:top-auto sm:h-[600px] sm:w-[380px]">
-          <div className="flex items-center gap-2 bg-brand px-4 py-3 text-white">
+        <div className={cn(
+            "fixed inset-x-2 bottom-2 top-16 z-50 flex flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl sm:inset-x-auto sm:top-auto sm:h-[600px] sm:w-[380px]",
+            ladoSm,
+          )}>
+          <div className="flex items-center gap-2 bg-brand px-4 py-3 text-white" style={cor ? { backgroundColor: cor } : undefined}>
             <MessageCircle className="h-5 w-5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold">{comHumano && atend?.atendente ? atend.atendente : "Assistente Sancet"}</p>
+              <p className="text-sm font-semibold">{comHumano && atend?.atendente ? atend.atendente : status.nome || "Assistente Sancet"}</p>
               <p className="text-[11px] opacity-90">
                 {atend?.status === "aguardando"
                   ? "Aguardando um atendente da equipe..."
@@ -382,7 +427,9 @@ export const ChatAssistente = () => {
                     <p className="mb-0.5 text-[11px] font-semibold opacity-80">{m.autor_nome ?? "Atendente"} · Equipe Sancet</p>
                   )}
                   {m.voz && <Mic className="mr-1 inline h-3 w-3 opacity-60" aria-label="por voz" />}
-                  {m.texto && <Formatado texto={m.texto} />}
+                  {m.texto && (
+                    <Formatado texto={(m.id === "saudacao" || (i === 0 && !m.id && m.autor === "assistente")) && status.boas_vindas ? status.boas_vindas : m.texto} />
+                  )}
                   {m.anexo?.url &&
                     (m.anexo.mime.startsWith("image/") ? (
                       <a href={m.anexo.url} target="_blank" rel="noreferrer" className="mt-1 block">
@@ -408,6 +455,19 @@ export const ChatAssistente = () => {
               </div>
               ),
             )}
+            {semConversa && !enviando && (status.sugestoes ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {(status.sugestoes ?? []).map((sug) => (
+                  <button
+                    key={sug}
+                    onClick={() => enviar(sug)}
+                    className="rounded-full border border-brand/40 bg-white px-3 py-1.5 text-xs text-secondary hover:bg-brand/5"
+                  >
+                    {sug}
+                  </button>
+                ))}
+              </div>
+            )}
             {enviando && !comHumano && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> digitando...
@@ -417,7 +477,7 @@ export const ChatAssistente = () => {
           </div>
 
           <div className="border-t bg-background p-2">
-            {!comHumano && (
+            {!comHumano && status.atendente !== false && (
               <button
                 onClick={pedirAtendente}
                 className="mb-1 flex items-center gap-1 px-1 text-[11px] font-medium text-brand-2 hover:underline"
@@ -448,15 +508,17 @@ export const ChatAssistente = () => {
                   enviar(texto, f);
                 }}
               />
-              <button
-                type="button"
-                onClick={() => arquivoRef.current?.click()}
-                className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-                aria-label="Enviar foto do pedido médico"
-                disabled={enviando}
-              >
-                <Paperclip className="h-5 w-5" />
-              </button>
+              {status.anexos !== false && (
+                <button
+                  type="button"
+                  onClick={() => arquivoRef.current?.click()}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                  aria-label="Enviar foto do pedido médico"
+                  disabled={enviando}
+                >
+                  <Paperclip className="h-5 w-5" />
+                </button>
+              )}
               <textarea
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}

@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type Convenio = { id: string; nome: string; codigo_shift: string };
-type Plano = { codigo_item: string; descricao: string };
+import { SeletorPlano, type Plano } from "@/components/convenio/SeletorPlano";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -299,18 +299,11 @@ const FormConvenio = ({
           {convSel && planos.length > 0 && (
             <div className="space-y-1.5">
               <Label>Plano *</Label>
-              <select
-                value={planoSel}
-                onChange={(e) => setPlanoSel(e.target.value)}
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="">Escolha o plano</option>
-                {planos.map((p) => (
-                  <option key={p.codigo_item} value={p.codigo_item}>
-                    {p.descricao}
-                  </option>
-                ))}
-              </select>
+              <SeletorPlano
+                planos={planos}
+                valor={planos.find((p) => p.codigo_item === planoSel) ?? null}
+                onChange={(p) => setPlanoSel(p.codigo_item)}
+              />
             </div>
           )}
 

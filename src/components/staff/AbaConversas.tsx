@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   UserCheck,
   Users,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -145,6 +147,8 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   const [interna, setInterna] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [transferir, setTransferir] = useState<{ para: string; obs: string } | null>(null);
+  const [rapidas, setRapidas] = useState<{ titulo: string; texto: string }[]>([]);
+  const [rapidasAberto, setRapidasAberto] = useState(false);
   const fimRef = useRef<HTMLDivElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
   const anexoUrl = useAnexoUrl();
@@ -181,6 +185,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   useEffect(() => {
     carregarConversas();
     db.rpc("chat_atendentes").then(({ data }: any) => setAtendentes(data ?? []));
+    db.rpc("chat_respostas_rapidas").then(({ data }: any) => setRapidas(Array.isArray(data) ? data : []));
   }, [carregarConversas]);
 
   // Tempo real: lista de conversas + mensagens da conversa aberta.
@@ -550,6 +555,30 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                 >
                   <Lock className="h-3 w-3" /> Nota interna
                 </button>
+                {rapidas.length > 0 && (
+                  <Popover open={rapidasAberto} onOpenChange={setRapidasAberto}>
+                    <PopoverTrigger asChild>
+                      <button className="ml-auto flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs hover:bg-muted">
+                        <Zap className="h-3 w-3" /> Respostas rápidas
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="max-h-80 w-80 overflow-y-auto p-1">
+                      {rapidas.map((r, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setTexto((t) => (t.trim() ? `${t.trim()}\n${r.texto}` : r.texto));
+                            setRapidasAberto(false);
+                          }}
+                          className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-muted"
+                        >
+                          <p className="text-sm font-medium">{r.titulo}</p>
+                          <p className="line-clamp-2 text-xs text-muted-foreground">{r.texto}</p>
+                        </button>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
+                )}
               </div>
               <div className="flex items-end gap-1.5">
                 <input

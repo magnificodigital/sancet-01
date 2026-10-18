@@ -59,7 +59,48 @@ function agoraSP() {
   return new Date(s);
 }
 
-const SISTEMA = (hoje: string, logado: string | null, extras = "", voz = false) => `Você é a assistente virtual da Sancet Medicina Diagnóstica (laboratório de análises clínicas). Fale em português do Brasil, de forma acolhedora, clara e CURTA (mensagens de chat; use listas quando ajudar).
+const TOM: Record<string, string> = {
+  acolhedor: "acolhedora, simpática e clara",
+  formal: "formal, educada e objetiva (trate por \"o(a) senhor(a)\")",
+  descontraido: "leve, descontraída e próxima, sem perder o respeito",
+};
+const TAMANHO: Record<string, string> = {
+  curta: "CURTAS (2 a 4 frases; listas só quando ajudar)",
+  media: "de tamanho médio (explique o necessário, use listas quando ajudar)",
+  detalhada: "completas e detalhadas, bem organizadas em listas",
+};
+/** Habilidade (liga/desliga no admin) de cada ferramenta. */
+const HABILIDADE_DA_FERRAMENTA: Record<string, string> = {
+  preparo_exames: "preparo",
+  listar_unidades: "unidades",
+  buscar_convenios: "convenios",
+  datas_agendamento: "datas",
+  meus_pedidos: "pedidos",
+  montar_carrinho: "agendar",
+  chamar_atendente: "atendente",
+};
+const habil = (cfg: any, h: string) => cfg?.habilidades?.[h] !== false;
+const ferramentasAtivas = (cfg: any) =>
+  FERRAMENTAS.filter((f) => {
+    const h = HABILIDADE_DA_FERRAMENTA[f.function.name];
+    return !h || habil(cfg, h);
+  });
+
+const SISTEMA = (hoje: string, logado: string | null, cfg: any, voz = false) => {
+  const nome = (cfg?.nome_assistente || "Assistente Sancet").trim();
+  const faq = (Array.isArray(cfg?.faq) ? cfg.faq : [])
+    .filter((f: any) => f?.pergunta && f?.resposta)
+    .slice(0, 80)
+    .map((f: any) => `P: ${String(f.pergunta).slice(0, 300)}\nR: ${String(f.resposta).slice(0, 1500)}`)
+    .join("\n\n");
+  const nao: string[] = [];
+  if (!habil(cfg, "precos")) nao.push("NÃO informe preços (diga que os valores são passados pela equipe ou no site, na página do exame)");
+  if (!habil(cfg, "preparo")) nao.push("NÃO dê orientações de preparo/jejum (oriente consultar a página Preparos do site ou a equipe)");
+  if (!habil(cfg, "agendar")) nao.push("NÃO monte carrinho nem conduza agendamento (oriente usar o menu Agendar Exames do site)");
+  if (!habil(cfg, "pedidos")) nao.push("NÃO consulte pedidos do paciente (oriente ver em Meus agendamentos)");
+  if (!habil(cfg, "atendente")) nao.push("NÃO transfira para atendente humano pelo chat; se pedirem, passe os telefones das unidades");
+  const extras = String(cfg?.instrucoes_extras ?? "").trim();
+  return `Você é ${nome}, assistente virtual da Sancet Medicina Diagnóstica (laboratório de análises clínicas). Fale em português do Brasil, de forma ${TOM[cfg?.tom] ?? TOM.acolhedor}. Respostas ${TAMANHO[cfg?.tamanho_resposta] ?? TAMANHO.curta}.${cfg?.usar_emojis === false ? " Não use emojis." : ""}
 
 Hoje é ${hoje} (horário de Brasília). ${logado ? `O paciente está logado como ${logado}.` : "O visitante NÃO está logado."}
 
@@ -72,19 +113,23 @@ O que você faz:
 
 Regras OBRIGATÓRIAS:
 - Consulte as ferramentas por conta própria, sem pedir licença, e NUNCA cite nomes de ferramentas, códigos internos ou "sistema" para o paciente.
-- NUNCA invente exames, preços, preparos, endereços ou horários: use SEMPRE as ferramentas. Se a ferramenta não encontrar, diga que não encontrou e sugira falar com a equipe.
+- NUNCA invente exames, preços, preparos, endereços ou horários: use SEMPRE as ferramentas ou as Perguntas frequentes abaixo. Se não encontrar, diga que não encontrou e sugira falar com a equipe.
 - NUNCA dê orientação médica, diagnóstico, interpretação de resultado ou indicação de exame. Nesses casos, recomende procurar o médico.
 - Preço só existe para particular. No convênio, a cobertura depende do plano (a equipe confirma).
 - Agendamento: o primeiro dia disponível segue a regra do laboratório (datas_agendamento informa). Domingo e dias em que a unidade fecha não têm atendimento.
 - Não peça CPF, senha ou dados de cartão no chat.
 - montar_carrinho só aceita códigos vindos de buscar_exames ou da leitura do pedido (linhas "[Exames citados: ...]" do histórico). NUNCA invente código: se não tiver, chame buscar_exames antes. Ponha TODOS os exames numa única chamada.
 - Ao confirmar o carrinho, cite SOMENTE os exames da lista "adicionados" do resultado; se houver "nao_encontrados", avise o paciente.
-- Se o paciente pedir para falar com uma pessoa/atendente (ou o assunto fugir do que você resolve, ex.: reclamação, problema com pedido, resultado, cobrança), use chamar_atendente: a equipe responde AQUI MESMO no chat. Telefones das unidades: contato_atendimento.${voz ? `
+- Se o paciente pedir para falar com uma pessoa/atendente (ou o assunto fugir do que você resolve, ex.: reclamação, problema com pedido, resultado, cobrança), use chamar_atendente: a equipe responde AQUI MESMO no chat. Telefones das unidades: contato_atendimento.${nao.length ? `\n- Restrições do laboratório: ${nao.join("; ")}.` : ""}${voz ? `
 
-Você está numa LIGAÇÃO DE VOZ: frases curtas e naturais, sem listas, sem markdown, sem emojis. Diga valores por extenso ("vinte e quatro reais"). Ao citar muitas unidades ou exames, resuma e ofereça detalhar. Para montar o carrinho, diga que o botão "Continuar agendamento" apareceu na tela do chat.` : ""}${extras.trim() ? `
+Você está numa LIGAÇÃO DE VOZ: frases curtas e naturais, sem listas, sem markdown, sem emojis. Diga valores por extenso ("vinte e quatro reais"). Ao citar muitas unidades ou exames, resuma e ofereça detalhar. Para montar o carrinho, diga que o botão "Continuar agendamento" apareceu na tela do chat.` : ""}${faq ? `
+
+Perguntas frequentes oficiais do laboratório (use estas respostas quando o assunto for o mesmo):
+${faq.slice(0, 20000)}` : ""}${extras ? `
 
 Orientações adicionais do laboratório (não podem contrariar as regras acima):
-${extras.trim().slice(0, 3000)}` : ""}`;
+${extras.slice(0, 3000)}` : ""}`;
+};
 
 const FERRAMENTAS = [
   {
@@ -172,7 +217,7 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
     if (!apiKey) return json({ error: "Assistente indisponível no momento." }, 503);
-    const modelo = Deno.env.get("OPENROUTER_MODELO_CHAT") || "google/gemini-2.5-flash";
+    let modelo = Deno.env.get("OPENROUTER_MODELO_CHAT") || "google/gemini-2.5-flash";
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json().catch(() => ({}));
@@ -184,11 +229,13 @@ Deno.serve(async (req) => {
       cfg?.chat_modo === "ligado" ||
       (cfg?.chat_modo === "teste" && typeof body.teste === "string" && body.teste.length > 0 && body.teste === cfg.codigo_teste);
     if (!liberado) return json({ error: "Assistente indisponível no momento.", indisponivel: true }, 403);
+    if (typeof cfg?.chat_modelo === "string" && /^[\w.-]+\/[\w.:-]+$/.test(cfg.chat_modelo)) modelo = cfg.chat_modelo;
 
     const texto = String(body.mensagem ?? "").trim().slice(0, MAX_MSG);
     const anexo = body.anexo as { base64?: string; mime?: string; nome?: string } | undefined;
     if (acao === "mensagem") {
       if (!texto && !anexo?.base64) return json({ error: "Mensagem vazia." }, 400);
+      if (anexo?.base64 && !habil(cfg, "anexos")) return json({ error: "Envio de arquivos desativado neste chat." }, 400);
       if (anexo?.base64 && (anexo.base64.length > MAX_ANEXO || !/^(image\/|application\/pdf)/.test(String(anexo.mime)))) {
         return json({ error: "Envie uma foto ou PDF de até 10 MB." }, 400);
       }
@@ -259,15 +306,18 @@ Deno.serve(async (req) => {
           session: {
             type: "realtime",
             model: cfg.voz_modelo || "gpt-realtime",
-            instructions: SISTEMA(hoje, paciente?.nome ?? null, cfg.instrucoes_extras ?? "", true),
+            instructions: SISTEMA(hoje, paciente?.nome ?? null, cfg, true),
             audio: {
               input: {
                 transcription: { model: "gpt-4o-mini-transcribe", language: "pt" },
-                turn_detection: { type: "semantic_vad" },
+                turn_detection: { type: "semantic_vad", eagerness: ["low", "medium", "high", "auto"].includes(cfg.voz_paciencia) ? cfg.voz_paciencia : "auto" },
               },
-              output: { voice: VOZES.has(cfg.voz_nome) ? cfg.voz_nome : "marin" },
+              output: {
+                voice: VOZES.has(cfg.voz_nome) ? cfg.voz_nome : "marin",
+                speed: Math.min(Math.max(Number(cfg.voz_velocidade) || 1, 0.5), 1.5),
+              },
             },
-            tools: FERRAMENTAS.map((f) => ({ type: "function", ...f.function })),
+            tools: ferramentasAtivas(cfg).map((f) => ({ type: "function", ...f.function })),
             tool_choice: "auto",
           },
         }),
@@ -293,7 +343,7 @@ Deno.serve(async (req) => {
       if (!cfg?.voz_liberada) return json({ error: "Atendimento por voz indisponível." }, 403);
       if ((await contarMeta("ferramenta")) >= MAX_FERRAMENTAS_POR_HORA) return json({ resultado: { erro: "limite de consultas atingido" }, acoes: [] });
       const nomeF = String(body.nome ?? "");
-      if (!FERRAMENTAS.some((f) => f.function.name === nomeF)) return json({ resultado: { erro: "ferramenta desconhecida" }, acoes: [] });
+      if (!ferramentasAtivas(cfg).some((f) => f.function.name === nomeF)) return json({ resultado: { erro: "ferramenta desconhecida" }, acoes: [] });
       let args: any = body.args;
       if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = {}; } }
       const acoesF: any[] = [];
@@ -361,6 +411,7 @@ Deno.serve(async (req) => {
     }
 
     if (acao === "pedir_humano") {
+      if (!habil(cfg, "atendente")) return json({ error: "Atendimento humano pelo chat desativado." }, 403);
       await chamarHumano(admin, conversaId, "Paciente clicou em falar com atendente");
       return json({ conversa_id: conversaId, token: tokenNovo, ok: true, ...(await estadoPublico(admin, conversaId)) });
     }
@@ -375,7 +426,7 @@ Deno.serve(async (req) => {
       .eq("autor", "paciente")
       .is("meta->>canal", null) // falas transcritas da ligação não contam
       .gte("created_at", umaHora);
-    if ((count ?? 0) >= MAX_POR_HORA) {
+    if ((count ?? 0) >= (Number(cfg?.limite_msgs_hora) || MAX_POR_HORA)) {
       return json({ conversa_id: conversaId, token: tokenNovo, resposta: "Recebemos muitas mensagens em pouco tempo. Aguarde alguns minutos, por favor." });
     }
 
@@ -457,7 +508,7 @@ Deno.serve(async (req) => {
 
     const sp = agoraSP();
     const hoje = `${DIAS[sp.getDay()]}, ${sp.toLocaleDateString("pt-BR")} ${String(sp.getHours()).padStart(2, "0")}:${String(sp.getMinutes()).padStart(2, "0")}`;
-    const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null, cfg?.instrucoes_extras ?? "") }, ...historico];
+    const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null, cfg) }, ...historico];
 
     const acoes: any[] = [];
     const citados = new Map<string, { codigo: string; nome: string; tipo: string }>();
@@ -472,7 +523,7 @@ Deno.serve(async (req) => {
           "HTTP-Referer": "https://sancet.com.br",
           "X-Title": "Sancet Assistente",
         },
-        body: JSON.stringify({ model: modelo, messages: mensagens, tools: FERRAMENTAS, temperature: 0.3, max_tokens: 900 }),
+        body: JSON.stringify({ model: modelo, messages: mensagens, tools: ferramentasAtivas(cfg), temperature: 0.3, max_tokens: 900 }),
       });
       if (!r.ok) throw new Error(`IA ${r.status}: ${(await r.text()).slice(0, 300)}`);
       const msg = (await r.json()).choices?.[0]?.message;
@@ -552,6 +603,8 @@ async function executar(
         .eq("ativo", true)
         .limit(2000);
       const alvo = normalizar(termo);
+      const { data: cfgP } = await admin.from("assistente_config").select("habilidades").eq("id", 1).maybeSingle();
+      const semPreco = cfgP?.habilidades?.precos === false;
       const achados = (todos ?? [])
         .map((e: any) => {
           const noNome = normalizar(e.nome).includes(alvo);
@@ -568,7 +621,7 @@ async function executar(
         exames: achados.map((e: any) => ({
           codigo_shift: e.codigo_shift,
           nome: e.nome,
-          preco: brl(e.preco_particular != null ? Number(e.preco_particular) : null),
+          ...(semPreco ? {} : { preco: brl(e.preco_particular != null ? Number(e.preco_particular) : null) }),
           prazo_resultado: e.prazo_resultado,
         })),
       };
@@ -704,10 +757,15 @@ async function executar(
     }
     case "chamar_atendente": {
       if (!conversaId) return { erro: "conversa inválida" };
-      await chamarHumano(admin, conversaId, String(a.motivo ?? "").slice(0, 300));
+      const r = await chamarHumano(admin, conversaId, String(a.motivo ?? "").slice(0, 300));
+      if (r.fora_horario && !r.na_fila) {
+        return { ok: false, fora_do_horario: true, instrucao: `Diga ao paciente: "${r.mensagem}". Continue ajudando no que puder.` };
+      }
       return {
         ok: true,
-        instrucao: "Avise que um atendente da equipe vai responder aqui mesmo no chat assim que possível (em horário de atendimento). Não faça mais perguntas.",
+        instrucao: r.fora_horario
+          ? `Diga ao paciente: "${r.mensagem}". Não faça mais perguntas.`
+          : "Avise que um atendente da equipe vai responder aqui mesmo no chat. Não faça mais perguntas.",
       };
     }
     case "contato_atendimento": {
@@ -719,16 +777,87 @@ async function executar(
   }
 }
 
-/** Passa a conversa para a fila da equipe (a IA para de responder). */
+/** Está dentro do horário de atendimento humano configurado? */
+function dentroDoHorario(cfg: any) {
+  const sp = agoraSP();
+  const dia = cfg?.humano_horario?.[String(sp.getDay())];
+  if (!dia?.inicio || !dia?.fim) return false;
+  const agora = sp.getHours() * 60 + sp.getMinutes();
+  const min = (h: string) => {
+    const [a, b] = String(h).split(":").map(Number);
+    return (a || 0) * 60 + (b || 0);
+  };
+  return agora >= min(dia.inicio) && agora < min(dia.fim);
+}
+
+/**
+ * Passa a conversa para a fila da equipe (a IA para de responder).
+ * Fora do horário: segue a configuração (entra na fila mesmo assim, ou a IA continua).
+ */
 async function chamarHumano(admin: any, conversaId: string, motivo = "") {
+  const { data: cfg } = await admin.from("assistente_config").select("*").eq("id", 1).maybeSingle();
   const { data: c } = await admin.from("chat_conversas").select("status, ia_ativa, responsavel_id").eq("id", conversaId).maybeSingle();
-  if (!c || (c.status === "humano" && !c.ia_ativa) || c.status === "aguardando") return;
+  if (!c || (c.status === "humano" && !c.ia_ativa) || c.status === "aguardando") return { na_fila: true, fora_horario: false, mensagem: "" };
+  const fora = !dentroDoHorario(cfg);
+  const msgFora = (cfg?.msg_fora_horario || "").trim() ||
+    "Nossa equipe está fora do horário de atendimento agora. Deixe sua mensagem que respondemos assim que voltarmos.";
+  if (fora && cfg?.fora_horario_acao === "ia") {
+    await admin.from("chat_mensagens").insert({
+      conversa_id: conversaId, autor: "sistema", texto: msgFora,
+      meta: { publico: true, evento: "fora_horario", ...(motivo ? { motivo } : {}) },
+    });
+    return { na_fila: false, fora_horario: true, mensagem: msgFora };
+  }
   await admin.from("chat_conversas").update({ status: c.responsavel_id ? "humano" : "aguardando", ia_ativa: false }).eq("id", conversaId);
+  const msg = fora
+    ? msgFora
+    : (cfg?.msg_chamar_atendente || "").trim() || "Chamamos um atendente da equipe Sancet. Assim que possível, alguém responde por aqui. 🙂";
   await admin.from("chat_mensagens").insert({
-    conversa_id: conversaId,
-    autor: "sistema",
-    texto: "Chamamos um atendente da equipe Sancet. Assim que possível, alguém responde por aqui. 🙂",
-    meta: { publico: true, evento: "pediu_humano", ...(motivo ? { motivo } : {}) },
+    conversa_id: conversaId, autor: "sistema", texto: msg,
+    meta: { publico: true, evento: "pediu_humano", ...(motivo ? { motivo } : {}), ...(fora ? { fora_horario: true } : {}) },
+  });
+  if (cfg?.notificar_email) await avisarEquipePorEmail(admin, cfg, conversaId, motivo).catch((e) => console.error("email chat:", e));
+  return { na_fila: true, fora_horario: fora, mensagem: msg };
+}
+
+/** E-mail para a equipe quando um paciente pede atendente (Resend do painel). */
+async function avisarEquipePorEmail(admin: any, cfg: any, conversaId: string, motivo: string) {
+  const { data: rows } = await admin.from("configuracoes").select("chave, valor").in("chave", ["RESEND_API_KEY", "RESEND_EMAIL_FROM", "RESEND_EMAILS_ADMIN", "SITE_URL"]);
+  const c: Record<string, string> = {};
+  (rows ?? []).forEach((r: any) => (c[r.chave] = r.valor ?? ""));
+  const apiKey = c.RESEND_API_KEY?.trim();
+  const para = String(cfg.emails_notificacao || c.RESEND_EMAILS_ADMIN || "")
+    .split(/[,;\s]+/)
+    .map((x) => x.trim())
+    .filter((x) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))
+    .slice(0, 10);
+  if (!apiKey || !para.length) return;
+  const { data: ult } = await admin
+    .from("chat_mensagens")
+    .select("texto")
+    .eq("conversa_id", conversaId)
+    .eq("autor", "paciente")
+    .not("texto", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(3);
+  const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]!);
+  const site = (c.SITE_URL || "https://sancet.vercel.app").replace(/\/$/, "");
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px">
+    <h2 style="color:#1d3a6b">💬 Paciente pediu atendimento no chat</h2>
+    ${motivo ? `<p><b>Assunto:</b> ${esc(motivo)}</p>` : ""}
+    <p><b>Últimas mensagens:</b></p>
+    <ul>${(ult ?? []).reverse().map((m: any) => `<li>${esc(String(m.texto).slice(0, 300))}</li>`).join("")}</ul>
+    <p><a href="${site}/staff/dashboard?aba=conversas" style="background:#c8102e;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">Abrir Conversas</a></p>
+  </div>`;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: c.RESEND_EMAIL_FROM?.trim() || "onboarding@resend.dev",
+      to: para,
+      subject: "[Sancet] Paciente pediu atendimento no chat",
+      html,
+    }),
   });
 }
 
