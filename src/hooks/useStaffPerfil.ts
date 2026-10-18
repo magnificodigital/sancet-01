@@ -16,6 +16,8 @@ type StaffPerfil = {
   nome: string | null;
   permissoes: Permissoes | null;
   isAdmin: boolean;
+  /** Super admin da plataforma (integrações, chaves, liberações). */
+  isSuperAdmin: boolean;
   carregando: boolean;
   /** auth.uid() do usuário logado (responsável pelos pedidos). */
   userId: string | null;
@@ -33,7 +35,7 @@ const PERMISSOES_ADMIN: Permissoes = {
 
 export const useStaffPerfil = (): StaffPerfil => {
   const [perfil, setPerfil] = useState<StaffPerfil>({
-    role: null, nome: null, permissoes: null, isAdmin: false, carregando: true, userId: null,
+    role: null, nome: null, permissoes: null, isAdmin: false, isSuperAdmin: false, carregando: true, userId: null,
   });
 
   useEffect(() => {
@@ -50,18 +52,20 @@ export const useStaffPerfil = (): StaffPerfil => {
       // SEGURANÇA: sem linha em user_roles = NÃO é da equipe (ex.: paciente logado).
       // Nunca assumir "staff" por padrão.
       if (!row) {
-        setPerfil({ role: null, nome: null, permissoes: null, isAdmin: false, carregando: false, userId: null });
+        setPerfil({ role: null, nome: null, permissoes: null, isAdmin: false, isSuperAdmin: false, carregando: false, userId: null });
         return;
       }
 
       const role = (row.role ?? "staff") as "admin" | "staff";
       const isAdmin = role === "admin";
+      const { data: sou } = isAdmin ? await (supabase as any).rpc("is_super_admin") : { data: false };
 
       setPerfil({
         role,
         nome: row.nome ?? null,
         permissoes: isAdmin ? PERMISSOES_ADMIN : (row.permissoes as Permissoes) ?? null,
         isAdmin,
+        isSuperAdmin: sou === true,
         carregando: false,
         userId: uid,
       });

@@ -23,9 +23,11 @@ const MOCK: Unidade[] = [
 
 type Props = {
   onEscolher: (u: Unidade) => void;
+  /** Unidade escolhida na conversa do chat: aparece primeiro, em destaque. */
+  sugerida?: string | null;
 };
 
-export const ListaUnidades = ({ onEscolher }: Props) => {
+export const ListaUnidades = ({ onEscolher, sugerida }: Props) => {
   const { somenteMatriz } = useAtendimento();
   const { data, isLoading } = useQuery({
     queryKey: ["unidades_cache"],
@@ -43,7 +45,10 @@ export const ListaUnidades = ({ onEscolher }: Props) => {
   const ehMatriz = (u: Unidade) =>
     u.codigo_shift === MATRIZ_CODIGO_SHIFT ||
     (u.nome ?? "").toLowerCase().includes(MATRIZ_NOME);
-  const unidades = somenteMatriz ? base.filter(ehMatriz) : base;
+  const filtradas = somenteMatriz ? base.filter(ehMatriz) : base;
+  const unidades = sugerida
+    ? [...filtradas.filter((u) => u.codigo_shift === sugerida), ...filtradas.filter((u) => u.codigo_shift !== sugerida)]
+    : filtradas;
 
   if (isLoading) {
     return <p className="text-muted-foreground text-sm">Carregando unidades...</p>;
@@ -62,7 +67,10 @@ export const ListaUnidades = ({ onEscolher }: Props) => {
       {unidades.map((u) => (
         <div
           key={u.codigo_shift}
-          className="rounded-xl border bg-card p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+          className={
+            "rounded-xl border bg-card p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3" +
+            (u.codigo_shift === sugerida ? " border-brand ring-2 ring-brand/20" : "")
+          }
         >
           <div className="flex-1 min-w-0">
             <p className="font-bold text-secondary">{u.nome}</p>
@@ -70,6 +78,7 @@ export const ListaUnidades = ({ onEscolher }: Props) => {
               {[u.endereco, u.bairro, u.cidade, u.uf].filter(Boolean).join(" · ")}
             </p>
             <Badge variant="secondary" className="mt-2">Corpo clínico</Badge>
+            {u.codigo_shift === sugerida && <Badge className="mt-2 ml-2 bg-brand text-white">Escolhida no chat</Badge>}
           </div>
           <Button
             onClick={() => onEscolher(u)}

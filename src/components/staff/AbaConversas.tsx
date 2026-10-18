@@ -1,6 +1,8 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ClipboardList,
+  MapPin,
   Bot,
   CheckCircle2,
   FileText,
@@ -44,6 +46,12 @@ type Conversa = {
   nao_lidas: number;
   created_at: string;
   pacientes: { nome: string | null; nome_social: string | null; celular: string | null; email: string | null } | null;
+  lead_nome: string | null;
+  lead_telefone: string | null;
+  lead_email: string | null;
+  unidade_codigo_shift: string | null;
+  unidade_nome: string | null;
+  pedido_protocolo: string | null;
 };
 type Mensagem = {
   id: string;
@@ -76,10 +84,14 @@ const STATUS_LABEL: Record<Conversa["status"], { label: string; cls: string }> =
 };
 
 const COLS_CONVERSA =
-  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email)";
+  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo";
 
 const nomeConversa = (c: Conversa) =>
-  c.pacientes?.nome_social || c.pacientes?.nome || `Visitante ${c.id.slice(0, 4).toUpperCase()}`;
+  c.pacientes?.nome_social || c.pacientes?.nome || c.lead_nome || `Visitante ${c.id.slice(0, 4).toUpperCase()}`;
+const telefone = (c: Conversa) => {
+  const t = (c.pacientes?.celular || c.lead_telefone || "").replace(/\D/g, "");
+  return t.length >= 10 ? `(${t.slice(0, 2)}) ${t.slice(2, -4)}-${t.slice(-4)}` : t || null;
+};
 
 const hora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const quando = (iso: string | null) => {
@@ -139,6 +151,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   const [carregando, setCarregando] = useState(true);
   const [filtro, setFiltro] = useState<Filtro>("fila");
   const [busca, setBusca] = useState("");
+  const [unidadeFiltro, setUnidadeFiltro] = useState<string>("todas");
   const [selId, setSelId] = useState<string | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [carregandoMsgs, setCarregandoMsgs] = useState(false);
@@ -258,13 +271,20 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                 ? c.status !== "encerrada"
                 : c.status === "encerrada";
       if (!ok) return false;
+      if (unidadeFiltro !== "todas" && (c.unidade_codigo_shift ?? "_sem") !== unidadeFiltro) return false;
       if (!q) return true;
-      return [nomeConversa(c), c.ultima_msg_texto ?? "", c.pacientes?.celular ?? "", c.pacientes?.email ?? ""]
+      return [nomeConversa(c), c.ultima_msg_texto ?? "", c.pacientes?.celular ?? "", c.pacientes?.email ?? "", c.lead_telefone ?? "", c.pedido_protocolo ?? ""]
         .join(" ")
         .toLowerCase()
         .includes(q);
     });
-  }, [conversas, filtro, busca, userId]);
+  }, [conversas, filtro, busca, userId, unidadeFiltro]);
+
+  const unidadesNaLista = useMemo(() => {
+    const m = new Map<string, string>();
+    conversas.forEach((c) => m.set(c.unidade_codigo_shift ?? "_sem", c.unidade_nome ?? "Sem unidade (não qualificado)"));
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [conversas]);
 
   const rpc = async (fn: string, args: Record<string, unknown>, ok?: string) => {
     const { error } = await db.rpc(fn, args);
@@ -426,6 +446,23 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
               ))}
             </div>
           </div>
+          {unidadesNaLista.length > 1 && (
+            <div className="border-b px-3 py-2">
+              <Select value={unidadeFiltro} onValueChange={setUnidadeFiltro}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as unidades</SelectItem>
+                  {unidadesNaLista.map(([cod, nome]) => (
+                    <SelectItem key={cod} value={cod}>
+                      {nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="min-h-0 flex-1 overflow-y-auto">
             {carregando ? (
               <div className="flex justify-center py-10">
@@ -457,6 +494,11 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                       <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", STATUS_LABEL[c.status].cls)}>
                         {STATUS_LABEL[c.status].label}
                       </span>
+                      {c.unidade_nome && (
+                        <span className="flex items-center gap-0.5 truncate text-[10px] text-muted-foreground">
+                          <MapPin className="h-2.5 w-2.5" /> {c.unidade_nome}
+                        </span>
+                      )}
                       {c.responsavel_id && (
                         <span className="truncate text-[10px] text-muted-foreground">
                           {c.responsavel_id === userId ? "com você" : `com ${nomeAtendente(c.responsavel_id)}`}
@@ -487,9 +529,24 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
               </button>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{nomeConversa(sel)}</p>
+                <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                  {telefone(sel) && <span>{telefone(sel)}</span>}
+                  {(sel.pacientes?.email || sel.lead_email) && <span>{sel.pacientes?.email || sel.lead_email}</span>}
+                  {sel.unidade_nome ? (
+                    <span className="flex items-center gap-0.5 font-medium text-secondary">
+                      <MapPin className="h-3 w-3" /> {sel.unidade_nome}
+                    </span>
+                  ) : (
+                    <span className="text-amber-700">Ainda sem unidade</span>
+                  )}
+                  {sel.pedido_protocolo && (
+                    <span className="flex items-center gap-0.5 font-medium text-secondary">
+                      <ClipboardList className="h-3 w-3" /> Pedido {sel.pedido_protocolo}
+                    </span>
+                  )}
+                  {!sel.pacientes && <span>Visitante não logado</span>}
+                </p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {sel.pacientes ? [sel.pacientes.celular, sel.pacientes.email].filter(Boolean).join(" · ") || "Paciente cadastrado" : "Visitante não logado"}
-                  {" · "}
                   {STATUS_LABEL[sel.status].label}
                   {sel.responsavel_id && ` · ${ehMinha ? "com você" : `com ${nomeAtendente(sel.responsavel_id)}`}`}
                 </p>

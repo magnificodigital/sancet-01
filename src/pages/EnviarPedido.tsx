@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/layout/PageShell";
 import { usePaciente } from "@/hooks/usePaciente";
 import { useSacola } from "@/stores/sacola";
+import { lerVinculoChat, limparVinculoChat } from "@/lib/chatVinculo";
 import { supabase } from "@/integrations/supabase/client";
 import { marcarAvisoPedido } from "@/lib/avisoPedido";
 import { EtapaTipoAtendimento } from "@/components/envio/EtapaTipoAtendimento";
@@ -181,6 +182,17 @@ const EnviarPedido = () => {
       const pedidoId = (data as any)?.id as string | undefined;
       if (!protocolo) throw new Error("Resposta inválida ao criar pedido.");
 
+      // Pedido montado pelo chat: liga a conversa ao pedido (equipe vê os dois juntos).
+      const vinculo = lerVinculoChat();
+      if (vinculo) {
+        limparVinculoChat();
+        supabase.functions
+          .invoke("sancet-assistente", {
+            body: { acao: "vincular_pedido", protocolo, conversa_id: vinculo.conversa_id, token: vinculo.token, teste: vinculo.teste ?? undefined },
+          })
+          .catch(() => {});
+      }
+
       if (pedidoId) {
         supabase.functions
           .invoke("enviar-email-pedido", {
@@ -263,6 +275,7 @@ const EnviarPedido = () => {
             )}
             {etapa === 2 && modalidade === "unidade" && (
               <EtapaUnidade
+                sugerida={lerVinculoChat()?.unidade_codigo_shift ?? null}
                 onConfirmar={(u) => {
                   setUnidade(u);
                   setEtapa(3);

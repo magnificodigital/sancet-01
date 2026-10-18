@@ -49,13 +49,15 @@ type Config = {
   notificar_email: boolean;
   emails_notificacao: string | null;
   respostas_rapidas: RespostaRapida[];
+  qualificar_obrigatorio: boolean;
+  qualificar_campos: Record<string, boolean>;
   atualizado_em: string | null;
 };
 
 const COLUNAS_EDITAVEIS = [
-  "voz_modelo", "voz_nome", "voz_max_minutos", "voz_saudacao", "voz_velocidade", "voz_paciencia", "instrucoes_extras",
+  "voz_nome", "voz_max_minutos", "voz_saudacao", "voz_velocidade", "voz_paciencia", "instrucoes_extras",
   "nome_assistente", "boas_vindas", "texto_botao", "posicao", "cor_widget", "abrir_auto_seg", "sugestoes", "paginas_ocultas",
-  "chat_modelo", "tom", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
+  "qualificar_obrigatorio", "qualificar_campos", "tom", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
   "humano_horario", "fora_horario_acao", "msg_chamar_atendente", "msg_fora_horario", "msg_encerramento",
   "notificar_email", "emails_notificacao", "respostas_rapidas",
 ] as const;
@@ -311,6 +313,7 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
           <Tabs defaultValue="aparencia">
             <TabsList className="h-auto flex-wrap justify-start">
               <TabsTrigger value="aparencia">Aparência</TabsTrigger>
+              <TabsTrigger value="qualificacao">Qualificação</TabsTrigger>
               <TabsTrigger value="ia">Comportamento</TabsTrigger>
               <TabsTrigger value="conhecimento">Perguntas frequentes</TabsTrigger>
               <TabsTrigger value="habilidades">Habilidades</TabsTrigger>
@@ -389,6 +392,38 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
               </div>
             </TabsContent>
 
+            {/* Qualificação */}
+            <TabsContent value="qualificacao" className="space-y-4 pt-4">
+              <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                <div>
+                  <p className="text-sm font-medium">Qualificar antes de atender</p>
+                  <p className="text-xs text-muted-foreground">
+                    A IA pede os dados e a unidade antes de responder. A conversa vai para a equipe daquela unidade (mesma regra dos pedidos).
+                  </p>
+                </div>
+                <Switch checked={cfg.qualificar_obrigatorio} disabled={d} onCheckedChange={(v) => mudar("qualificar_obrigatorio", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Dados pedidos</Label>
+                {[
+                  { id: "nome", label: "Nome completo" },
+                  { id: "telefone", label: "Celular / WhatsApp" },
+                  { id: "email", label: "E-mail" },
+                  { id: "unidade", label: "Unidade onde quer fazer os exames" },
+                ].map((c) => (
+                  <div key={c.id} className="flex items-center justify-between rounded-md border px-3 py-2">
+                    <span className="text-sm">{c.label}</span>
+                    <Switch
+                      checked={c.id === "email" ? cfg.qualificar_campos?.email === true : cfg.qualificar_campos?.[c.id] !== false}
+                      disabled={d || !cfg.qualificar_obrigatorio}
+                      onCheckedChange={(v) => mudar("qualificar_campos", { ...cfg.qualificar_campos, [c.id]: v })}
+                    />
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground">Paciente logado não precisa repetir nome, celular e e-mail: a IA já usa os dados da conta.</p>
+              </div>
+            </TabsContent>
+
             {/* Comportamento */}
             <TabsContent value="ia" className="space-y-4 pt-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -417,30 +452,6 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
                       <SelectItem value="detalhada">Detalhadas</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Modelo de IA do chat</Label>
-                  <Select
-                    value={MODELOS_CHAT.some((m) => m.value === cfg.chat_modelo) ? cfg.chat_modelo : "_outro"}
-                    disabled={d}
-                    onValueChange={(v) => mudar("chat_modelo", v === "_outro" ? "" : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MODELOS_CHAT.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="_outro">Outro (digitar o código OpenRouter)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {!MODELOS_CHAT.some((m) => m.value === cfg.chat_modelo) && (
-                    <Input value={cfg.chat_modelo} disabled={d} placeholder="ex.: openai/gpt-4o-mini" className="font-mono" onChange={(e) => mudar("chat_modelo", e.target.value.trim())} />
-                  )}
-                  <p className="text-xs text-muted-foreground">Precisa aceitar ferramentas (function calling). Os mais inteligentes custam mais por mensagem.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Limite de mensagens por conversa (por hora)</Label>
@@ -647,21 +658,6 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Modelo de voz</Label>
-                  <Select value={cfg.voz_modelo} disabled={d} onValueChange={(v) => mudar("voz_modelo", v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MODELOS_VOZ.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
                   <Label>Velocidade da fala: {Number(cfg.voz_velocidade).toFixed(2)}x</Label>
                   <input
                     type="range"
@@ -698,7 +694,7 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
                 <Input value={cfg.voz_saudacao ?? ""} disabled={d} maxLength={300} placeholder="Ex.: Olá, aqui é a assistente da Sancet. Como posso ajudar?" onChange={(e) => mudar("voz_saudacao", e.target.value)} />
               </div>
               <p className="text-xs text-muted-foreground">
-                A voz usa a chave <code>OPENAI_API_KEY</code> cadastrada nos Secrets do Supabase.
+                A chave da OpenAI e o modelo de voz ficam em Super Admin → Integrações.
               </p>
             </TabsContent>
           </Tabs>

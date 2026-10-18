@@ -1,3 +1,5 @@
+import { modeloIA, segredo } from "../_shared/integracoes.ts";
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -7,12 +9,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
-    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-    const modelo = Deno.env.get("OPENROUTER_MODELO") || "google/gemini-2.5-flash-preview:free";
+    const apiKey = await segredo("OPENROUTER_API_KEY");
+    const modelo = await modeloIA("receita", Deno.env.get("OPENROUTER_MODELO") || "google/gemini-2.5-flash");
 
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "OPENROUTER_API_KEY não configurada nos secrets da edge function." }),
+        JSON.stringify({ error: "Chave da OpenRouter não configurada (Super Admin > Integrações)." }),
         { status: 400, headers: cors }
       );
     }

@@ -10,6 +10,7 @@
 //   gera uma chave temporária; as ferramentas da voz rodam AQUI (acao
 //   "ferramenta") e a transcrição fica na mesma conversa (acao "transcricao").
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { modeloIA, segredo } from "../_shared/integracoes.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -80,13 +81,18 @@ const HABILIDADE_DA_FERRAMENTA: Record<string, string> = {
   chamar_atendente: "atendente",
 };
 const habil = (cfg: any, h: string) => cfg?.habilidades?.[h] !== false;
-const ferramentasAtivas = (cfg: any) =>
+/** Antes de qualificar, só estas ferramentas funcionam. */
+const ANTES_DE_QUALIFICAR = new Set(["qualificar_atendimento", "listar_unidades", "contato_atendimento"]);
+const precisaQualificar = (cfg: any, conversa: any) => cfg?.qualificar_obrigatorio !== false && !!conversa && !conversa.qualificado_em;
+const ferramentasAtivas = (cfg: any, conversa: any = null) =>
   FERRAMENTAS.filter((f) => {
+    if (precisaQualificar(cfg, conversa) && !ANTES_DE_QUALIFICAR.has(f.function.name)) return false;
     const h = HABILIDADE_DA_FERRAMENTA[f.function.name];
     return !h || habil(cfg, h);
   });
 
-const SISTEMA = (hoje: string, logado: string | null, cfg: any, voz = false) => {
+type Qualif = { pendente: boolean; pedir: string[]; conhecidos: string; unidade: string | null };
+const SISTEMA = (hoje: string, logado: string | null, cfg: any, voz = false, q: Qualif | null = null) => {
   const nome = (cfg?.nome_assistente || "Assistente Sancet").trim();
   const faq = (Array.isArray(cfg?.faq) ? cfg.faq : [])
     .filter((f: any) => f?.pergunta && f?.resposta)
@@ -103,7 +109,11 @@ const SISTEMA = (hoje: string, logado: string | null, cfg: any, voz = false) => 
   return `Você é ${nome}, assistente virtual da Sancet Medicina Diagnóstica (laboratório de análises clínicas). Fale em português do Brasil, de forma ${TOM[cfg?.tom] ?? TOM.acolhedor}. Respostas ${TAMANHO[cfg?.tamanho_resposta] ?? TAMANHO.curta}.${cfg?.usar_emojis === false ? " Não use emojis." : ""}
 
 Hoje é ${hoje} (horário de Brasília). ${logado ? `O paciente está logado como ${logado}.` : "O visitante NÃO está logado."}
-
+${q?.pendente ? `
+PRIMEIRO PASSO OBRIGATÓRIO (antes de responder qualquer outra coisa): cumprimente e peça, de forma simpática e em UMA mensagem, ${q.pedir.join(", ")}. Explique que é para direcionar o atendimento para a equipe da unidade. Se o paciente não souber a unidade, ofereça a lista (listar_unidades) e ajude a escolher pela cidade/bairro. Quando tiver os dados, chame qualificar_atendimento. Só depois disso responda as dúvidas dele.${q.conhecidos ? ` Dados que já temos (não pergunte de novo): ${q.conhecidos}.` : ""}
+` : q?.unidade ? `
+Atendimento direcionado para a unidade ${q.unidade}. Use essa unidade em datas_agendamento e no agendamento, salvo se o paciente pedir para trocar (chame qualificar_atendimento com a nova unidade).
+` : ""}
 O que você faz:
 - Tira dúvidas sobre exames, preços (só particular), preparo/jejum, unidades, horários e convênios aceitos.
 - Ajuda a agendar: descobre se é PARTICULAR ou CONVÊNIO, identifica os exames (o paciente pode mandar FOTO do pedido médico aqui no chat), e então chama montar_carrinho. Depois diga para ele clicar no botão "Continuar agendamento" que aparece no chat, onde escolhe unidade, data e envia os documentos.
@@ -205,6 +215,24 @@ const FERRAMENTAS = [
   {
     type: "function",
     function: {
+      name: "qualificar_atendimento",
+      description:
+        "Registra os dados do paciente e a UNIDADE onde ele quer fazer os exames. Obrigatório antes do atendimento (direciona para a equipe da unidade). Também serve para trocar de unidade.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome: { type: "string", description: "Nome completo do paciente" },
+          telefone: { type: "string", description: "Celular/WhatsApp com DDD" },
+          email: { type: "string" },
+          unidade: { type: "string", description: "Nome da unidade escolhida (use listar_unidades se o paciente não souber)" },
+        },
+        required: ["unidade"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "chamar_atendente",
       description: "Transfere a conversa para um atendente humano da equipe Sancet, que responde aqui no chat. A IA para de responder depois disso.",
       parameters: { type: "object", properties: { motivo: { type: "string", description: "Resumo curto do que o paciente precisa." } } },
@@ -215,9 +243,9 @@ const FERRAMENTAS = [
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+    const apiKey = await segredo("OPENROUTER_API_KEY");
     if (!apiKey) return json({ error: "Assistente indisponível no momento." }, 503);
-    let modelo = Deno.env.get("OPENROUTER_MODELO_CHAT") || "google/gemini-2.5-flash";
+    const modelo = await modeloIA("chat", Deno.env.get("OPENROUTER_MODELO_CHAT") || "google/gemini-2.5-flash");
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json().catch(() => ({}));
@@ -229,7 +257,6 @@ Deno.serve(async (req) => {
       cfg?.chat_modo === "ligado" ||
       (cfg?.chat_modo === "teste" && typeof body.teste === "string" && body.teste.length > 0 && body.teste === cfg.codigo_teste);
     if (!liberado) return json({ error: "Assistente indisponível no momento.", indisponivel: true }, 403);
-    if (typeof cfg?.chat_modelo === "string" && /^[\w.-]+\/[\w.:-]+$/.test(cfg.chat_modelo)) modelo = cfg.chat_modelo;
 
     const texto = String(body.mensagem ?? "").trim().slice(0, MAX_MSG);
     const anexo = body.anexo as { base64?: string; mime?: string; nome?: string } | undefined;
@@ -242,13 +269,13 @@ Deno.serve(async (req) => {
     }
 
     // Paciente logado (opcional)
-    let paciente: { id: string; nome: string | null } | null = null;
+    let paciente: { id: string; nome: string | null; celular?: string | null; email?: string | null } | null = null;
     const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
     if (jwt) {
       const { data } = await admin.auth.getUser(jwt).catch(() => ({ data: { user: null } }) as any);
       if (data?.user) {
-        const { data: p } = await admin.from("pacientes").select("id, nome, nome_social").eq("auth_user_id", data.user.id).maybeSingle();
-        if (p) paciente = { id: p.id, nome: (p as any).nome_social || p.nome };
+        const { data: p } = await admin.from("pacientes").select("id, nome, nome_social, celular, email").eq("auth_user_id", data.user.id).maybeSingle();
+        if (p) paciente = { id: p.id, nome: (p as any).nome_social || p.nome, celular: (p as any).celular, email: (p as any).email };
       }
     }
 
@@ -290,7 +317,7 @@ Deno.serve(async (req) => {
     if (acao === "voz_iniciar") {
       if (!cfg?.voz_liberada) return json({ error: "Atendimento por voz indisponível." }, 403);
       if (!conversa.ia_ativa) return json({ error: "Você está em atendimento com a nossa equipe aqui no chat.", conversa_id: conversaId, token: tokenNovo }, 409);
-      const openai = Deno.env.get("OPENAI_API_KEY");
+      const openai = await segredo("OPENAI_API_KEY");
       if (!openai) return json({ error: "Atendimento por voz indisponível." }, 503);
       if ((await contarMeta("voz_inicio")) >= MAX_VOZ_POR_HORA) {
         return json({ error: "Muitas ligações em pouco tempo. Tente de novo mais tarde.", conversa_id: conversaId, token: tokenNovo }, 429);
@@ -305,11 +332,11 @@ Deno.serve(async (req) => {
           expires_after: { anchor: "created_at", seconds: 120 },
           session: {
             type: "realtime",
-            model: cfg.voz_modelo || "gpt-realtime",
-            instructions: SISTEMA(hoje, paciente?.nome ?? null, cfg, true),
+            model: await modeloIA("voz", "gpt-realtime"),
+            instructions: SISTEMA(hoje, paciente?.nome ?? null, cfg, true, qualif(cfg, conversa, paciente)),
             audio: {
               input: {
-                transcription: { model: "gpt-4o-mini-transcribe", language: "pt" },
+                transcription: { model: await modeloIA("transcricao", "gpt-4o-mini-transcribe"), language: "pt" },
                 turn_detection: { type: "semantic_vad", eagerness: ["low", "medium", "high", "auto"].includes(cfg.voz_paciencia) ? cfg.voz_paciencia : "auto" },
               },
               output: {
@@ -317,7 +344,7 @@ Deno.serve(async (req) => {
                 speed: Math.min(Math.max(Number(cfg.voz_velocidade) || 1, 0.5), 1.5),
               },
             },
-            tools: ferramentasAtivas(cfg).map((f) => ({ type: "function", ...f.function })),
+            tools: ferramentasAtivas(cfg, null).map((f) => ({ type: "function", ...f.function })),
             tool_choice: "auto",
           },
         }),
@@ -343,12 +370,12 @@ Deno.serve(async (req) => {
       if (!cfg?.voz_liberada) return json({ error: "Atendimento por voz indisponível." }, 403);
       if ((await contarMeta("ferramenta")) >= MAX_FERRAMENTAS_POR_HORA) return json({ resultado: { erro: "limite de consultas atingido" }, acoes: [] });
       const nomeF = String(body.nome ?? "");
-      if (!ferramentasAtivas(cfg).some((f) => f.function.name === nomeF)) return json({ resultado: { erro: "ferramenta desconhecida" }, acoes: [] });
+      if (!ferramentasAtivas(cfg, null).some((f) => f.function.name === nomeF)) return json({ resultado: { erro: "ferramenta desconhecida" }, acoes: [] });
       let args: any = body.args;
       if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = {}; } }
       const acoesF: any[] = [];
       const citadosF = new Map<string, { codigo: string; nome: string; tipo: string }>();
-      const resultado = await executar(admin, nomeF, args ?? {}, paciente, acoesF, citadosF, conversaId).catch((e) => ({ erro: String(e?.message ?? e) }));
+      const resultado = await executar(admin, nomeF, args ?? {}, paciente, acoesF, citadosF, conversaId, { cfg, conversa }).catch((e) => ({ erro: String(e?.message ?? e) }));
       if (nomeF === "montar_carrinho" && !(resultado as any)?.erro) {
         await admin.from("chat_conversas").update({ contexto: { ...(conversa.contexto ?? {}), tipo: args?.tipo } }).eq("id", conversaId);
       }
@@ -408,6 +435,29 @@ Deno.serve(async (req) => {
       );
       const ultimo = (novas ?? []).length ? novas![novas!.length - 1].created_at : desde;
       return json({ conversa_id: conversaId, token: tokenNovo, mensagens, ultimo, ...(await estadoPublico(admin, conversaId)) });
+    }
+
+    // ---- Pedido criado a partir do chat: liga a conversa ao pedido ----
+    if (acao === "vincular_pedido") {
+      if (!paciente) return json({ error: "Faça login." }, 401);
+      const { data: ped } = await admin
+        .from("pedidos")
+        .select("id, protocolo, paciente_id, unidade_codigo_shift, unidade_nome")
+        .eq("protocolo", String(body.protocolo ?? ""))
+        .maybeSingle();
+      if (!ped || ped.paciente_id !== paciente.id) return json({ error: "Pedido não encontrado." }, 404);
+      await admin.from("chat_conversas").update({
+        pedido_id: ped.id,
+        pedido_protocolo: ped.protocolo,
+        paciente_id: paciente.id,
+        ...(ped.unidade_codigo_shift ? { unidade_codigo_shift: ped.unidade_codigo_shift, unidade_nome: ped.unidade_nome } : {}),
+      }).eq("id", conversaId);
+      await admin.from("chat_mensagens").insert({
+        conversa_id: conversaId, autor: "sistema",
+        texto: `✅ Pedido ${ped.protocolo} enviado a partir desta conversa.`,
+        meta: { publico: true, evento: "pedido", pedido_id: ped.id },
+      });
+      return json({ conversa_id: conversaId, token: tokenNovo, ok: true });
     }
 
     if (acao === "pedir_humano") {
@@ -508,7 +558,7 @@ Deno.serve(async (req) => {
 
     const sp = agoraSP();
     const hoje = `${DIAS[sp.getDay()]}, ${sp.toLocaleDateString("pt-BR")} ${String(sp.getHours()).padStart(2, "0")}:${String(sp.getMinutes()).padStart(2, "0")}`;
-    const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null, cfg) }, ...historico];
+    const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null, cfg, false, qualif(cfg, conversa, paciente)) }, ...historico];
 
     const acoes: any[] = [];
     const citados = new Map<string, { codigo: string; nome: string; tipo: string }>();
@@ -523,7 +573,7 @@ Deno.serve(async (req) => {
           "HTTP-Referer": "https://sancet.com.br",
           "X-Title": "Sancet Assistente",
         },
-        body: JSON.stringify({ model: modelo, messages: mensagens, tools: ferramentasAtivas(cfg), temperature: 0.3, max_tokens: 900 }),
+        body: JSON.stringify({ model: modelo, messages: mensagens, tools: ferramentasAtivas(cfg, conversa), temperature: 0.3, max_tokens: 900 }),
       });
       if (!r.ok) throw new Error(`IA ${r.status}: ${(await r.text()).slice(0, 300)}`);
       const msg = (await r.json()).choices?.[0]?.message;
@@ -539,7 +589,7 @@ Deno.serve(async (req) => {
         try {
           args = JSON.parse(c.function?.arguments || "{}");
         } catch { /* args inválidos */ }
-        const resultado = await executar(admin, c.function?.name, args, paciente, acoes, citados, conversaId).catch((e) => ({
+        const resultado = await executar(admin, c.function?.name, args, paciente, acoes, citados, conversaId, { cfg, conversa }).catch((e) => ({
           erro: String(e?.message ?? e),
         }));
         if (c.function?.name === "montar_carrinho" && !(resultado as any)?.erro) contexto = { ...contexto, tipo: args.tipo };
@@ -579,8 +629,52 @@ async function executar(
   admin: any, nome: string, a: any, paciente: any, acoes: any[],
   citados: Map<string, { codigo: string; nome: string; tipo: string }>,
   conversaId = "",
+  ctx: { cfg: any; conversa: any } = { cfg: null, conversa: null },
 ): Promise<unknown> {
+  if (precisaQualificar(ctx.cfg, ctx.conversa) && !ANTES_DE_QUALIFICAR.has(nome)) {
+    return { erro: "Antes, peça os dados do paciente e a unidade e chame qualificar_atendimento." };
+  }
   switch (nome) {
+    case "qualificar_atendimento": {
+      const campos = ctx.cfg?.qualificar_campos ?? { nome: true, telefone: true, unidade: true };
+      const nomeL = String(a.nome ?? "").trim().slice(0, 120) || paciente?.nome || ctx.conversa?.lead_nome || "";
+      const telL = String(a.telefone ?? "").replace(/\D/g, "").slice(0, 13) || String(paciente?.celular ?? "").replace(/\D/g, "") || ctx.conversa?.lead_telefone || "";
+      const emailL = String(a.email ?? "").trim().slice(0, 160) || paciente?.email || ctx.conversa?.lead_email || "";
+      const falta: string[] = [];
+      if (campos.nome !== false && nomeL.length < 3) falta.push("nome completo");
+      if (campos.telefone !== false && telL.length < 10) falta.push("celular com DDD");
+      if (campos.email === true && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailL)) falta.push("e-mail");
+      const { data: unidades } = await admin.from("unidades_cache").select("codigo_shift, nome, cidade").eq("ativo", true);
+      const alvo = normalizar(String(a.unidade ?? ""));
+      let un: any = null;
+      if (alvo) {
+        const lista = unidades ?? [];
+        un = lista.find((u: any) => normalizar(u.nome) === alvo) ??
+          (lista.filter((u: any) => normalizar(u.nome).includes(alvo) || alvo.includes(normalizar(u.nome))).length === 1
+            ? lista.find((u: any) => normalizar(u.nome).includes(alvo) || alvo.includes(normalizar(u.nome)))
+            : null);
+      }
+      if (campos.unidade !== false && !un) falta.push("unidade (uma destas: " + (unidades ?? []).map((u: any) => u.nome).join(", ") + ")");
+      if (falta.length) return { ok: false, faltando: falta, instrucao: "Peça ao paciente o que falta e chame de novo." };
+      const upd: any = {
+        lead_nome: nomeL || null,
+        lead_telefone: telL || null,
+        lead_email: emailL || null,
+        qualificado_em: new Date().toISOString(),
+        ...(un ? { unidade_codigo_shift: un.codigo_shift, unidade_nome: un.nome } : {}),
+      };
+      if (conversaId) {
+        await admin.from("chat_conversas").update(upd).eq("id", conversaId);
+        const trocou = un && ctx.conversa?.unidade_codigo_shift && ctx.conversa.unidade_codigo_shift !== un.codigo_shift;
+        await admin.from("chat_mensagens").insert({
+          conversa_id: conversaId, autor: "sistema",
+          texto: `📍 Atendimento ${trocou ? "transferido para" : "direcionado à"} unidade ${un?.nome ?? "—"}`,
+          meta: { evento: "qualificado", unidade: un?.codigo_shift ?? null },
+        });
+      }
+      if (ctx.conversa) Object.assign(ctx.conversa, upd);
+      return { ok: true, unidade: un?.nome ?? null, instrucao: "Agradeça e pergunte (ou responda) como pode ajudar." };
+    }
     case "buscar_exames": {
       const termo = limparBusca(a.termo);
       if (!termo) return { erro: "termo vazio" };
@@ -745,7 +839,11 @@ async function executar(
         const ja = new Set(existente.itens.map((i: any) => i.codigoShift));
         existente.itens.push(...itens.filter((i) => !ja.has(i.codigoShift)));
       } else {
-        acoes.push({ tipo: "carrinho", tipo_compra: a.tipo, itens });
+        acoes.push({
+          tipo: "carrinho", tipo_compra: a.tipo, itens,
+          unidade_codigo_shift: ctx.conversa?.unidade_codigo_shift ?? null,
+          unidade_nome: ctx.conversa?.unidade_nome ?? null,
+        });
       }
       const carrinho = existente ?? acoes[acoes.length - 1];
       return {
@@ -875,5 +973,25 @@ async function estadoPublico(admin: any, conversaId: string) {
     ia_ativa: c?.ia_ativa ?? true,
     atendente: c && !c.ia_ativa ? await nomeEquipe(admin, c.responsavel_id) : null,
     canal: c?.canal_chave ?? null,
+  };
+}
+
+/** Situação da qualificação para o prompt. */
+function qualif(cfg: any, conversa: any, paciente: any): Qualif {
+  const campos = cfg?.qualificar_campos ?? { nome: true, telefone: true, unidade: true };
+  const conhecidos: string[] = [];
+  const pedir: string[] = [];
+  const nome = paciente?.nome || conversa?.lead_nome;
+  const tel = paciente?.celular || conversa?.lead_telefone;
+  const email = paciente?.email || conversa?.lead_email;
+  if (campos.nome !== false) (nome ? conhecidos.push(`nome ${nome}`) : pedir.push("o nome completo"));
+  if (campos.telefone !== false) (tel ? conhecidos.push(`celular ${tel}`) : pedir.push("o celular com DDD (WhatsApp)"));
+  if (campos.email === true) (email ? conhecidos.push(`e-mail ${email}`) : pedir.push("o e-mail"));
+  if (campos.unidade !== false) pedir.push("em qual UNIDADE da Sancet deseja fazer os exames");
+  return {
+    pendente: precisaQualificar(cfg, conversa),
+    pedir: pedir.length ? pedir : ["em qual unidade deseja ser atendido"],
+    conhecidos: conhecidos.join(", "),
+    unidade: conversa?.unidade_nome ?? null,
   };
 }

@@ -15,6 +15,7 @@ import { AbaSites } from "@/components/staff/AbaSites";
 import { AbaAjuda } from "@/components/staff/AbaAjuda";
 import { AbaRecall } from "@/components/staff/AbaRecall";
 import { AbaConversas } from "@/components/staff/AbaConversas";
+import { AbaSuperAdmin } from "@/components/staff/AbaSuperAdmin";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { toast } from "sonner";
 
@@ -153,7 +154,7 @@ const StaffDashboard = () => {
   }
 
   return (
-    <StaffShell abaAtiva={aba} onTrocarAba={trocarAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin}>
+    <StaffShell abaAtiva={aba} onTrocarAba={trocarAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin} isSuperAdmin={staffPerfil.isSuperAdmin}>
       {aba === "visao" && <AbaVisaoGeral />}
       {aba === "pedidos" && <AbaPedidos permissoes={staffPerfil.permissoes} />}
       {aba === "conversas" && <AbaConversas userId={staffPerfil.userId} isAdmin={staffPerfil.isAdmin} />}
@@ -161,7 +162,10 @@ const StaffDashboard = () => {
       {aba === "catalogo" && <AbaCatalogo permissoes={staffPerfil.permissoes} />}
       {aba === "unidades" && <AbaUnidades permissoes={staffPerfil.permissoes} />}
       {aba === "convenios" && <AbaConvenios />}
-      {aba === "config" && <AbaConfiguracoes permissoes={staffPerfil.permissoes} isAdmin={staffPerfil.isAdmin} />}
+      {aba === "config" && (
+        <AbaConfiguracoes permissoes={staffPerfil.permissoes} isAdmin={staffPerfil.isAdmin} isSuperAdmin={staffPerfil.isSuperAdmin} />
+      )}
+      {aba === "superadmin" && staffPerfil.isSuperAdmin && <AbaSuperAdmin />}
       {aba === "sites" && <AbaSites />}
       {aba === "equipe" && <AbaEquipe />}
       {aba === "recall" && <AbaRecall />}

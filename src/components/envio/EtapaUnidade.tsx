@@ -8,9 +8,10 @@ import { ListaUnidades, Unidade } from "./ListaUnidades";
 
 type Props = {
   onConfirmar: (u: Unidade) => void;
+  sugerida?: string | null;
 };
 
-export const EtapaUnidade = ({ onConfirmar }: Props) => {
+export const EtapaUnidade = ({ onConfirmar, sugerida }: Props) => {
   const [cep, setCep] = useState("");
 
   return (
@@ -38,7 +39,7 @@ export const EtapaUnidade = ({ onConfirmar }: Props) => {
       </div>
 
       {/* "Escolher local" vai direto para a próxima etapa (sem abrir painel lateral). */}
-      <ListaUnidades onEscolher={onConfirmar} />
+      <ListaUnidades onEscolher={onConfirmar} sugerida={sugerida} />
 
       <Alert className="bg-muted/50 border-muted-foreground/20">
         <Info className="h-4 w-4" />

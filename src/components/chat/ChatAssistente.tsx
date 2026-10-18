@@ -6,8 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSacola, type ItemSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
 import { useLigacaoVoz, type SessaoVoz } from "./useLigacaoVoz";
+import { salvarVinculoChat } from "@/lib/chatVinculo";
 
-type Acao = { tipo: "carrinho"; tipo_compra: "particular" | "convenio"; itens: ItemSacola[] };
+type Acao = {
+  tipo: "carrinho";
+  tipo_compra: "particular" | "convenio";
+  itens: ItemSacola[];
+  unidade_codigo_shift?: string | null;
+  unidade_nome?: string | null;
+};
 type Msg = {
   id?: string;
   autor: "paciente" | "assistente" | "equipe" | "sistema";
@@ -294,6 +301,15 @@ export const ChatAssistente = () => {
 
   const continuarAgendamento = (a: Acao) => {
     if (emLigacao) ligacao.encerrar();
+    if (estado.conversa_id) {
+      salvarVinculoChat({
+        conversa_id: estado.conversa_id,
+        token: estado.token,
+        teste: codigoTeste,
+        unidade_codigo_shift: a.unidade_codigo_shift ?? null,
+        unidade_nome: a.unidade_nome ?? null,
+      });
+    }
     limpar();
     setTipo(a.tipo_compra);
     a.itens.forEach((it) => adicionar(it));

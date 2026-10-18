@@ -4,6 +4,7 @@ import {
   BellRing,
   Building2,
   ChevronDown,
+  Crown,
   ClipboardList,
   FileText,
   FlaskConical,
@@ -48,6 +49,7 @@ export type StaffTab =
   | "sites"
   | "equipe"
   | "recall"
+  | "superadmin"
   | "ajuda";
 
 const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
@@ -62,6 +64,7 @@ const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "sites", label: "Sites", icon: FileText },
   { id: "equipe", label: "Equipe", icon: UserCog },
   { id: "recall", label: "Recall", icon: BellRing },
+  { id: "superadmin", label: "Super Admin", icon: Crown },
   { id: "ajuda", label: "Ajuda", icon: LifeBuoy },
 ];
 
@@ -73,11 +76,12 @@ type Props = {
   onTrocarAba: (t: StaffTab) => void;
   emailUsuario: string | null;
   isAdmin: boolean;
+  isSuperAdmin?: boolean;
 };
 
-export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAdmin }: Props) => {
-  const itensVisiveis = ITENS.filter(
-    (i) => (i.id !== "equipe" && i.id !== "sites" && i.id !== "recall") || isAdmin,
+export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAdmin, isSuperAdmin = false }: Props) => {
+  const itensVisiveis = ITENS.filter((i) =>
+    i.id === "superadmin" ? isSuperAdmin : (i.id !== "equipe" && i.id !== "sites" && i.id !== "recall") || isAdmin,
   );
   const navigate = useNavigate();
   const location = useLocation();

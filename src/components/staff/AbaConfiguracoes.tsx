@@ -111,6 +111,8 @@ type Secao = {
   /** chaves usadas para calcular se está "conectado" */
   chavesRequeridas?: string[];
   adminOnly?: boolean;
+  /** Integrações e operações perigosas: só o super admin da plataforma. */
+  superOnly?: boolean;
 };
 
 const SECOES: Secao[] = [
@@ -120,14 +122,7 @@ const SECOES: Secao[] = [
     descricao: "Integração SOAP com o sistema laboratorial",
     icone: Database,
     chavesRequeridas: ["SHIFT_ENDPOINT", "SHIFT_USER_ID", "SHIFT_SENHA"],
-  },
-  {
-    id: "ia",
-    titulo: "OpenRouter",
-    descricao: "Modelos de IA para leitura de receitas",
-    brand: "openrouter",
-    icone: Sparkles,
-    chavesRequeridas: ["OPENROUTER_API_KEY"],
+    superOnly: true,
   },
   {
     id: "assistente",
@@ -142,6 +137,7 @@ const SECOES: Secao[] = [
     descricao: "Asaas, Mercado Pago e Paghiper",
     icone: CreditCard,
     chavesRequeridas: ["GATEWAY_ATIVO"],
+    superOnly: true,
   },
   {
     id: "atendimento",
@@ -157,6 +153,7 @@ const SECOES: Secao[] = [
     brand: "resend",
     icone: Mail,
     chavesRequeridas: ["RESEND_API_KEY", "RESEND_EMAIL_FROM"],
+    superOnly: true,
   },
   {
     id: "aparencia",
@@ -177,6 +174,7 @@ const SECOES: Secao[] = [
     descricao: "Reset e exclusão de dados",
     icone: AlertTriangle,
     adminOnly: true,
+    superOnly: true,
   },
 ];
 
@@ -294,9 +292,10 @@ const LogoUpload = ({
 type Props = {
   permissoes?: { config: { ver: boolean; editar: boolean } } | null;
   isAdmin?: boolean;
+  isSuperAdmin?: boolean;
 };
 
-export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) => {
+export const AbaConfiguracoes = ({ permissoes, isAdmin = false, isSuperAdmin = false }: Props = {}) => {
   if (permissoes?.config?.ver === false) {
     return (
       <div className="py-20 text-center text-muted-foreground">
@@ -306,6 +305,9 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
   }
   const podeEditar = permissoes?.config?.editar !== false;
   const [configs, setConfigs] = useState<Configs>({});
+  // Valores carregados: só regrava o que mudou (senhas de integração são
+  // invisíveis para quem não é super admin e não podem ser sobrescritas).
+  const [originais, setOriginais] = useState<Configs>({});
   const [revelados, setRevelados] = useState<Set<string>>(new Set());
   const [salvando, setSalvando] = useState(false);
   const [zonaRiscoAberta, setZonaRiscoAberta] = useState(false);
@@ -346,6 +348,7 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
           map[r.chave] = r.valor;
         });
         setConfigs(map);
+        setOriginais(map);
       });
   }, []);
 
@@ -368,23 +371,35 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
 
   const salvar = async () => {
     setSalvando(true);
-    const rows = CHAVES.map((chave) => ({
+    const rows = CHAVES.filter((chave) => (configs[chave] ?? "") !== (originais[chave] ?? "")).map((chave) => ({
       chave,
       valor: configs[chave] ?? "",
       atualizado_em: new Date().toISOString(),
     }));
+    if (!rows.length) {
+      setSalvando(false);
+      return toast.info("Nada para salvar.");
+    }
     const { error } = await supabase
       .from("configuracoes")
       .upsert(rows, { onConflict: "chave" });
     setSalvando(false);
     if (error) toast.error("Erro ao salvar configurações");
-    else toast.success("Configurações salvas!");
+    else {
+      setOriginais((o) => ({ ...o, ...Object.fromEntries(rows.map((r) => [r.chave, r.valor])) }));
+      toast.success("Configurações salvas!");
+    }
   };
 
   const secoesVisiveis = useMemo(
-    () => SECOES.filter((s) => !s.adminOnly || isAdmin),
-    [isAdmin],
+    () => SECOES.filter((s) => (!s.adminOnly || isAdmin) && (!s.superOnly || isSuperAdmin)),
+    [isAdmin, isSuperAdmin],
   );
+
+  // Abre na primeira seção que a pessoa pode ver.
+  useEffect(() => {
+    if (secoesVisiveis.length && !secoesVisiveis.some((x) => x.id === secaoAtiva)) setSecaoAtiva(secoesVisiveis[0].id);
+  }, [secoesVisiveis, secaoAtiva]);
 
   const statusSecao = (s: Secao) => {
     if (!s.chavesRequeridas) return null;
@@ -775,44 +790,6 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false }: Props = {}) =>
               </CardHeader>
               <CardContent>
                 <AbaAuditoria />
-              </CardContent>
-            </Card>
-          )}
-
-          {secaoAtiva === "ia" && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-secondary" /> Modelo de IA
-                  </CardTitle>
-                  {statusSecao(SECOES.find((s) => s.id === "ia")!) && <Badge variant="secondary">Conectado</Badge>}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Um único API key dá acesso a Claude, GPT-4o, Gemini e DeepSeek via OpenRouter.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {campo("OPENROUTER_API_KEY", "API Key", "sk-or-...")}
-                <div className="space-y-1.5">
-                  <Label>Modelo para leitura de receitas</Label>
-                  <Select
-                    value={configs["OPENROUTER_MODELO"] ?? "google/gemini-2.5-flash-preview:free"}
-                    onValueChange={(v) => set("OPENROUTER_MODELO", v)}
-                    disabled={!podeEditar}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um modelo..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MODELOS_OPENROUTER.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </CardContent>
             </Card>
           )}
