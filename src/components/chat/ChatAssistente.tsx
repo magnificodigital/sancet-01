@@ -7,6 +7,8 @@ import { useSacola, type ItemSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
 import { useLigacaoVoz, type SessaoVoz } from "./useLigacaoVoz";
 import { salvarVinculoChat } from "@/lib/chatVinculo";
+import { PlayerAudio } from "@/components/audio/PlayerAudio";
+import { BarraGravando, BotaoMicrofone, gravacaoSuportada, useGravadorAudio } from "@/components/audio/useGravadorAudio";
 
 type Acao = {
   tipo: "carrinho";
@@ -22,7 +24,7 @@ type Msg = {
   acoes?: Acao[];
   voz?: boolean;
   autor_nome?: string | null;
-  anexo?: { nome: string; mime: string; url: string | null } | null;
+  anexo?: { nome: string; mime: string; url: string | null; transcricao?: string | null } | null;
 };
 type Atendimento = { status: "ia" | "aguardando" | "humano" | "encerrada"; ia_ativa: boolean; atendente: string | null };
 type Status = {
@@ -38,6 +40,8 @@ type Status = {
   paginas_ocultas?: string[];
   anexos?: boolean;
   atendente?: boolean;
+  audio?: boolean;
+  audio_max_seg?: number;
 };
 
 const CHAVE = "sancet_chat_v1";
@@ -219,6 +223,13 @@ export const ChatAssistente = () => {
     if (aberto && estado.nao_lidas) setEstado((s) => ({ ...s, nao_lidas: 0 }));
   }, [aberto, estado.nao_lidas]);
 
+  const enviarRef = useRef<(m: string, a?: File) => void>(() => {});
+  const gravador = useGravadorAudio({
+    maxSeg: status?.audio_max_seg ?? 180,
+    onPronto: (f) => enviarRef.current("", f),
+    onErro: (msg) => toast.error(msg),
+  });
+
   const ligacao = useLigacaoVoz({
     obterSessao: useCallback(async () => (await chamar({ acao: "voz_iniciar" })) as SessaoVoz, [chamar]),
     executarFerramenta: async (nome, args) => {
@@ -277,7 +288,11 @@ export const ChatAssistente = () => {
 
   const enviar = async (mensagem: string, anexo?: File) => {
     if ((!mensagem.trim() && !anexo) || enviando) return;
-    const minha: Msg = { autor: "paciente", texto: anexo ? `📎 ${anexo.name}${mensagem ? `\n${mensagem}` : ""}` : mensagem };
+    const ehAudio = !!anexo && anexo.type.startsWith("audio/");
+    const idLocal = `local-${Date.now()}`;
+    const minha: Msg = ehAudio
+      ? { id: idLocal, autor: "paciente", texto: "", anexo: { nome: "Áudio", mime: anexo!.type, url: URL.createObjectURL(anexo!) } }
+      : { id: idLocal, autor: "paciente", texto: anexo ? `📎 ${anexo.name}${mensagem ? `\n${mensagem}` : ""}` : mensagem };
     setEstado((s) => ({ ...s, mensagens: [...s.mensagens, minha] }));
     setTexto("");
     setEnviando(true);
@@ -285,8 +300,28 @@ export const ChatAssistente = () => {
       const corpo: any = { mensagem };
       if (anexo) corpo.anexo = { base64: await paraBase64(anexo), mime: anexo.type, nome: anexo.name };
       const data = await chamar(corpo);
+      // Áudio do paciente: troca o link local pelo do servidor e mostra a transcrição.
+      if (ehAudio && data.meu_anexo?.url) {
+        setEstado((s) => ({
+          ...s,
+          mensagens: s.mensagens.map((m) =>
+            m.id === idLocal ? { ...m, anexo: { nome: "Áudio", mime: data.meu_anexo.mime, url: data.meu_anexo.url, transcricao: data.meu_anexo.transcricao } } : m,
+          ),
+        }));
+      }
       if (data.resposta) {
-        setEstado((s) => ({ ...s, mensagens: [...s.mensagens, { autor: "assistente", texto: data.resposta, acoes: data.acoes ?? [] }] }));
+        setEstado((s) => ({
+          ...s,
+          mensagens: [
+            ...s.mensagens,
+            {
+              autor: "assistente",
+              texto: data.resposta,
+              acoes: data.acoes ?? [],
+              ...(data.resposta_audio ? { anexo: { nome: "Áudio", mime: "audio/mpeg", url: data.resposta_audio } } : {}),
+            },
+          ],
+        }));
       }
       sincronizar();
     } catch (e: any) {
@@ -298,6 +333,8 @@ export const ChatAssistente = () => {
       setEnviando(false);
     }
   };
+
+  enviarRef.current = enviar;
 
   const continuarAgendamento = (a: Acao) => {
     if (emLigacao) ligacao.encerrar();
@@ -446,7 +483,12 @@ export const ChatAssistente = () => {
                   {m.texto && (
                     <Formatado texto={(m.id === "saudacao" || (i === 0 && !m.id && m.autor === "assistente")) && status.boas_vindas ? status.boas_vindas : m.texto} />
                   )}
-                  {m.anexo?.url &&
+                  {m.anexo?.url && m.anexo.mime.startsWith("audio/") ? (
+                    <div className="mt-0.5">
+                      <PlayerAudio src={m.anexo.url} claro={m.autor === "paciente" || m.autor === "equipe"} />
+                      {m.anexo.transcricao && <p className="mt-1 text-[11px] italic opacity-80">“{m.anexo.transcricao}”</p>}
+                    </div>
+                  ) : m.anexo?.url &&
                     (m.anexo.mime.startsWith("image/") ? (
                       <a href={m.anexo.url} target="_blank" rel="noreferrer" className="mt-1 block">
                         <img src={m.anexo.url} alt={m.anexo.nome} className="max-h-48 rounded-lg" />
@@ -524,6 +566,10 @@ export const ChatAssistente = () => {
                   enviar(texto, f);
                 }}
               />
+              {gravador.gravando ? (
+                <BarraGravando segundos={gravador.segundos} maxSeg={status.audio_max_seg ?? 180} onCancelar={gravador.cancelar} onEnviar={gravador.enviar} />
+              ) : (
+              <>
               {status.anexos !== false && (
                 <button
                   type="button"
@@ -549,14 +595,20 @@ export const ChatAssistente = () => {
                 placeholder="Digite sua mensagem..."
                 className="max-h-28 min-h-[40px] flex-1 resize-none rounded-2xl border px-3 py-2 text-sm outline-none focus:border-brand"
               />
-              <button
-                type="submit"
-                disabled={enviando || !texto.trim()}
-                className="rounded-full bg-brand p-2 text-white disabled:opacity-40"
-                aria-label="Enviar"
-              >
-                <Send className="h-5 w-5" />
-              </button>
+              {!texto.trim() && status.audio !== false && gravacaoSuportada() ? (
+                <BotaoMicrofone onClick={gravador.iniciar} disabled={enviando || emLigacao} className="bg-brand hover:bg-brand-hover" />
+              ) : (
+                <button
+                  type="submit"
+                  disabled={enviando || !texto.trim()}
+                  className="rounded-full bg-brand p-2 text-white disabled:opacity-40"
+                  aria-label="Enviar"
+                >
+                  <Send className="h-5 w-5" />
+                </button>
+              )}
+              </>
+              )}
             </form>
           </div>
         </div>

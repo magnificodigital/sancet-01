@@ -262,9 +262,11 @@ Deno.serve(async (req) => {
     const anexo = body.anexo as { base64?: string; mime?: string; nome?: string } | undefined;
     if (acao === "mensagem") {
       if (!texto && !anexo?.base64) return json({ error: "Mensagem vazia." }, 400);
-      if (anexo?.base64 && !habil(cfg, "anexos")) return json({ error: "Envio de arquivos desativado neste chat." }, 400);
-      if (anexo?.base64 && (anexo.base64.length > MAX_ANEXO || !/^(image\/|application\/pdf)/.test(String(anexo.mime)))) {
-        return json({ error: "Envie uma foto ou PDF de até 10 MB." }, 400);
+      const ehAudio = /^audio\//.test(String(anexo?.mime ?? ""));
+      if (anexo?.base64 && ehAudio && cfg?.audio_paciente === false) return json({ error: "Envio de áudio desativado neste chat." }, 400);
+      if (anexo?.base64 && !ehAudio && !habil(cfg, "anexos")) return json({ error: "Envio de arquivos desativado neste chat." }, 400);
+      if (anexo?.base64 && (anexo.base64.length > MAX_ANEXO || !/^(image\/|application\/pdf|audio\/(webm|mp4|mpeg|ogg|wav|x-m4a|aac))/.test(String(anexo.mime)))) {
+        return json({ error: "Envie foto, PDF ou áudio de até 10 MB." }, 400);
       }
     }
 
@@ -488,18 +490,23 @@ Deno.serve(async (req) => {
 
     // Anexo do paciente fica guardado para a equipe ver
     let anexoPath: string | null = null;
+    const mimeAnexo = String(anexo?.mime ?? "").split(";")[0].toLowerCase();
+    const audioPaciente = !!anexo?.base64 && mimeAnexo.startsWith("audio/");
+    let transcricao = "";
     if (anexo?.base64) {
-      const ext = /pdf/.test(String(anexo.mime)) ? "pdf" : (String(anexo.mime).split("/")[1] || "jpg").replace(/[^a-z0-9]/gi, "").slice(0, 5);
+      const ext = EXT_MIME[mimeAnexo] ?? (mimeAnexo.split("/")[1] || "bin").replace(/[^a-z0-9]/gi, "").slice(0, 5);
       const caminho = `${conversaId}/${crypto.randomUUID()}.${ext}`;
       const bytes = Uint8Array.from(atob(anexo.base64), (ch) => ch.charCodeAt(0));
-      const { error: upErr } = await admin.storage.from("chat-anexos").upload(caminho, bytes, { contentType: anexo.mime, upsert: false });
+      const { error: upErr } = await admin.storage.from("chat-anexos").upload(caminho, bytes, { contentType: mimeAnexo, upsert: false });
       if (!upErr) anexoPath = caminho;
       else console.error("anexo chat:", upErr.message);
+      // Áudio: transcreve para a IA (e a equipe) entenderem.
+      if (audioPaciente) transcricao = await transcrever(bytes, mimeAnexo, ext).catch(() => "");
     }
 
     // Leitura do pedido médico enviado no chat (reaproveita a função de leitura)
     let notaAnexo = "";
-    if (anexo?.base64 && iaResponde) {
+    if (anexo?.base64 && !audioPaciente && iaResponde) {
       const tipoCtx = (conversa.contexto?.tipo as string) || "particular";
       const catalogo = await catalogoParaLeitura(admin, tipoCtx);
       const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sancet-ler-receita`, {
@@ -525,15 +532,34 @@ Deno.serve(async (req) => {
     await admin.from("chat_mensagens").insert({
       conversa_id: conversaId,
       autor: "paciente",
-      texto: texto || null,
+      texto: [texto, transcricao].filter(Boolean).join("\n") || null,
       anexo_path: anexoPath,
-      anexo_nome: anexo ? String(anexo.nome ?? "arquivo").slice(0, 200) : null,
-      anexo_mime: anexo ? String(anexo.mime ?? "").slice(0, 100) : null,
-      meta: anexo ? { anexo: anexo.nome ?? "arquivo", ...(notaAnexo ? { leitura: notaAnexo } : {}) } : {},
+      anexo_nome: anexo ? (audioPaciente ? "Áudio" : String(anexo.nome ?? "arquivo").slice(0, 200)) : null,
+      anexo_mime: anexo ? mimeAnexo.slice(0, 100) : null,
+      meta: anexo
+        ? {
+            anexo: audioPaciente ? "áudio" : anexo.nome ?? "arquivo",
+            ...(audioPaciente ? { audio: true, transcrito: !!transcricao } : {}),
+            ...(notaAnexo ? { leitura: notaAnexo } : {}),
+          }
+        : {},
     });
+    // Devolve ao site o próprio anexo (link temporário) e a transcrição.
+    const meuAnexo = anexoPath
+      ? {
+          url: (await admin.storage.from("chat-anexos").createSignedUrl(anexoPath, 3600)).data?.signedUrl ?? null,
+          mime: mimeAnexo,
+          transcricao: transcricao || null,
+        }
+      : null;
 
     if (!iaResponde) {
-      return json({ conversa_id: conversaId, token: tokenNovo, resposta: null, aguardando_humano: true, ...(await estadoPublico(admin, conversaId)) });
+      return json({ conversa_id: conversaId, token: tokenNovo, resposta: null, aguardando_humano: true, meu_anexo: meuAnexo, ...(await estadoPublico(admin, conversaId)) });
+    }
+    if (audioPaciente && !transcricao && !texto) {
+      const r0 = "Recebi seu áudio, mas não consegui ouvir agora. 😕 Pode escrever sua mensagem, por favor?";
+      await admin.from("chat_mensagens").insert({ conversa_id: conversaId, autor: "assistente", texto: r0, meta: {} });
+      return json({ conversa_id: conversaId, token: tokenNovo, resposta: r0, acoes: [], meu_anexo: meuAnexo, ...(await estadoPublico(admin, conversaId)) });
     }
 
     // Histórico recente
@@ -598,13 +624,33 @@ Deno.serve(async (req) => {
     }
     if (!resposta) resposta = "Desculpe, não consegui concluir agora. Pode reformular ou falar com nossa equipe?";
 
-    await admin.from("chat_mensagens").insert({ conversa_id: conversaId, autor: "assistente", texto: resposta, meta: {
-      ...(acoes.length ? { acoes } : {}),
-      ...(citados.size ? { exames_citados: [...citados.values()].slice(0, 40) } : {}),
-    } });
+    // Paciente mandou áudio: a IA responde em áudio também (além do texto).
+    let respAudio: { path: string; url: string | null } | null = null;
+    if (audioPaciente && cfg?.audio_responder_com_audio !== false) {
+      const mp3 = await falar(resposta, cfg?.voz_nome).catch(() => null);
+      if (mp3) {
+        const caminho = `${conversaId}/${crypto.randomUUID()}.mp3`;
+        const { error: e2 } = await admin.storage.from("chat-anexos").upload(caminho, mp3, { contentType: "audio/mpeg" });
+        if (!e2) respAudio = { path: caminho, url: (await admin.storage.from("chat-anexos").createSignedUrl(caminho, 3600)).data?.signedUrl ?? null };
+      }
+    }
+
+    await admin.from("chat_mensagens").insert({
+      conversa_id: conversaId, autor: "assistente", texto: resposta,
+      ...(respAudio ? { anexo_path: respAudio.path, anexo_nome: "Áudio", anexo_mime: "audio/mpeg" } : {}),
+      meta: {
+        ...(acoes.length ? { acoes } : {}),
+        ...(citados.size ? { exames_citados: [...citados.values()].slice(0, 40) } : {}),
+        ...(respAudio ? { audio: true } : {}),
+      },
+    });
     await admin.from("chat_conversas").update({ contexto, updated_at: new Date().toISOString() }).eq("id", conversaId);
 
-    return json({ conversa_id: conversaId, token: tokenNovo, resposta, acoes, ...(await estadoPublico(admin, conversaId)) });
+    return json({
+      conversa_id: conversaId, token: tokenNovo, resposta, acoes, meu_anexo: meuAnexo,
+      ...(respAudio?.url ? { resposta_audio: respAudio.url } : {}),
+      ...(await estadoPublico(admin, conversaId)),
+    });
   } catch (e) {
     console.error("assistente:", e);
     return json({ error: "Não consegui responder agora. Tente de novo em instantes." }, 500);
@@ -996,4 +1042,56 @@ function qualif(cfg: any, conversa: any, paciente: any): Qualif {
     conhecidos: conhecidos.join(", "),
     unidade: conversa?.unidade_nome ?? null,
   };
+}
+
+const EXT_MIME: Record<string, string> = {
+  "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic",
+  "audio/webm": "webm", "audio/mp4": "m4a", "audio/x-m4a": "m4a", "audio/mpeg": "mp3", "audio/ogg": "ogg", "audio/wav": "wav", "audio/aac": "aac",
+};
+
+/** Áudio → texto (OpenAI). Sem chave, devolve vazio. */
+async function transcrever(bytes: Uint8Array, mime: string, ext: string): Promise<string> {
+  const chave = await segredo("OPENAI_API_KEY");
+  if (!chave) return "";
+  const fd = new FormData();
+  fd.append("file", new Blob([bytes], { type: mime }), `audio.${ext === "m4a" ? "m4a" : ext}`);
+  fd.append("model", await modeloIA("transcricao", "gpt-4o-mini-transcribe"));
+  fd.append("language", "pt");
+  const r = await fetch("https://api.openai.com/v1/audio/transcriptions", { method: "POST", headers: { Authorization: `Bearer ${chave}` }, body: fd });
+  if (!r.ok) {
+    console.error("transcrever:", r.status, (await r.text()).slice(0, 200));
+    return "";
+  }
+  return String((await r.json())?.text ?? "").trim().slice(0, 4000);
+}
+
+/** Texto → áudio mp3 (OpenAI TTS), com a voz configurada. */
+async function falar(texto: string, voz?: string): Promise<Uint8Array | null> {
+  const chave = await segredo("OPENAI_API_KEY");
+  if (!chave) return null;
+  const limpo = texto
+    .replace(/\*\*/g, "")
+    .replace(/^[•\-*]\s*/gm, "")
+    .replace(/R\$\s?(\d+),00/g, "$1 reais")
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
+    .slice(0, 3500);
+  const pedir = (v: string) =>
+    fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${chave}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts",
+        voice: v,
+        input: limpo,
+        response_format: "mp3",
+        instructions: "Fale em português do Brasil, com tom acolhedor e natural, ritmo tranquilo.",
+      }),
+    });
+  let r = await pedir(voz || "coral");
+  if (!r.ok && voz && voz !== "coral") r = await pedir("coral"); // voz não suportada no TTS
+  if (!r.ok) {
+    console.error("falar:", r.status, (await r.text()).slice(0, 200));
+    return null;
+  }
+  return new Uint8Array(await r.arrayBuffer());
 }

@@ -40,6 +40,8 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FichaPacienteChat } from "./FichaPacienteChat";
+import { PlayerAudio } from "@/components/audio/PlayerAudio";
+import { BarraGravando, BotaoMicrofone, gravacaoSuportada, useGravadorAudio } from "@/components/audio/useGravadorAudio";
 import { ModalPedidoStaff } from "./ModalPedidoStaff";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -163,10 +165,11 @@ const useAnexoUrl = () => {
   return url;
 };
 
-const Anexo = ({ m, url }: { m: Mensagem; url: string | null }) => {
+const Anexo = ({ m, url, claro = false }: { m: Mensagem; url: string | null; claro?: boolean }) => {
   if (!m.anexo_path) return null;
   const nome = m.anexo_nome ?? "anexo";
   if (!url) return <p className="mt-1 text-xs opacity-70">📎 {nome} (carregando...)</p>;
+  if ((m.anexo_mime ?? "").startsWith("audio/")) return <PlayerAudio src={url} claro={claro} />;
   if ((m.anexo_mime ?? "").startsWith("image/")) {
     return (
       <a href={url} target="_blank" rel="noreferrer" className="mt-1 block">
@@ -206,6 +209,8 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   const [sugerindo, setSugerindo] = useState(false);
   const fimRef = useRef<HTMLDivElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
+  const enviarRef = useRef<(f?: File) => void>(() => {});
+  const gravador = useGravadorAudio({ onPronto: (f) => enviarRef.current(f), onErro: (m) => toast.error(m) });
   const anexoUrl = useAnexoUrl();
 
   const nomeAtendente = useCallback(
@@ -445,6 +450,8 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
     }
   };
 
+  enviarRef.current = (f?: File) => void enviar(f);
+
   const confirmarTransferencia = async () => {
     if (!sel || !transferir?.para) return;
     const ok = await rpc(
@@ -517,8 +524,18 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                 m.autor === "equipe" && "rounded-br-md bg-brand-2 text-white",
               )}
             >
-              {m.texto && <p className="whitespace-pre-line">{m.texto}</p>}
-              <Anexo m={m} url={anexoUrl(m.anexo_path)} />
+              {(m.anexo_mime ?? "").startsWith("audio/") && <Anexo m={m} url={anexoUrl(m.anexo_path)} claro={m.autor === "equipe"} />}
+              {m.texto &&
+                (m.meta?.audio && doPaciente ? (
+                  <p className="mt-1 border-t pt-1 text-xs italic text-muted-foreground">
+                    <span className="not-italic font-medium">Transcrição: </span>
+                    {m.texto}
+                  </p>
+                ) : (
+                  <p className="whitespace-pre-line">{m.texto}</p>
+                ))}
+              {m.meta?.audio && doPaciente && !m.texto && <p className="mt-1 text-[11px] italic text-muted-foreground">Sem transcrição (chave da OpenAI não configurada).</p>}
+              {!(m.anexo_mime ?? "").startsWith("audio/") && <Anexo m={m} url={anexoUrl(m.anexo_path)} />}
               {acoes.map((a, j) => (
                 <p key={j} className="mt-1.5 flex items-start gap-1 rounded-lg bg-white/80 px-2 py-1 text-[11px] text-secondary">
                   <ShoppingCart className="mt-0.5 h-3 w-3 shrink-0" />
@@ -546,15 +563,15 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Cabeçalho da página */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="rounded-xl bg-secondary/10 p-2.5 text-secondary">
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      {/* Cabeçalho da página (compacto: a conversa ocupa a tela) */}
+      <div className="flex shrink-0 flex-wrap items-center gap-3">
+        <div className="rounded-xl bg-secondary/10 p-2 text-secondary">
           <MessageSquare className="h-5 w-5" />
         </div>
         <div className="mr-auto">
-          <h1 className="text-2xl font-bold text-secondary">Conversas</h1>
-          <p className="text-sm text-muted-foreground">Atendimento do chat do site: IA, fila e equipe no mesmo lugar.</p>
+          <h1 className="text-xl font-bold leading-tight text-secondary">Conversas</h1>
+          <p className="hidden text-xs text-muted-foreground sm:block">Atendimento do chat do site: IA, fila e equipe no mesmo lugar.</p>
         </div>
         <div className="hidden gap-2 lg:flex">
           {kpis.map((k) => (
@@ -563,7 +580,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
               onClick={() => setFiltro(k.id)}
               className={cn("rounded-xl border px-3 py-1.5 text-left transition hover:shadow-sm", k.cls, filtro === k.id && "ring-2 ring-current/20")}
             >
-              <p className="text-lg font-bold leading-none">{k.valor}</p>
+              <p className="text-base font-bold leading-none">{k.valor}</p>
               <p className="text-[11px]">{k.label}</p>
             </button>
           ))}
@@ -585,7 +602,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
         </div>
       </div>
 
-      <div className="grid h-[calc(100vh-200px)] min-h-[540px] overflow-hidden rounded-2xl border bg-background shadow-sm md:grid-cols-[340px_1fr] xl:grid-cols-[330px_1fr_300px]">
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-2xl border bg-background shadow-sm md:grid-cols-[320px_1fr] xl:grid-cols-[340px_1fr_320px] 2xl:grid-cols-[380px_1fr_360px]">
         {/* Lista */}
         <div className={cn("flex min-h-0 flex-col border-r bg-muted/20", sel && "hidden md:flex")}>
           <div className="space-y-2.5 border-b bg-background p-3">
@@ -940,16 +957,32 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                       {sugerindo ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4" />} Sugerir
                     </Button>
                   )}
-                  <span className="ml-auto hidden text-[10px] text-muted-foreground sm:inline">Enter envia · Shift+Enter quebra linha</span>
-                  <Button
-                    onClick={() => enviar()}
-                    disabled={enviando || !texto.trim() || (!podeMexer && !interna)}
-                    size="sm"
-                    className={cn("h-8 rounded-full px-4", interna && "bg-amber-500 hover:bg-amber-600")}
-                  >
-                    {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />}
-                    {!enviando && (interna ? "Salvar nota" : "Enviar")}
-                  </Button>
+                  {gravador.gravando ? (
+                    <div className="ml-auto flex min-w-0 flex-1 sm:max-w-sm">
+                      <BarraGravando segundos={gravador.segundos} onCancelar={gravador.cancelar} onEnviar={gravador.enviar} />
+                    </div>
+                  ) : (
+                    <>
+                      <span className="ml-auto hidden text-[10px] text-muted-foreground sm:inline">Enter envia · Shift+Enter quebra linha</span>
+                      {!texto.trim() && gravacaoSuportada() ? (
+                        <BotaoMicrofone
+                          onClick={gravador.iniciar}
+                          disabled={enviando || (!podeMexer && !interna)}
+                          className={cn("h-8 w-8", interna && "bg-amber-500 hover:bg-amber-600")}
+                        />
+                      ) : (
+                        <Button
+                          onClick={() => enviar()}
+                          disabled={enviando || !texto.trim() || (!podeMexer && !interna)}
+                          size="sm"
+                          className={cn("h-8 rounded-full px-4", interna && "bg-amber-500 hover:bg-amber-600")}
+                        >
+                          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />}
+                          {!enviando && (interna ? "Salvar nota" : "Enviar")}
+                        </Button>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -4,6 +4,8 @@ import {
   BellRing,
   Building2,
   ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
   Crown,
   ClipboardList,
   FileText,
@@ -113,6 +115,31 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
   const { claro } = useLogos();
   const checkinAtivo = location.pathname.startsWith("/staff/checkin");
   const [mobileAberto, setMobileAberto] = useState(false);
+  // Conversas usa a tela toda: o menu recolhe sozinho ali (a escolha fica lembrada por tipo de tela).
+  const telaCheia = abaAtiva === "conversas" && !checkinAtivo;
+  const chavePref = telaCheia ? "sancet_menu_recolhido_conversas" : "sancet_menu_recolhido";
+  const lerPref = (k: string, padrao: boolean) => {
+    try {
+      const v = localStorage.getItem(k);
+      return v === null ? padrao : v === "1";
+    } catch {
+      return padrao;
+    }
+  };
+  const [recolhido, setRecolhido] = useState(() => lerPref(chavePref, telaCheia));
+  useEffect(() => {
+    setRecolhido(lerPref(chavePref, telaCheia));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chavePref]);
+  const alternarMenu = () =>
+    setRecolhido((r) => {
+      try {
+        localStorage.setItem(chavePref, r ? "0" : "1");
+      } catch {
+        /* sem storage */
+      }
+      return !r;
+    });
   const [pedidosNovos, setPedidosNovos] = useState<number>(0);
   const [conversasPendentes, setConversasPendentes] = useState<number>(0);
 
@@ -146,21 +173,38 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
     navigate("/staff/login", { replace: true });
   };
 
-  const Sidebar = (
+  const renderSidebar = (compacto: boolean, comBotao = true) => (
     <aside
-      className="flex min-h-0 w-60 shrink-0 flex-col text-white"
+      className={cn("flex min-h-0 shrink-0 flex-col text-white transition-[width] duration-200", compacto ? "w-[68px]" : "w-60")}
       style={{ backgroundColor: SIDEBAR_BG }}
     >
-      <div className="flex flex-col items-start gap-2 px-5 py-6">
-        <img src={claro || logoLight} alt="Sancet" className="h-14 w-auto" />
-        <p className="text-xs text-white/60">Painel Interno</p>
-      </div>
+      {compacto ? (
+        <div className="flex flex-col items-center gap-2 py-4">
+          {comBotao && (
+            <button onClick={alternarMenu} className="rounded-md p-2 text-white/70 hover:bg-white/10 hover:text-white" aria-label="Abrir menu" title="Abrir menu">
+              <ChevronsRight className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-start gap-2 px-5 py-6">
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+            <img src={claro || logoLight} alt="Sancet" className="h-14 w-auto" />
+            <p className="text-xs text-white/60">Painel Interno</p>
+          </div>
+          {comBotao && (
+            <button onClick={alternarMenu} className="-mr-2 rounded-md p-1.5 text-white/60 hover:bg-white/10 hover:text-white" aria-label="Recolher menu" title="Recolher menu">
+              <ChevronsLeft className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
       <hr className="border-white/15" />
 
-      <nav className="flex-1 space-y-4 overflow-y-auto p-3">
+      <nav className={cn("flex-1 overflow-y-auto", compacto ? "space-y-2 px-2 py-3" : "space-y-4 p-3")}>
         {grupos.map((g) => (
-          <div key={g.titulo ?? "inicio"} className="space-y-0.5">
-            {g.titulo && <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/45">{g.titulo}</p>}
+          <div key={g.titulo ?? "inicio"} className={cn("space-y-0.5", compacto && g.titulo && "border-t border-white/10 pt-2")}>
+            {g.titulo && !compacto && <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/45">{g.titulo}</p>}
             {g.itens.map((item) => {
               const ativo = item.id === "checkin" ? checkinAtivo : !checkinAtivo && abaAtiva === item.id;
               const Icon = item.icon;
@@ -173,14 +217,19 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
                     else onTrocarAba(item.id as StaffTab);
                     setMobileAberto(false);
                   }}
+                  title={compacto ? item.label : undefined}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-md border-l-[3px] border-transparent px-3 py-1.5 text-sm transition",
-                    ativo ? "border-white bg-white/15 font-medium" : "text-white/85 hover:bg-white/10 hover:text-white",
+                    "relative flex w-full items-center rounded-md text-sm transition",
+                    compacto ? "justify-center py-2.5" : "gap-3 border-l-[3px] border-transparent px-3 py-1.5",
+                    ativo ? (compacto ? "bg-white/20" : "border-white bg-white/15 font-medium") : "text-white/85 hover:bg-white/10 hover:text-white",
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="flex-1 text-left">{item.label}</span>
-                  {contador > 0 && (
+                  <Icon className={compacto ? "h-5 w-5" : "h-4 w-4"} />
+                  {!compacto && <span className="flex-1 text-left">{item.label}</span>}
+                  {compacto && contador > 0 && (
+                    <span className={cn("absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-[hsl(var(--brand-sidebar))]", item.id === "conversas" ? "bg-amber-400" : "bg-brand")} />
+                  )}
+                  {!compacto && contador > 0 && (
                     <span
                       className={cn(
                         "inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white",
@@ -197,33 +246,40 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
         ))}
       </nav>
 
-      <div className="px-3 pb-1">
+      <div className={compacto ? "px-2 pb-1" : "px-3 pb-1"}>
         <button
           onClick={() => {
             onTrocarAba("ajuda");
             setMobileAberto(false);
           }}
+          title={compacto ? "Ajuda" : undefined}
           className={cn(
-            "flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-sm transition",
+            "flex w-full items-center rounded-md text-sm transition",
+            compacto ? "justify-center py-2.5" : "gap-3 px-3 py-1.5",
             !checkinAtivo && abaAtiva === "ajuda" ? "bg-white/15 font-medium" : "text-white/70 hover:bg-white/10 hover:text-white",
           )}
         >
-          <LifeBuoy className="h-4 w-4" /> Ajuda
+          <LifeBuoy className={compacto ? "h-5 w-5" : "h-4 w-4"} /> {!compacto && "Ajuda"}
         </button>
       </div>
 
-      <div className="border-t border-white/15 p-3">
+      <div className={cn("border-t border-white/15", compacto ? "p-2" : "p-3")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-white/10"
+              className={cn("flex w-full items-center rounded-md py-2 text-left text-sm hover:bg-white/10", compacto ? "justify-center" : "gap-2 px-3")}
               aria-label="Minha conta"
+              title={compacto ? emailUsuario ?? "Minha conta" : undefined}
             >
               <UserCircle className="h-5 w-5 shrink-0" />
-              <span className="min-w-0 flex-1 truncate" title={emailUsuario ?? ""}>
-                {emailUsuario ?? "Minha conta"}
-              </span>
-              <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+              {!compacto && (
+                <>
+                  <span className="min-w-0 flex-1 truncate" title={emailUsuario ?? ""}>
+                    {emailUsuario ?? "Minha conta"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+                </>
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-56">
@@ -250,7 +306,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
   return (
     <div className="flex h-screen w-full overflow-hidden" style={{ backgroundColor: "#F5F5F5" }}>
       {/* Desktop sidebar */}
-      <div className="hidden md:flex">{Sidebar}</div>
+      <div className="hidden md:flex">{renderSidebar(recolhido)}</div>
 
       {/* Mobile sidebar (drawer) */}
       {mobileAberto && (
@@ -259,7 +315,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
             className="absolute inset-0 bg-black/50"
             onClick={() => setMobileAberto(false)}
           />
-          <div className="relative z-10">{Sidebar}</div>
+          <div className="relative z-10">{renderSidebar(false, false)}</div>
         </div>
       )}
 
@@ -281,7 +337,7 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Pr
           </p>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+        <main className={telaCheia ? "min-h-0 flex-1 overflow-hidden p-2 md:p-4" : "flex-1 overflow-y-auto p-4 md:p-8"}>{children}</main>
       </div>
     </div>
   );

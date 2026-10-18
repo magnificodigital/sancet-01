@@ -58,6 +58,9 @@ type Config = {
   fila_sem_resposta_min: number;
   fila_sem_resposta_acao: "avisar" | "ia" | "nada";
   msg_fila_demora: string | null;
+  audio_paciente: boolean;
+  audio_responder_com_audio: boolean;
+  audio_max_seg: number;
   atualizado_em: string | null;
 };
 
@@ -66,7 +69,7 @@ const COLUNAS_EDITAVEIS = [
   "nome_assistente", "boas_vindas", "texto_botao", "posicao", "cor_widget", "abrir_auto_seg", "sugestoes", "paginas_ocultas",
   "qualificar_obrigatorio", "qualificar_campos", "tom",
   "fila_distribuir", "fila_incluir_admins", "fila_max_por_atendente", "fila_prazo_min", "fila_sem_resposta_min",
-  "fila_sem_resposta_acao", "msg_fila_demora", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
+  "fila_sem_resposta_acao", "msg_fila_demora", "audio_paciente", "audio_responder_com_audio", "audio_max_seg", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
   "humano_horario", "fora_horario_acao", "msg_chamar_atendente", "msg_fora_horario", "msg_encerramento",
   "notificar_email", "emails_notificacao", "respostas_rapidas",
 ] as const;
@@ -232,6 +235,7 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
       fila_prazo_min: Math.min(Math.max(Math.round(cfg.fila_prazo_min) || 5, 1), 240),
       fila_sem_resposta_min: Math.min(Math.max(Math.round(cfg.fila_sem_resposta_min) || 15, 1), 1440),
       msg_fila_demora: limpo(cfg.msg_fila_demora),
+      audio_max_seg: Math.min(Math.max(Math.round(cfg.audio_max_seg) || 180, 15), 600),
       voz_velocidade: Math.min(Math.max(Number(cfg.voz_velocidade) || 1, 0.5), 1.5),
       sugestoes: cfg.sugestoes.map((s) => s.trim()).filter(Boolean),
       paginas_ocultas: cfg.paginas_ocultas.map((s) => s.trim()).filter(Boolean).map((s) => (s.startsWith("/") ? s : `/${s}`)),
@@ -716,6 +720,27 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
 
             {/* Voz */}
             <TabsContent value="voz" className="space-y-4 pt-4">
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-semibold">Mensagens de áudio (estilo WhatsApp)</p>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Paciente pode enviar áudio</p>
+                    <p className="text-xs text-muted-foreground">O áudio é transcrito para a IA e a equipe entenderem.</p>
+                  </div>
+                  <Switch checked={cfg.audio_paciente} disabled={d} onCheckedChange={(v) => mudar("audio_paciente", v)} />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">IA responde em áudio quando o paciente manda áudio</p>
+                    <p className="text-xs text-muted-foreground">A resposta também aparece escrita. Usa a voz escolhida abaixo.</p>
+                  </div>
+                  <Switch checked={cfg.audio_responder_com_audio} disabled={d} onCheckedChange={(v) => mudar("audio_responder_com_audio", v)} />
+                </div>
+                <div className="max-w-xs space-y-1.5">
+                  <Label>Duração máxima do áudio (segundos)</Label>
+                  <Input type="number" min={15} max={600} value={cfg.audio_max_seg} disabled={d} onChange={(e) => mudar("audio_max_seg", Number(e.target.value))} />
+                </div>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Voz</Label>
