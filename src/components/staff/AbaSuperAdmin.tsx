@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PermissoesUsuarios } from "./PermissoesUsuarios";
 
 const db = supabase as any;
 
@@ -70,7 +72,7 @@ const MODELOS: Record<keyof Modelos, { titulo: string; desc: string; opcoes: { v
   },
 };
 
-export const AbaSuperAdmin = () => {
+export const AbaSuperAdmin = ({ userId }: { userId: string | null }) => {
   const [chaves, setChaves] = useState<ItemChave[] | null>(null);
   const [novas, setNovas] = useState<Record<string, string>>({});
   const [testando, setTestando] = useState<string | null>(null);
@@ -154,9 +156,22 @@ export const AbaSuperAdmin = () => {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-secondary">Super Admin</h1>
-          <p className="text-sm text-muted-foreground">Integrações, chaves de API, modelos de IA e acessos da plataforma.</p>
+          <p className="text-sm text-muted-foreground">Permissões da equipe, integrações, chaves de API e modelos de IA.</p>
         </div>
       </div>
+
+      <Tabs defaultValue="permissoes">
+        <TabsList className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="permissoes">Permissões</TabsTrigger>
+          <TabsTrigger value="integracoes">Integrações e IA</TabsTrigger>
+          <TabsTrigger value="superadmins">Super admins</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="permissoes" className="pt-4">
+          <PermissoesUsuarios meuId={userId} />
+        </TabsContent>
+
+        <TabsContent value="integracoes" className="space-y-6 pt-4">
 
       {/* Chaves */}
       <Card>
@@ -282,7 +297,9 @@ export const AbaSuperAdmin = () => {
         </CardContent>
       </Card>
 
-      {/* Super admins */}
+        </TabsContent>
+
+        <TabsContent value="superadmins" className="pt-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -312,6 +329,8 @@ export const AbaSuperAdmin = () => {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

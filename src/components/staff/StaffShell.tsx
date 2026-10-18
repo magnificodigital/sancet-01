@@ -35,6 +35,8 @@ import {
 import { cn } from "@/lib/utils";
 import logoLight from "@/assets/logo-sancet-light.png";
 import { useLogos } from "@/lib/tema";
+import { useStaffPerfil } from "@/hooks/useStaffPerfil";
+import { pode } from "@/lib/permissoes";
 
 export type StaffTab =
   | "visao"
@@ -52,20 +54,43 @@ export type StaffTab =
   | "superadmin"
   | "ajuda";
 
-const ITENS: { id: StaffTab; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: "visao", label: "Visão Geral", icon: LayoutDashboard },
-  { id: "pedidos", label: "Pedidos", icon: ClipboardList },
-  { id: "conversas", label: "Conversas", icon: MessageSquare },
-  { id: "pacientes", label: "Pacientes", icon: Users },
-  { id: "catalogo", label: "Catálogo", icon: FlaskConical },
-  { id: "unidades", label: "Unidades", icon: Building2 },
-  { id: "convenios", label: "Convênios", icon: Shield },
-  { id: "config", label: "Configurações", icon: Settings2 },
-  { id: "sites", label: "Sites", icon: FileText },
-  { id: "equipe", label: "Equipe", icon: UserCog },
-  { id: "recall", label: "Recall", icon: BellRing },
-  { id: "superadmin", label: "Super Admin", icon: Crown },
-  { id: "ajuda", label: "Ajuda", icon: LifeBuoy },
+type ItemMenu = { id: StaffTab | "checkin"; label: string; icon: typeof LayoutDashboard; modulo?: string; superOnly?: boolean };
+
+/** Menu organizado por assunto. Cada item aparece conforme a permissão "ver" da área. */
+const GRUPOS: { titulo: string | null; itens: ItemMenu[] }[] = [
+  { titulo: null, itens: [{ id: "visao", label: "Visão Geral", icon: LayoutDashboard, modulo: "visao" }] },
+  {
+    titulo: "Atendimento",
+    itens: [
+      { id: "pedidos", label: "Pedidos", icon: ClipboardList, modulo: "pedidos" },
+      { id: "conversas", label: "Conversas", icon: MessageSquare, modulo: "conversas" },
+      { id: "checkin", label: "Check-in", icon: QrCode, modulo: "checkin" },
+      { id: "pacientes", label: "Pacientes", icon: Users, modulo: "pacientes" },
+    ],
+  },
+  {
+    titulo: "Cadastros",
+    itens: [
+      { id: "catalogo", label: "Catálogo", icon: FlaskConical, modulo: "catalogo" },
+      { id: "unidades", label: "Unidades", icon: Building2, modulo: "unidades" },
+      { id: "convenios", label: "Convênios", icon: Shield, modulo: "convenios" },
+    ],
+  },
+  {
+    titulo: "Marketing",
+    itens: [
+      { id: "sites", label: "Sites e páginas", icon: FileText, modulo: "paginas" },
+      { id: "recall", label: "Recall", icon: BellRing, modulo: "recall" },
+    ],
+  },
+  {
+    titulo: "Administração",
+    itens: [
+      { id: "equipe", label: "Equipe", icon: UserCog, modulo: "equipe" },
+      { id: "config", label: "Configurações", icon: Settings2, modulo: "config" },
+      { id: "superadmin", label: "Super Admin", icon: Crown, superOnly: true },
+    ],
+  },
 ];
 
 const SIDEBAR_BG = "hsl(var(--brand-sidebar))";
@@ -79,10 +104,10 @@ type Props = {
   isSuperAdmin?: boolean;
 };
 
-export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAdmin, isSuperAdmin = false }: Props) => {
-  const itensVisiveis = ITENS.filter((i) =>
-    i.id === "superadmin" ? isSuperAdmin : (i.id !== "equipe" && i.id !== "sites" && i.id !== "recall") || isAdmin,
-  );
+export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario }: Props) => {
+  const perfil = useStaffPerfil();
+  const visivel = (i: ItemMenu) => (i.superOnly ? perfil.isSuperAdmin : !i.modulo || pode(perfil.permissoes as any, i.modulo, "ver"));
+  const grupos = GRUPOS.map((g) => ({ ...g, itens: g.itens.filter(visivel) })).filter((g) => g.itens.length);
   const navigate = useNavigate();
   const location = useLocation();
   const { claro } = useLogos();
@@ -132,60 +157,60 @@ export const StaffShell = ({ children, abaAtiva, onTrocarAba, emailUsuario, isAd
       </div>
       <hr className="border-white/15" />
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {itensVisiveis.map((item) => {
-          const ativo = !checkinAtivo && abaAtiva === item.id;
-          const Icon = item.icon;
-          const botao = (
-            <button
-              key={item.id}
-              onClick={() => {
-                onTrocarAba(item.id);
-                setMobileAberto(false);
-              }}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-md border-l-[3px] border-transparent px-3 py-2 text-sm transition",
-                ativo ? "bg-white/15 border-white font-medium" : "hover:bg-white/10",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              <span className="flex-1 text-left">{item.label}</span>
-              {item.id === "conversas" && conversasPendentes > 0 && (
-                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                  {conversasPendentes > 99 ? "99+" : conversasPendentes}
-                </span>
-              )}
-              {item.id === "pedidos" && pedidosNovos > 0 && (
-                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                  {pedidosNovos > 99 ? "99+" : pedidosNovos}
-                </span>
-              )}
-            </button>
-          );
-          if (item.id === "pedidos") {
-            return (
-              <div key="pedidos-group" className="space-y-1">
-                {botao}
+      <nav className="flex-1 space-y-4 overflow-y-auto p-3">
+        {grupos.map((g) => (
+          <div key={g.titulo ?? "inicio"} className="space-y-0.5">
+            {g.titulo && <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/45">{g.titulo}</p>}
+            {g.itens.map((item) => {
+              const ativo = item.id === "checkin" ? checkinAtivo : !checkinAtivo && abaAtiva === item.id;
+              const Icon = item.icon;
+              const contador = item.id === "conversas" ? conversasPendentes : item.id === "pedidos" ? pedidosNovos : 0;
+              return (
                 <button
-                  key="checkin"
+                  key={item.id}
                   onClick={() => {
-                    navigate("/staff/checkin");
+                    if (item.id === "checkin") navigate("/staff/checkin");
+                    else onTrocarAba(item.id as StaffTab);
                     setMobileAberto(false);
                   }}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-md border-l-[3px] border-transparent px-3 py-2 text-sm transition",
-                    checkinAtivo ? "bg-white/15 border-white font-medium" : "hover:bg-white/10",
+                    "flex w-full items-center gap-3 rounded-md border-l-[3px] border-transparent px-3 py-1.5 text-sm transition",
+                    ativo ? "border-white bg-white/15 font-medium" : "text-white/85 hover:bg-white/10 hover:text-white",
                   )}
                 >
-                  <QrCode className="h-4 w-4" />
-                  <span className="flex-1 text-left">Check-in</span>
+                  <Icon className="h-4 w-4" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {contador > 0 && (
+                    <span
+                      className={cn(
+                        "inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white",
+                        item.id === "conversas" ? "bg-amber-500" : "bg-brand",
+                      )}
+                    >
+                      {contador > 99 ? "99+" : contador}
+                    </span>
+                  )}
                 </button>
-              </div>
-            );
-          }
-          return botao;
-        })}
+              );
+            })}
+          </div>
+        ))}
       </nav>
+
+      <div className="px-3 pb-1">
+        <button
+          onClick={() => {
+            onTrocarAba("ajuda");
+            setMobileAberto(false);
+          }}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-sm transition",
+            !checkinAtivo && abaAtiva === "ajuda" ? "bg-white/15 font-medium" : "text-white/70 hover:bg-white/10 hover:text-white",
+          )}
+        >
+          <LifeBuoy className="h-4 w-4" /> Ajuda
+        </button>
+      </div>
 
       <div className="border-t border-white/15 p-3">
         <DropdownMenu>

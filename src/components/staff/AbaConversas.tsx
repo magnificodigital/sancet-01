@@ -21,7 +21,15 @@ import {
   UserCheck,
   Users,
   Zap,
+  MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -86,11 +94,11 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: "encerradas", label: "Encerradas" },
 ];
 
-const STATUS_LABEL: Record<Conversa["status"], { label: string; cls: string }> = {
-  ia: { label: "IA atendendo", cls: "bg-violet-100 text-violet-700" },
-  aguardando: { label: "Aguardando atendente", cls: "bg-amber-100 text-amber-800" },
-  humano: { label: "Em atendimento", cls: "bg-blue-100 text-blue-700" },
-  encerrada: { label: "Encerrada", cls: "bg-muted text-muted-foreground" },
+const STATUS_LABEL: Record<Conversa["status"], { label: string; cls: string; dot: string }> = {
+  ia: { label: "IA atendendo", cls: "bg-violet-100 text-violet-700", dot: "bg-violet-500" },
+  aguardando: { label: "Aguardando atendente", cls: "bg-amber-100 text-amber-800", dot: "bg-amber-500" },
+  humano: { label: "Em atendimento", cls: "bg-blue-100 text-blue-700", dot: "bg-blue-500" },
+  encerrada: { label: "Encerrada", cls: "bg-muted text-muted-foreground", dot: "bg-gray-400" },
 };
 
 const COLS_CONVERSA =
@@ -453,13 +461,17 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
     const sep = !ant || new Date(ant.created_at).toDateString() !== new Date(m.created_at).toDateString();
     const voz = m.meta?.canal === "voz";
     const acoes: any[] = Array.isArray(m.meta?.acoes) ? m.meta.acoes : [];
+    // Agrupa mensagens seguidas do mesmo autor (até 3 min): mostra rótulo só na primeira.
+    const continua =
+      !sep && !!ant && ant.autor === m.autor && ant.autor_nome === m.autor_nome &&
+      new Date(m.created_at).getTime() - new Date(ant.created_at).getTime() < 3 * 60_000;
     let corpo: JSX.Element | null = null;
 
     if (m.autor === "sistema") {
       if (!m.texto && !acoes.length) return sep ? <Separador iso={m.created_at} /> : null;
       corpo = (
-        <div className="flex justify-center">
-          <span className="rounded-full bg-muted px-3 py-1 text-center text-[11px] text-muted-foreground">
+        <div className="flex justify-center py-0.5">
+          <span className="max-w-[85%] rounded-full border bg-white/80 px-3 py-1 text-center text-[11px] text-muted-foreground shadow-sm">
             {m.texto ?? `🛒 Carrinho montado pela voz: ${acoes.flatMap((a) => a.itens?.map((i: any) => i.nome) ?? []).join(", ")}`}
             <span className="ml-2 opacity-60">{hora(m.created_at)}</span>
           </span>
@@ -467,8 +479,8 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
       );
     } else if (m.autor === "nota") {
       corpo = (
-        <div className="mx-auto max-w-[90%] rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          <p className="mb-0.5 flex items-center gap-1 text-[11px] font-semibold">
+        <div className="mx-auto w-full max-w-[85%] rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 shadow-sm">
+          <p className="mb-0.5 flex items-center gap-1 text-[11px] font-semibold text-amber-700">
             <Lock className="h-3 w-3" /> Nota interna · {m.autor_nome} · {hora(m.created_at)}
           </p>
           <p className="whitespace-pre-line">{m.texto}</p>
@@ -476,33 +488,45 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
         </div>
       );
     } else {
-      const lado = m.autor === "paciente" ? "esq" : "dir";
-      const rotulo =
-        m.autor === "paciente" ? (sel ? nomeConversa(sel) : "Paciente") : m.autor === "assistente" ? "Assistente IA" : m.autor_nome ?? "Equipe";
+      const doPaciente = m.autor === "paciente";
+      const rotulo = doPaciente ? (sel ? nomeConversa(sel) : "Paciente") : m.autor === "assistente" ? "Assistente IA" : m.autor_nome ?? "Equipe";
+      const avatar = doPaciente ? (
+        <Avatar nome={rotulo} />
+      ) : m.autor === "assistente" ? (
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
+          <Bot className="h-4 w-4" />
+        </div>
+      ) : (
+        <Avatar nome={rotulo} escuro />
+      );
       corpo = (
-        <div className={cn("flex", lado === "esq" ? "justify-start" : "justify-end")}>
-          <div
-            className={cn(
-              "max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm",
-              m.autor === "paciente" && "border bg-white",
-              m.autor === "assistente" && "bg-violet-50 text-violet-950",
-              m.autor === "equipe" && "bg-brand-2 text-white",
-            )}
-          >
-            <p className={cn("mb-0.5 flex items-center gap-1 text-[11px] font-semibold", m.autor === "equipe" ? "text-white/80" : "text-muted-foreground")}>
-              {m.autor === "assistente" && <Bot className="h-3 w-3" />}
-              {voz && <Mic className="h-3 w-3" />}
-              {rotulo}
-              <span className="font-normal opacity-70">· {hora(m.created_at)}</span>
-            </p>
-            {m.texto && <p className="whitespace-pre-line">{m.texto}</p>}
-            <Anexo m={m} url={anexoUrl(m.anexo_path)} />
-            {acoes.map((a, j) => (
-              <p key={j} className="mt-1.5 flex items-start gap-1 rounded-md bg-white/70 px-2 py-1 text-[11px] text-secondary">
-                <ShoppingCart className="mt-0.5 h-3 w-3 shrink-0" />
-                Carrinho ({a.tipo_compra}): {(a.itens ?? []).map((i: any) => i.nome).join(", ")}
+        <div className={cn("flex items-end gap-2", doPaciente ? "justify-start" : "flex-row-reverse", continua && "-mt-1.5")}>
+          <div className="w-7 shrink-0">{!continua && avatar}</div>
+          <div className={cn("flex max-w-[75%] flex-col", doPaciente ? "items-start" : "items-end")}>
+            {!continua && (
+              <p className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-muted-foreground">
+                {voz && <Mic className="h-3 w-3" />}
+                {rotulo}
               </p>
-            ))}
+            )}
+            <div
+              className={cn(
+                "rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-sm",
+                doPaciente && "rounded-bl-md border bg-white text-foreground",
+                m.autor === "assistente" && "rounded-br-md border border-violet-100 bg-violet-50 text-violet-950",
+                m.autor === "equipe" && "rounded-br-md bg-brand-2 text-white",
+              )}
+            >
+              {m.texto && <p className="whitespace-pre-line">{m.texto}</p>}
+              <Anexo m={m} url={anexoUrl(m.anexo_path)} />
+              {acoes.map((a, j) => (
+                <p key={j} className="mt-1.5 flex items-start gap-1 rounded-lg bg-white/80 px-2 py-1 text-[11px] text-secondary">
+                  <ShoppingCart className="mt-0.5 h-3 w-3 shrink-0" />
+                  Carrinho ({a.tipo_compra}{a.unidade_nome ? ` · ${a.unidade_nome}` : ""}): {(a.itens ?? []).map((i: any) => i.nome).join(", ")}
+                </p>
+              ))}
+            </div>
+            <span className="mt-0.5 px-1 text-[10px] text-muted-foreground/80">{hora(m.created_at)}</span>
           </div>
         </div>
       );
@@ -515,63 +539,89 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
     );
   };
 
+  const kpis = [
+    { id: "fila" as Filtro, label: "Na fila", valor: contagem.fila, cls: "text-amber-700 bg-amber-50 border-amber-200" },
+    { id: "minhas" as Filtro, label: "Minhas não lidas", valor: contagem.minhas, cls: "text-blue-700 bg-blue-50 border-blue-200" },
+    { id: "ia" as Filtro, label: "Com a IA", valor: contagem.ia, cls: "text-violet-700 bg-violet-50 border-violet-200" },
+  ];
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-secondary/10 p-2 text-secondary">
+      {/* Cabeçalho da página */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="rounded-xl bg-secondary/10 p-2.5 text-secondary">
           <MessageSquare className="h-5 w-5" />
         </div>
-        <div>
+        <div className="mr-auto">
           <h1 className="text-2xl font-bold text-secondary">Conversas</h1>
-          <p className="text-sm text-muted-foreground">Chat do site: veja a conversa com a IA, assuma, responda e transfira.</p>
+          <p className="text-sm text-muted-foreground">Atendimento do chat do site: IA, fila e equipe no mesmo lugar.</p>
         </div>
-        <div className="ml-auto flex items-center gap-1 rounded-full border p-1 text-xs">
+        <div className="hidden gap-2 lg:flex">
+          {kpis.map((k) => (
+            <button
+              key={k.id}
+              onClick={() => setFiltro(k.id)}
+              className={cn("rounded-xl border px-3 py-1.5 text-left transition hover:shadow-sm", k.cls, filtro === k.id && "ring-2 ring-current/20")}
+            >
+              <p className="text-lg font-bold leading-none">{k.valor}</p>
+              <p className="text-[11px]">{k.label}</p>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1 rounded-full border bg-background p-1 text-xs shadow-sm">
           {(["online", "ausente"] as const).map((st) => (
             <button
               key={st}
               onClick={() => mudarMeuStatus(st)}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1",
-                meuStatus === st ? (st === "online" ? "bg-green-600 text-white" : "bg-amber-500 text-white") : "hover:bg-muted",
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium transition",
+                meuStatus === st ? (st === "online" ? "bg-green-600 text-white shadow" : "bg-amber-500 text-white shadow") : "text-muted-foreground hover:bg-muted",
               )}
             >
-              <span className={cn("h-2 w-2 rounded-full", st === "online" ? "bg-green-300" : "bg-amber-200")} />
+              <span className={cn("h-2 w-2 rounded-full", st === "online" ? "bg-green-300" : "bg-amber-200", meuStatus === st && st === "online" && "animate-pulse")} />
               {st === "online" ? "Online" : "Ausente"}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="grid h-[calc(100vh-190px)] min-h-[520px] overflow-hidden rounded-xl border bg-background md:grid-cols-[340px_1fr] xl:grid-cols-[320px_1fr_300px]">
+      <div className="grid h-[calc(100vh-200px)] min-h-[540px] overflow-hidden rounded-2xl border bg-background shadow-sm md:grid-cols-[340px_1fr] xl:grid-cols-[330px_1fr_300px]">
         {/* Lista */}
-        <div className={cn("flex min-h-0 flex-col border-r", sel && "hidden md:flex")}>
-          <div className="space-y-2 border-b p-3">
+        <div className={cn("flex min-h-0 flex-col border-r bg-muted/20", sel && "hidden md:flex")}>
+          <div className="space-y-2.5 border-b bg-background p-3">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar nome, telefone, mensagem" className="pl-8" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar nome, telefone, protocolo..."
+                className="rounded-full border-0 bg-muted/60 pl-9 focus-visible:ring-1"
+              />
             </div>
-            <div className="flex flex-wrap gap-1">
-              {FILTROS.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setFiltro(f.id)}
-                  className={cn(
-                    "rounded-full border px-2.5 py-1 text-xs",
-                    filtro === f.id ? "border-secondary bg-secondary text-white" : "hover:bg-muted",
-                  )}
-                >
-                  {f.label}
-                  {(f.id === "fila" || f.id === "minhas") && contagem[f.id] > 0 && (
-                    <span className="ml-1 rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{contagem[f.id]}</span>
-                  )}
-                </button>
-              ))}
+            <div className="flex gap-1 overflow-x-auto pb-0.5">
+              {FILTROS.map((f) => {
+                const n = f.id === "fila" ? contagem.fila : f.id === "minhas" ? contagem.minhas : 0;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => setFiltro(f.id)}
+                    className={cn(
+                      "flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition",
+                      filtro === f.id ? "bg-secondary text-white shadow-sm" : "text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    {f.label}
+                    {n > 0 && (
+                      <span className={cn("rounded-full px-1.5 text-[10px] font-bold", filtro === f.id ? "bg-white/25" : "bg-brand text-white")}>{n}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          </div>
-          {unidadesNaLista.length > 1 && (
-            <div className="border-b px-3 py-2">
+            {unidadesNaLista.length > 1 && (
               <Select value={unidadeFiltro} onValueChange={setUnidadeFiltro}>
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-8 rounded-full text-xs">
+                  <MapPin className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -583,150 +633,194 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
+            )}
+          </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {carregando ? (
               <div className="flex justify-center py-10">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             ) : lista.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-muted-foreground">Nenhuma conversa aqui.</p>
+              <div className="flex flex-col items-center gap-2 px-6 py-14 text-center text-muted-foreground">
+                <CheckCircle2 className="h-8 w-8 opacity-30" />
+                <p className="text-sm">{filtro === "fila" ? "Ninguém esperando. 🎉" : "Nenhuma conversa aqui."}</p>
+              </div>
             ) : (
-              listaOrdenada.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setSelId(c.id)}
-                  className={cn("flex w-full gap-3 border-b px-3 py-2.5 text-left hover:bg-muted/50", c.id === selId && "bg-secondary/5")}
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-sm font-semibold text-secondary">
-                    {nomeConversa(c).slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium">{nomeConversa(c)}</span>
-                      <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{quando(c.ultima_msg_em)}</span>
+              listaOrdenada.map((c) => {
+                const m = espera(c);
+                const atrasado = m !== null && m >= (filaCfg?.prazo_min ?? 5);
+                const ativa = c.id === selId;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelId(c.id)}
+                    className={cn(
+                      "flex w-full gap-3 border-b border-l-[3px] px-3 py-3 text-left transition",
+                      ativa ? "border-l-secondary bg-background" : "border-l-transparent hover:bg-background/70",
+                    )}
+                  >
+                    <div className="relative">
+                      <Avatar nome={nomeConversa(c)} grande />
+                      <span className={cn("absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background", STATUS_LABEL[c.status].dot)} />
                     </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {c.ultima_msg_autor === "assistente" && "🤖 "}
-                      {c.ultima_msg_autor === "equipe" && "Você/equipe: "}
-                      {c.ultima_msg_texto}
-                    </p>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", STATUS_LABEL[c.status].cls)}>
-                        {STATUS_LABEL[c.status].label}
-                      </span>
-                      {c.unidade_nome && (
-                        <span className="flex items-center gap-0.5 truncate text-[10px] text-muted-foreground">
-                          <MapPin className="h-2.5 w-2.5" /> {c.unidade_nome}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={cn("truncate text-sm", c.nao_lidas > 0 ? "font-bold" : "font-medium")}>{nomeConversa(c)}</span>
+                        <span className={cn("ml-auto shrink-0 text-[10px]", c.nao_lidas > 0 ? "font-semibold text-brand" : "text-muted-foreground")}>
+                          {quando(c.ultima_msg_em)}
                         </span>
-                      )}
-                      {c.responsavel_id && (
-                        <span className="truncate text-[10px] text-muted-foreground">
-                          {c.responsavel_id === userId ? "com você" : `com ${nomeAtendente(c.responsavel_id)}`}
-                        </span>
-                      )}
-                      {(() => {
-                        const m = espera(c);
-                        if (m === null) return null;
-                        const atrasado = m >= (filaCfg?.prazo_min ?? 5);
-                        return (
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <p className={cn("min-w-0 flex-1 truncate text-xs", c.nao_lidas > 0 ? "text-foreground" : "text-muted-foreground")}>
+                          {c.ultima_msg_autor === "assistente" && <Bot className="mr-0.5 inline h-3 w-3" />}
+                          {c.ultima_msg_autor === "equipe" && <span className="text-muted-foreground">Equipe: </span>}
+                          {c.ultima_msg_texto}
+                        </p>
+                        {c.nao_lidas > 0 && (
+                          <span className="flex h-4 min-w-[16px] shrink-0 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
+                            {c.nao_lidas}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", STATUS_LABEL[c.status].cls)}>{STATUS_LABEL[c.status].label}</span>
+                        {c.unidade_nome && (
+                          <span className="flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            <MapPin className="h-2.5 w-2.5" /> {c.unidade_nome}
+                          </span>
+                        )}
+                        {c.responsavel_id && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            {c.responsavel_id === userId ? "com você" : nomeAtendente(c.responsavel_id)?.split(" ")[0]}
+                          </span>
+                        )}
+                        {m !== null && (
                           <span
-                            className={cn("ml-auto flex shrink-0 items-center gap-0.5 rounded px-1 text-[10px] font-semibold", atrasado ? "bg-red-100 text-red-700" : "text-muted-foreground")}
+                            className={cn(
+                              "ml-auto flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                              atrasado ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground",
+                            )}
                             title={c.status === "aguardando" ? "Esperando na fila" : "Paciente sem resposta"}
                           >
                             <Clock className="h-2.5 w-2.5" /> {fmtMin(m)}
                           </span>
-                        );
-                      })()}
-                      {c.nao_lidas > 0 && (
-                        <span className={cn("rounded-full bg-brand px-1.5 text-[10px] font-bold text-white", espera(c) === null && "ml-auto")}>{c.nao_lidas}</span>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
 
         {/* Conversa */}
         {!sel ? (
-          <div className="hidden flex-col items-center justify-center gap-2 text-muted-foreground md:flex">
-            <MessageSquare className="h-10 w-10 opacity-30" />
-            <p className="text-sm">Selecione uma conversa.</p>
+          <div className="hidden flex-col items-center justify-center gap-3 bg-muted/10 text-muted-foreground md:flex">
+            <div className="rounded-full bg-secondary/5 p-6">
+              <MessageSquare className="h-10 w-10 text-secondary/40" />
+            </div>
+            <p className="text-sm font-medium">Selecione uma conversa</p>
+            <p className="max-w-xs text-center text-xs">
+              Fique <b>Online</b> para receber conversas automaticamente. A ficha do paciente e o resumo da IA aparecem aqui.
+            </p>
           </div>
         ) : (
           <div className="flex min-h-0 flex-col">
-            <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2.5">
+            <div className="flex items-center gap-3 border-b px-4 py-3">
               <button className="md:hidden" onClick={() => setSelId(null)} aria-label="Voltar">
                 <ArrowLeft className="h-5 w-5" />
               </button>
+              <Avatar nome={nomeConversa(sel)} grande />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{nomeConversa(sel)}</p>
-                <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate font-semibold">{nomeConversa(sel)}</p>
+                  <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", STATUS_LABEL[sel.status].cls)}>
+                    {STATUS_LABEL[sel.status].label}
+                    {sel.responsavel_id && ` · ${ehMinha ? "com você" : nomeAtendente(sel.responsavel_id)}`}
+                  </span>
+                </div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                   {telefone(sel) && <span>{telefone(sel)}</span>}
-                  {(sel.pacientes?.email || sel.lead_email) && <span>{sel.pacientes?.email || sel.lead_email}</span>}
                   {sel.unidade_nome ? (
                     <span className="flex items-center gap-0.5 font-medium text-secondary">
                       <MapPin className="h-3 w-3" /> {sel.unidade_nome}
                     </span>
                   ) : (
-                    <span className="text-amber-700">Ainda sem unidade</span>
+                    <span className="text-amber-700">Sem unidade ainda</span>
                   )}
                   {sel.pedido_protocolo && (
                     <span className="flex items-center gap-0.5 font-medium text-secondary">
-                      <ClipboardList className="h-3 w-3" /> Pedido {sel.pedido_protocolo}
+                      <ClipboardList className="h-3 w-3" /> {sel.pedido_protocolo}
                     </span>
                   )}
-                  {!sel.pacientes && <span>Visitante não logado</span>}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {STATUS_LABEL[sel.status].label}
-                  {sel.responsavel_id && ` · ${ehMinha ? "com você" : `com ${nomeAtendente(sel.responsavel_id)}`}`}
-                </p>
+                  {!sel.pacientes && <span>Visitante</span>}
+                </div>
               </div>
-              <Button size="sm" variant="outline" className="xl:hidden" onClick={() => setFichaAberta(true)}>
-                <PanelRight className="mr-1 h-4 w-4" /> Ficha
-              </Button>
-              <label className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs" title="Quando ligada, a IA responde o paciente">
-                <Bot className="h-4 w-4" /> IA
-                <Switch
-                  checked={sel.ia_ativa}
-                  disabled={!podeMexer}
-                  onCheckedChange={(v) => rpc("chat_definir_ia", { _conversa: sel.id, _ativa: v }, v ? "IA ligada nesta conversa." : "IA desligada: você está atendendo.")}
-                />
-              </label>
-              {(!ehMinha || sel.ia_ativa || sel.status !== "humano") && podeMexer && sel.status !== "encerrada" && (
-                <Button size="sm" onClick={() => rpc("chat_assumir", { _conversa: sel.id }, "Você assumiu a conversa.")}>
-                  <UserCheck className="mr-1 h-4 w-4" /> Assumir
-                </Button>
-              )}
-              <Button size="sm" variant="outline" disabled={!podeMexer} onClick={() => setTransferir({ para: "", obs: "" })}>
-                <Users className="mr-1 h-4 w-4" /> Transferir
-              </Button>
-              {sel.status !== "encerrada" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!podeMexer}
-                  onClick={() => window.confirm("Encerrar este atendimento?") && rpc("chat_encerrar", { _conversa: sel.id }, "Atendimento encerrado.")}
+              <div className="flex shrink-0 items-center gap-2">
+                <label
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
+                    sel.ia_ativa ? "border-violet-200 bg-violet-50 text-violet-700" : "text-muted-foreground",
+                  )}
+                  title="Quando ligada, a IA responde o paciente"
                 >
-                  <CheckCircle2 className="mr-1 h-4 w-4" /> Encerrar
+                  <Bot className="h-3.5 w-3.5" /> IA
+                  <Switch
+                    checked={sel.ia_ativa}
+                    disabled={!podeMexer}
+                    className="scale-75"
+                    onCheckedChange={(v) => rpc("chat_definir_ia", { _conversa: sel.id, _ativa: v }, v ? "IA ligada nesta conversa." : "IA desligada: você está atendendo.")}
+                  />
+                </label>
+                {(!ehMinha || sel.ia_ativa || sel.status !== "humano") && podeMexer && sel.status !== "encerrada" && (
+                  <Button size="sm" className="rounded-full" onClick={() => rpc("chat_assumir", { _conversa: sel.id }, "Você assumiu a conversa.")}>
+                    <UserCheck className="mr-1 h-4 w-4" /> Assumir
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" className="rounded-full xl:hidden" onClick={() => setFichaAberta(true)} aria-label="Ficha do paciente">
+                  <PanelRight className="h-4 w-4" />
                 </Button>
-              )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="icon" variant="ghost" className="rounded-full" aria-label="Mais ações">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem disabled={!podeMexer} onClick={() => setTransferir({ para: "", obs: "" })}>
+                      <Users className="mr-2 h-4 w-4" /> Transferir
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => gerarResumo(sel.id, true)}>
+                      <Sparkles className="mr-2 h-4 w-4" /> Atualizar resumo da IA
+                    </DropdownMenuItem>
+                    {sel.status !== "encerrada" && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          disabled={!podeMexer}
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => window.confirm("Encerrar este atendimento?") && rpc("chat_encerrar", { _conversa: sel.id }, "Atendimento encerrado.")}
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" /> Encerrar atendimento
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-muted/30 p-3">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#f6f7f9] px-4 py-3">
               {(resumo.texto || resumo.carregando) && (
-                <div className="sticky top-0 z-10 rounded-lg border border-violet-200 bg-violet-50/95 p-2.5 text-xs text-violet-950 shadow-sm backdrop-blur">
-                  <div className="mb-1 flex items-center gap-1 font-semibold">
+                <div className="sticky top-0 z-10 rounded-xl border border-violet-200 bg-white/95 p-3 text-xs shadow-sm backdrop-blur">
+                  <div className="mb-1 flex items-center gap-1.5 font-semibold text-violet-700">
                     <Sparkles className="h-3.5 w-3.5" /> Resumo da IA
-                    <button className="ml-auto opacity-70 hover:opacity-100" onClick={() => sel && gerarResumo(sel.id, true)} aria-label="Atualizar resumo" title="Atualizar">
+                    <button className="ml-auto opacity-60 hover:opacity-100" onClick={() => gerarResumo(sel.id, true)} aria-label="Atualizar resumo" title="Atualizar">
                       <RefreshCw className={cn("h-3.5 w-3.5", resumo.carregando && "animate-spin")} />
                     </button>
                   </div>
-                  {resumo.texto ? <p className="whitespace-pre-line">{resumo.texto}</p> : <p className="opacity-70">Resumindo a conversa...</p>}
+                  {resumo.texto ? <p className="whitespace-pre-line text-foreground/80">{resumo.texto}</p> : <p className="text-muted-foreground">Resumindo a conversa...</p>}
                 </div>
               )}
               {carregandoMsgs ? (
@@ -739,83 +833,55 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
               <div ref={fimRef} />
             </div>
 
-            <div className="border-t p-2">
+            {/* Escrever */}
+            <div className="border-t bg-background p-3">
               {!podeMexer && !interna && (
-                <p className="mb-1.5 flex items-center gap-1 px-1 text-xs text-muted-foreground">
+                <p className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
                   <Lock className="h-3 w-3" /> Conversa com {nomeAtendente(sel.responsavel_id)}. Você pode deixar uma nota interna.
                 </p>
               )}
-              {sel.ia_ativa && podeMexer && !interna && (
-                <p className="mb-1.5 px-1 text-xs text-muted-foreground">Ao responder, você assume a conversa e a IA para de responder.</p>
-              )}
-              <div className="mb-1.5 flex gap-1 px-1">
-                <button
-                  onClick={() => setInterna(false)}
-                  className={cn("rounded-full px-2.5 py-0.5 text-xs", !interna ? "bg-secondary text-white" : "hover:bg-muted")}
-                >
-                  Responder ao paciente
-                </button>
-                <button
-                  onClick={() => setInterna(true)}
-                  className={cn("flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs", interna ? "bg-amber-500 text-white" : "hover:bg-muted")}
-                >
-                  <Lock className="h-3 w-3" /> Nota interna
-                </button>
-                {rapidas.length > 0 && (
-                  <Popover open={rapidasAberto} onOpenChange={setRapidasAberto}>
-                    <PopoverTrigger asChild>
-                      <button className="ml-auto flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs hover:bg-muted">
-                        <Zap className="h-3 w-3" /> Respostas rápidas
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="max-h-80 w-80 overflow-y-auto p-1">
-                      {rapidas.map((r, i) => (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            usarRapida(r);
-                          }}
-                          className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-muted"
-                        >
-                          <p className="text-sm font-medium">{r.titulo}</p>
-                          <p className="line-clamp-2 text-xs text-muted-foreground">{r.texto}</p>
-                        </button>
-                      ))}
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
               {rapidasFiltradas.length > 0 && (
-                <div className="mb-1.5 max-h-48 overflow-y-auto rounded-md border bg-background p-1 shadow-sm">
+                <div className="mb-2 max-h-48 overflow-y-auto rounded-xl border bg-background p-1 shadow-md">
                   {rapidasFiltradas.map((r, i) => (
-                    <button key={i} onClick={() => usarRapida(r)} className="block w-full rounded px-2 py-1.5 text-left hover:bg-muted">
-                      <span className="text-xs font-medium">/{r.titulo}</span>
+                    <button key={i} onClick={() => usarRapida(r)} className={cn("block w-full rounded-lg px-2.5 py-1.5 text-left hover:bg-muted", i === 0 && "bg-muted/60")}>
+                      <span className="text-xs font-semibold">/{r.titulo}</span>
                       <span className="ml-2 line-clamp-1 text-[11px] text-muted-foreground">{aplicarVariaveis(r.texto)}</span>
                     </button>
                   ))}
                 </div>
               )}
-              <div className="flex items-end gap-1.5">
-                <input
-                  ref={arquivoRef}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = "";
-                    if (f) enviar(f);
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => arquivoRef.current?.click()}
-                  disabled={enviando || (!podeMexer && !interna)}
-                  className="rounded-full p-2 text-muted-foreground hover:bg-muted disabled:opacity-40"
-                  aria-label="Anexar arquivo"
-                >
-                  <Paperclip className="h-5 w-5" />
-                </button>
+              <div className={cn("rounded-2xl border shadow-sm focus-within:ring-2", interna ? "border-amber-300 bg-amber-50/60 focus-within:ring-amber-200" : "focus-within:ring-secondary/20")}>
+                <div className="flex items-center gap-1 border-b px-2 py-1.5">
+                  <button
+                    onClick={() => setInterna(false)}
+                    className={cn("rounded-full px-3 py-1 text-xs font-medium transition", !interna ? "bg-secondary text-white" : "text-muted-foreground hover:bg-muted")}
+                  >
+                    Responder
+                  </button>
+                  <button
+                    onClick={() => setInterna(true)}
+                    className={cn("flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition", interna ? "bg-amber-500 text-white" : "text-muted-foreground hover:bg-muted")}
+                  >
+                    <Lock className="h-3 w-3" /> Nota interna
+                  </button>
+                  {rapidas.length > 0 && (
+                    <Popover open={rapidasAberto} onOpenChange={setRapidasAberto}>
+                      <PopoverTrigger asChild>
+                        <button className="ml-auto flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted">
+                          <Zap className="h-3 w-3" /> Respostas rápidas
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="max-h-80 w-80 overflow-y-auto p-1">
+                        {rapidas.map((r, i) => (
+                          <button key={i} onClick={() => usarRapida(r)} className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-muted">
+                            <p className="text-sm font-medium">{r.titulo}</p>
+                            <p className="line-clamp-2 text-xs text-muted-foreground">{aplicarVariaveis(r.texto)}</p>
+                          </button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
                 <Textarea
                   value={texto}
                   onChange={(e) => setTexto(e.target.value)}
@@ -829,24 +895,62 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                   rows={2}
                   maxLength={4000}
                   disabled={!podeMexer && !interna}
-                  placeholder={interna ? "Nota visível só para a equipe..." : "Escreva a resposta (Enter envia, Shift+Enter quebra linha)"}
-                  className={cn("min-h-[44px] flex-1 resize-none", interna && "border-amber-300 bg-amber-50")}
+                  placeholder={
+                    interna
+                      ? "Nota visível só para a equipe..."
+                      : sel.ia_ativa && podeMexer
+                        ? "Ao responder, você assume a conversa e a IA para. Digite / para respostas rápidas."
+                        : "Escreva a resposta... (/ para respostas rápidas)"
+                  }
+                  className="min-h-[56px] resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
                 />
-                {!interna && (
+                <div className="flex items-center gap-1 px-2 pb-2">
+                  <input
+                    ref={arquivoRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) enviar(f);
+                    }}
+                  />
                   <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={sugerirResposta}
-                    disabled={sugerindo || !podeMexer}
-                    title="Sugerir resposta com IA (se houver texto, ela usa como orientação)"
-                    aria-label="Sugerir resposta"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => arquivoRef.current?.click()}
+                    disabled={enviando || (!podeMexer && !interna)}
+                    className="h-8 rounded-full px-2 text-muted-foreground"
+                    aria-label="Anexar arquivo"
                   >
-                    {sugerindo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    <Paperclip className="h-4 w-4" />
                   </Button>
-                )}
-                <Button onClick={() => enviar()} disabled={enviando || !texto.trim() || (!podeMexer && !interna)} size="icon" aria-label="Enviar">
-                  {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
+                  {!interna && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={sugerirResposta}
+                      disabled={sugerindo || !podeMexer}
+                      className="h-8 rounded-full px-2.5 text-violet-700 hover:bg-violet-50 hover:text-violet-800"
+                      title="A IA escreve uma resposta; se houver texto no campo, ela usa como orientação"
+                    >
+                      {sugerindo ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4" />} Sugerir
+                    </Button>
+                  )}
+                  <span className="ml-auto hidden text-[10px] text-muted-foreground sm:inline">Enter envia · Shift+Enter quebra linha</span>
+                  <Button
+                    onClick={() => enviar()}
+                    disabled={enviando || !texto.trim() || (!podeMexer && !interna)}
+                    size="sm"
+                    className={cn("h-8 rounded-full px-4", interna && "bg-amber-500 hover:bg-amber-600")}
+                  >
+                    {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />}
+                    {!enviando && (interna ? "Salvar nota" : "Enviar")}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -941,7 +1045,22 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
 };
 
 const Separador = ({ iso }: { iso: string }) => (
-  <div className="flex justify-center py-1">
+  <div className="flex items-center gap-3 py-2">
+    <div className="h-px flex-1 bg-border" />
     <span className="text-[11px] font-medium capitalize text-muted-foreground">{dia(iso)}</span>
+    <div className="h-px flex-1 bg-border" />
   </div>
 );
+
+const CORES_AVATAR = ["bg-sky-100 text-sky-700", "bg-emerald-100 text-emerald-700", "bg-rose-100 text-rose-700", "bg-amber-100 text-amber-800", "bg-indigo-100 text-indigo-700", "bg-teal-100 text-teal-700", "bg-fuchsia-100 text-fuchsia-700"];
+/** Avatar com iniciais e cor fixa por nome. */
+const Avatar = ({ nome, grande = false, escuro = false }: { nome: string; grande?: boolean; escuro?: boolean }) => {
+  const partes = nome.trim().split(/\s+/);
+  const ini = ((partes[0]?.[0] ?? "") + (partes.length > 1 ? partes[partes.length - 1][0] : "")).toUpperCase() || "?";
+  const cor = escuro ? "bg-brand-2 text-white" : CORES_AVATAR[[...nome].reduce((a, ch) => a + ch.charCodeAt(0), 0) % CORES_AVATAR.length];
+  return (
+    <div className={cn("flex shrink-0 items-center justify-center rounded-full font-semibold", grande ? "h-10 w-10 text-sm" : "h-7 w-7 text-[11px]", cor)}>
+      {ini}
+    </div>
+  );
+};

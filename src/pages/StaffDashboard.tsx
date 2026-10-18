@@ -16,6 +16,7 @@ import { AbaAjuda } from "@/components/staff/AbaAjuda";
 import { AbaRecall } from "@/components/staff/AbaRecall";
 import { AbaConversas, lerStatusAtendente } from "@/components/staff/AbaConversas";
 import { AbaSuperAdmin } from "@/components/staff/AbaSuperAdmin";
+import { MODULOS, pode } from "@/lib/permissoes";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { toast } from "sonner";
 
@@ -156,6 +157,23 @@ const StaffDashboard = () => {
     };
   }, []);
 
+  // Área liberada? (mesma regra do menu e do banco)
+  const MODULO_DA_ABA: Record<string, string> = { sites: "paginas" };
+  const podeAba = (a: StaffTab) => {
+    if (a === "ajuda") return true;
+    if (a === "superadmin") return staffPerfil.isSuperAdmin;
+    if (staffPerfil.carregando) return true;
+    const m = MODULO_DA_ABA[a] ?? a;
+    return !MODULOS.some((x) => x.id === m) || pode(staffPerfil.permissoes as any, m, "ver");
+  };
+  // Sem acesso à Visão Geral: abre na primeira área liberada.
+  useEffect(() => {
+    if (staffPerfil.carregando || podeAba(aba)) return;
+    const primeira = (["visao", "pedidos", "conversas", "pacientes", "catalogo", "unidades", "convenios", "sites", "recall", "equipe", "config"] as StaffTab[]).find(podeAba);
+    if (primeira) trocarAba(primeira);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffPerfil.carregando, aba]);
+
   if (carregando) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -166,21 +184,27 @@ const StaffDashboard = () => {
 
   return (
     <StaffShell abaAtiva={aba} onTrocarAba={trocarAba} emailUsuario={email} isAdmin={staffPerfil.isAdmin} isSuperAdmin={staffPerfil.isSuperAdmin}>
-      {aba === "visao" && <AbaVisaoGeral />}
-      {aba === "pedidos" && <AbaPedidos permissoes={staffPerfil.permissoes} />}
-      {aba === "conversas" && <AbaConversas userId={staffPerfil.userId} isAdmin={staffPerfil.isAdmin} />}
-      {aba === "pacientes" && <AbaPacientes permissoes={staffPerfil.permissoes} />}
-      {aba === "catalogo" && <AbaCatalogo permissoes={staffPerfil.permissoes} />}
-      {aba === "unidades" && <AbaUnidades permissoes={staffPerfil.permissoes} />}
-      {aba === "convenios" && <AbaConvenios />}
-      {aba === "config" && (
-        <AbaConfiguracoes permissoes={staffPerfil.permissoes} isAdmin={staffPerfil.isAdmin} isSuperAdmin={staffPerfil.isSuperAdmin} />
+      {!podeAba(aba) ? (
+        <div className="py-20 text-center text-muted-foreground">Você não tem acesso a esta área. Fale com o administrador.</div>
+      ) : (
+        <>
+          {aba === "visao" && <AbaVisaoGeral />}
+          {aba === "pedidos" && <AbaPedidos permissoes={staffPerfil.permissoes} />}
+          {aba === "conversas" && <AbaConversas userId={staffPerfil.userId} isAdmin={staffPerfil.isAdmin} />}
+          {aba === "pacientes" && <AbaPacientes permissoes={staffPerfil.permissoes} />}
+          {aba === "catalogo" && <AbaCatalogo permissoes={staffPerfil.permissoes} />}
+          {aba === "unidades" && <AbaUnidades permissoes={staffPerfil.permissoes} />}
+          {aba === "convenios" && <AbaConvenios />}
+          {aba === "config" && (
+            <AbaConfiguracoes permissoes={staffPerfil.permissoes} isAdmin={staffPerfil.isAdmin} isSuperAdmin={staffPerfil.isSuperAdmin} />
+          )}
+          {aba === "superadmin" && <AbaSuperAdmin userId={staffPerfil.userId} />}
+          {aba === "sites" && <AbaSites />}
+          {aba === "equipe" && <AbaEquipe isSuperAdmin={staffPerfil.isSuperAdmin} />}
+          {aba === "recall" && <AbaRecall />}
+          {aba === "ajuda" && <AbaAjuda isAdmin={staffPerfil.isAdmin} />}
+        </>
       )}
-      {aba === "superadmin" && staffPerfil.isSuperAdmin && <AbaSuperAdmin />}
-      {aba === "sites" && <AbaSites />}
-      {aba === "equipe" && <AbaEquipe />}
-      {aba === "recall" && <AbaRecall />}
-      {aba === "ajuda" && <AbaAjuda isAdmin={staffPerfil.isAdmin} />}
     </StaffShell>
   );
 };

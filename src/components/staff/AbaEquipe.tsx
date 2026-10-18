@@ -63,7 +63,7 @@ const SECOES_CRUD: Array<{ key: keyof typeof PERMISSOES_PADRAO; label: string }>
   { key: "unidades", label: "Unidades" },
 ];
 
-export const AbaEquipe = () => {
+export const AbaEquipe = ({ isSuperAdmin = false }: { isSuperAdmin?: boolean } = {}) => {
   const [usuarios, setUsuarios] = useState<StaffUsuario[]>([]);
   const [contadores, setContadores] = useState<Record<string, number>>({});
   const [sheetAberto, setSheetAberto] = useState(false);
@@ -184,7 +184,8 @@ export const AbaEquipe = () => {
       }
       const { error } = await supabase
         .from("user_roles")
-        .update({ nome: nomeEdit, ativo: ativoEdit, permissoes: permEdit, role: roleEdit })
+        // Papel e permissões: só o super admin (o banco também barra).
+        .update({ nome: nomeEdit, ativo: ativoEdit, ...(isSuperAdmin ? { role: roleEdit } : {}) })
         .eq("id", editando.id);
       if (error) throw error;
       toast.success("Usuário atualizado!");
@@ -440,6 +441,7 @@ export const AbaEquipe = () => {
                 <Label>Perfil</Label>
                 <select
                   className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  disabled={!isSuperAdmin}
                   value={roleNovo}
                   onChange={(e) => setRoleNovo(e.target.value as "admin" | "staff")}
                 >
@@ -451,6 +453,10 @@ export const AbaEquipe = () => {
                     Admin tem acesso total (todas as unidades e permissões).
                   </p>
                 )}
+                <p className="text-xs text-muted-foreground">
+                  Nasce com o perfil padrão (Recepção para Staff).{" "}
+                  {isSuperAdmin ? "Ajuste o que pode ver/editar/apagar em Super Admin → Permissões." : "Criar administradores e ajustar permissões: só o super admin."}
+                </p>
               </div>
             </div>
           ) : (
@@ -469,7 +475,7 @@ export const AbaEquipe = () => {
                   className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                   value={roleEdit}
                   onChange={(e) => setRoleEdit(e.target.value as "admin" | "staff")}
-                  disabled={editando.user_id === meuUserId}
+                  disabled={editando.user_id === meuUserId || !isSuperAdmin}
                 >
                   <option value="staff">Staff</option>
                   <option value="admin">Admin</option>
@@ -486,50 +492,10 @@ export const AbaEquipe = () => {
                 )}
               </div>
 
-              <div className="space-y-3">
-                <Label>Permissões</Label>
-                <div className="rounded-md border divide-y">
-                  {SECOES_CRUD.map((s) => (
-                    <div key={s.key} className="p-3">
-                      <p className="text-sm font-medium mb-2">{s.label}</p>
-                      <div className="flex gap-4">
-                        {(["ver", "editar", "excluir"] as const).map((acao) => (
-                          <label key={acao} className="flex items-center gap-2 text-sm capitalize">
-                            <Checkbox
-                              checked={!!permEdit?.[s.key]?.[acao]}
-                              onCheckedChange={(v) => togglePerm(s.key, acao, !!v)}
-                            />
-                            {acao}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="p-3">
-                    <p className="text-sm font-medium mb-2">Sync</p>
-                    <label className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={!!permEdit?.sync?.ver}
-                        onCheckedChange={(v) => togglePerm("sync", "ver", !!v)}
-                      />
-                      Ver
-                    </label>
-                  </div>
-                  <div className="p-3">
-                    <p className="text-sm font-medium mb-2">Configurações</p>
-                    <div className="flex gap-4">
-                      {(["ver", "editar"] as const).map((acao) => (
-                        <label key={acao} className="flex items-center gap-2 text-sm capitalize">
-                          <Checkbox
-                            checked={!!permEdit?.config?.[acao]}
-                            onCheckedChange={(v) => togglePerm("config", acao, !!v)}
-                          />
-                          {acao}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">Permissões</p>
+                O que esta pessoa pode ver, editar e apagar é definido pelo super admin em{" "}
+                <b>Super Admin → Permissões</b>.
               </div>
 
               <div className="flex items-center justify-between rounded-md border p-3">

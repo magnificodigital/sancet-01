@@ -9,6 +9,8 @@ type Permissoes = {
   sync:      { ver: boolean };
   config:    { ver: boolean; editar: boolean };
   paginas:   { ver: boolean; editar: boolean; excluir: boolean };
+  /** Demais áreas (conversas, checkin, convenios, recall, equipe...): ver src/lib/permissoes.ts */
+  [modulo: string]: { ver?: boolean; editar?: boolean; excluir?: boolean };
 };
 
 type StaffPerfil = {
@@ -58,12 +60,16 @@ export const useStaffPerfil = (): StaffPerfil => {
 
       const role = (row.role ?? "staff") as "admin" | "staff";
       const isAdmin = role === "admin";
-      const { data: sou } = isAdmin ? await (supabase as any).rpc("is_super_admin") : { data: false };
+      const [{ data: sou }, { data: efetivas }] = await Promise.all([
+        isAdmin ? (supabase as any).rpc("is_super_admin") : Promise.resolve({ data: false }),
+        // Permissões efetivas (padrão do papel + o que o super admin personalizou).
+        (supabase as any).rpc("minhas_permissoes"),
+      ]);
 
       setPerfil({
         role,
         nome: row.nome ?? null,
-        permissoes: isAdmin ? PERMISSOES_ADMIN : (row.permissoes as Permissoes) ?? null,
+        permissoes: (efetivas as Permissoes) ?? (isAdmin ? PERMISSOES_ADMIN : (row.permissoes as Permissoes) ?? null),
         isAdmin,
         isSuperAdmin: sou === true,
         carregando: false,

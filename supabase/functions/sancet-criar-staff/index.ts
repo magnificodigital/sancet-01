@@ -44,8 +44,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Acesso negado (apenas admin)' }), { status: 403, headers: corsHeaders })
     }
 
-    const { nome, email, senha, permissoes, role } = await req.json()
+    const { nome, email, senha, role } = await req.json()
     const roleFinal = role === 'admin' ? 'admin' : 'staff'
+
+    // Papel admin e permissões personalizadas: só o super admin da plataforma.
+    const { data: ehSuper } = await supabaseAdmin.from('super_admins').select('user_id').eq('user_id', requesterId).maybeSingle()
+    if (roleFinal === 'admin' && !ehSuper) {
+      return new Response(JSON.stringify({ error: 'Somente o super admin pode criar administradores.' }), { status: 403, headers: corsHeaders })
+    }
+    // Novo usuário nasce com o perfil padrão do papel; o super admin ajusta em Super Admin > Permissões.
+    const permissoes = null
 
     const { data: novoUser, error: erroCriar } = await supabaseAdmin.auth.admin.createUser({
       email,
