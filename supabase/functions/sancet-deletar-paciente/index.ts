@@ -33,8 +33,8 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
     if (!user) return json({ error: 'Não autorizado' }, 401)
 
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' })
-    if (!isAdmin) return json({ error: 'Apenas administradores podem excluir pacientes' }, 403)
+    const { data: pode } = await supabase.rpc('tem_permissao_uid', { _uid: user.id, _modulo: 'pacientes', _acao: 'excluir' })
+    if (!pode) return json({ error: 'Sem permissão para excluir pacientes' }, 403)
 
     const { paciente_id } = await req.json()
     if (!paciente_id) return json({ error: 'paciente_id obrigatório' }, 400)

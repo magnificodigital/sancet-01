@@ -17,6 +17,7 @@ export const PlayerAudio = ({ src, claro = false, className }: { src: string; cl
   const [atual, setAtual] = useState(0);
   const [duracao, setDuracao] = useState(0);
   const [vel, setVel] = useState(1);
+  const [erro, setErro] = useState(false);
 
   useEffect(() => {
     const a = ref.current;
@@ -40,12 +41,23 @@ export const PlayerAudio = ({ src, claro = false, className }: { src: string; cl
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("loadedmetadata", onMeta);
     a.addEventListener("ended", onEnd);
-    a.addEventListener("waiting", () => setCarregando(true));
-    a.addEventListener("playing", () => setCarregando(false));
+    const onWait = () => setCarregando(true);
+    const onPlay = () => setCarregando(false);
+    const onErr = () => {
+      setErro(true);
+      setTocando(false);
+    };
+    setErro(false);
+    a.addEventListener("waiting", onWait);
+    a.addEventListener("playing", onPlay);
+    a.addEventListener("error", onErr);
     return () => {
       a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("loadedmetadata", onMeta);
       a.removeEventListener("ended", onEnd);
+      a.removeEventListener("waiting", onWait);
+      a.removeEventListener("playing", onPlay);
+      a.removeEventListener("error", onErr);
     };
   }, [src]);
 
@@ -68,6 +80,9 @@ export const PlayerAudio = ({ src, claro = false, className }: { src: string; cl
     if (ref.current) ref.current.playbackRate = nova;
   };
   const pct = duracao > 0 ? Math.min(100, (atual / duracao) * 100) : 0;
+  if (erro) {
+    return <p className={cn("py-1 text-xs italic", claro ? "text-white/80" : "text-muted-foreground")}>🎤 Áudio indisponível (o link expirou — recarregue a conversa).</p>;
+  }
 
   return (
     <div className={cn("flex w-60 max-w-full items-center gap-2 py-0.5", className)}>

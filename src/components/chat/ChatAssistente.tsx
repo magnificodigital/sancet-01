@@ -69,7 +69,11 @@ type Estado = {
 const ler = (): Estado => {
   try {
     const s = JSON.parse(localStorage.getItem(CHAVE) ?? "null");
-    if (s && Array.isArray(s.mensagens)) return s;
+    if (s && Array.isArray(s.mensagens)) {
+      // Links locais (blob:) de áudio não sobrevivem a um recarregamento.
+      s.mensagens = s.mensagens.map((m: Msg) => (m.anexo?.url?.startsWith("blob:") ? { ...m, anexo: { ...m.anexo, url: null } } : m));
+      return s;
+    }
   } catch {
     /* sem storage */
   }
@@ -332,9 +336,10 @@ export const ChatAssistente = () => {
       }
       sincronizar();
     } catch (e: any) {
+      const msgErro = typeof e?.message === "string" && e.message !== "erro" ? e.message : "Não consegui responder agora. Pode tentar de novo em instantes?";
       setEstado((s) => ({
         ...s,
-        mensagens: [...s.mensagens, { autor: "assistente", texto: "Não consegui responder agora. Pode tentar de novo em instantes?" }],
+        mensagens: [...s.mensagens, { autor: "assistente", texto: msgErro }],
       }));
     } finally {
       setPendentes((n) => Math.max(0, n - 1));
@@ -533,7 +538,9 @@ export const ChatAssistente = () => {
                   {m.texto && (
                     <Formatado texto={(m.id === "saudacao" || (i === 0 && !m.id && m.autor === "assistente")) && status.boas_vindas ? status.boas_vindas : m.texto} />
                   )}
-                  {m.anexo?.url && m.anexo.mime.startsWith("audio/") ? (
+                  {m.anexo && !m.anexo.url && m.anexo.mime.startsWith("audio/") ? (
+                    <p className="text-xs opacity-80">🎤 Áudio enviado</p>
+                  ) : m.anexo?.url && m.anexo.mime.startsWith("audio/") ? (
                     <div className="mt-0.5">
                       <PlayerAudio src={m.anexo.url} claro={m.autor === "paciente" || m.autor === "equipe"} />
                       {m.anexo.transcricao && <p className="mt-1 text-[11px] italic opacity-80">“{m.anexo.transcricao}”</p>}

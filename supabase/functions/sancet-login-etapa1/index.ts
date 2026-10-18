@@ -1,3 +1,4 @@
+import { dentroDoLimite, ipDentroDoLimite, MSG_LIMITE } from "../_shared/limite.ts";
 // sancet-login-etapa1: envia código 2FA por email
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -33,6 +34,9 @@ Deno.serve(async (req) => {
     const { email, senha } = await req.json();
     const emailNorm = String(email ?? "").trim().toLowerCase();
     if (!emailNorm || !senha) return json({ error: "Informe e-mail e senha." }, 400);
+    if (!(await ipDentroDoLimite(req, "login", 20, 3600)) || !(await dentroDoLimite("login-email", emailNorm, 8, 3600))) {
+      return json({ error: MSG_LIMITE }, 429);
+    }
 
     const url = Deno.env.get("SUPABASE_URL")!;
     const anon = Deno.env.get("SUPABASE_ANON_KEY")!;

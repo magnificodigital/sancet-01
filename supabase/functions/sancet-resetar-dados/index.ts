@@ -40,8 +40,9 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
     if (!user) return json({ error: 'Não autorizado' }, 401)
 
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' })
-    if (!isAdmin) return json({ error: 'Apenas administradores' }, 403)
+    // Zona de risco: só o super admin da plataforma.
+    const { data: ehSuper } = await supabase.rpc('eh_super_admin_uid', { _uid: user.id })
+    if (!ehSuper) return json({ error: 'Somente o super admin pode apagar os dados.' }, 403)
 
     // Conta antes
     const { count: nPac } = await supabase.from('pacientes').select('id', { count: 'exact', head: true })

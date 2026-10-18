@@ -34,13 +34,8 @@ Deno.serve(async (req) => {
     if (!user) return json({ error: 'Não autorizado' }, 401)
 
     // Admin OU staff com permissão pedidos.excluir
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' })
-    let autorizado = !!isAdmin
-    if (!autorizado) {
-      const { data: row } = await supabase
-        .from('user_roles').select('permissoes').eq('user_id', user.id).maybeSingle()
-      autorizado = !!(row?.permissoes as any)?.pedidos?.excluir
-    }
+    // Permissão efetiva (padrão do papel + o que o super admin definiu)
+    const { data: autorizado } = await supabase.rpc('tem_permissao_uid', { _uid: user.id, _modulo: 'pedidos', _acao: 'excluir' })
     if (!autorizado) return json({ error: 'Sem permissão para excluir pedidos' }, 403)
 
     const { pedido_id } = await req.json()

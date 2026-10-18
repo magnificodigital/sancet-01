@@ -31,6 +31,17 @@ Deno.serve(async (req) => {
 
     // Usuário da equipe (aba Equipe): só troca a senha de quem está em user_roles.
     if (user_id) {
+      // Senha de admin/super admin só o super admin troca (evita tomar a conta de outro admin).
+      const [{ data: alvoSuper }, { data: euSuper }, { data: alvoRole }, { data: podeEquipe }] = await Promise.all([
+        admin.rpc("eh_super_admin_uid", { _uid: user_id }),
+        admin.rpc("eh_super_admin_uid", { _uid: user.id }),
+        admin.from("user_roles").select("role").eq("user_id", user_id).maybeSingle(),
+        admin.rpc("tem_permissao_uid", { _uid: user.id, _modulo: "equipe", _acao: "editar" }),
+      ]);
+      if (!podeEquipe) return json({ error: "Sem permissão para alterar senhas da equipe." }, 403);
+      if ((alvoSuper || alvoRole?.role === "admin") && !euSuper && user_id !== user.id) {
+        return json({ error: "Somente o super admin pode alterar a senha de administradores." }, 403);
+      }
       if (!nova_senha || String(nova_senha).length < 8) {
         return json({ error: "A senha precisa ter pelo menos 8 caracteres." }, 400);
       }
@@ -42,6 +53,12 @@ Deno.serve(async (req) => {
       if (uErr) return json({ error: "Falha ao alterar a senha.", detalhe: uErr.message }, 500);
       return json({ ok: true });
     }
+
+    const { data: podePac } = await admin.rpc("tem_permissao_uid", { _uid: user.id, _modulo: "pacientes", _acao: "editar" });
+    if (!podePac) return json({ error: "Sem permissão para alterar dados de pacientes." }, 403);
+    // Nunca mexe em conta da equipe pelo fluxo de paciente (impede tomar conta de admin).
+    const ehEquipe = async (uid: string | null) =>
+      !!uid && !!(await admin.from("user_roles").select("user_id").eq("user_id", uid).maybeSingle()).data;
 
     if (!paciente_id || !nova_senha || String(nova_senha).length < 6) {
       return json({ error: "Informe paciente e senha com ao menos 6 caracteres." }, 400);
@@ -60,6 +77,7 @@ Deno.serve(async (req) => {
 
     // 1) Já vinculado → apenas atualiza senha
     if (pac.auth_user_id) {
+      if (await ehEquipe(pac.auth_user_id)) return json({ error: "Este login pertence à equipe. Altere a senha em Equipe." }, 403);
       const { error: uErr } = await admin.auth.admin.updateUserById(pac.auth_user_id, {
         password: String(nova_senha),
         email_confirm: true,
@@ -69,15 +87,11 @@ Deno.serve(async (req) => {
     }
 
     // 2) Não vinculado → verifica se já existe auth user com esse e-mail
-    let authUserId: string | null = null;
-    try {
-      // listUsers com filtro por email (paginado; consulta simples)
-      const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-      const found = list?.users?.find((u: any) => (u.email ?? "").toLowerCase() === emailNorm);
-      if (found) authUserId = found.id;
-    } catch { /* ignore */ }
+    const { data: achado } = await admin.rpc("auth_user_por_email", { _email: emailNorm });
+    const authUserId: string | null = achado ?? null;
 
     if (authUserId) {
+      if (await ehEquipe(authUserId)) return json({ error: "Este e-mail é de um login da equipe. Não é possível usar como acesso de paciente." }, 403);
       const { error: uErr } = await admin.auth.admin.updateUserById(authUserId, {
         password: String(nova_senha),
         email_confirm: true,

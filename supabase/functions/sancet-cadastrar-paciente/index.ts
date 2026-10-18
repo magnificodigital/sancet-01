@@ -1,3 +1,4 @@
+import { dentroDoLimite, ipDentroDoLimite, MSG_LIMITE } from "../_shared/limite.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -26,6 +27,7 @@ function cpfValido(v: string): boolean {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (!(await ipDentroDoLimite(req, "cadastro", 10, 3600))) return json({ error: MSG_LIMITE }, 429);
 
   try {
     const body = await req.json();

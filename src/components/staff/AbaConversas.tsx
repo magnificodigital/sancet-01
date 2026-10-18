@@ -308,7 +308,8 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
 
   const sel = conversas.find((c) => c.id === selId) ?? null;
   const ehMinha = !!sel && sel.responsavel_id === userId;
-  const podeMexer = !!sel && (!sel.responsavel_id || ehMinha || isAdmin);
+  const podeResponder = isAdmin || pode(perfilStaff.permissoes as any, "conversas", "editar");
+  const podeMexer = !!sel && podeResponder && (!sel.responsavel_id || ehMinha || isAdmin);
 
   const contagem = useMemo(() => {
     const c: Record<Filtro, number> = { fila: 0, minhas: 0, ia: 0, todas: 0, encerradas: 0 };

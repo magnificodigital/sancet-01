@@ -46,6 +46,16 @@ Deno.serve(async (req) => {
     if (!user_id) {
       return new Response(JSON.stringify({ error: 'user_id obrigatório' }), { status: 400, headers: corsHeaders })
     }
+    const negar = (msg: string) => new Response(JSON.stringify({ error: msg }), { status: 403, headers: corsHeaders })
+    const { data: pode } = await supabaseAdmin.rpc('tem_permissao_uid', { _uid: requesterId, _modulo: 'equipe', _acao: 'excluir' })
+    if (!pode) return negar('Sem permissão para excluir usuários da equipe')
+    // Super admin só é removido por outro super admin; admin só por super admin.
+    const [{ data: alvoSuper }, { data: euSuper }, { data: alvoRole }] = await Promise.all([
+      supabaseAdmin.rpc('eh_super_admin_uid', { _uid: user_id }),
+      supabaseAdmin.rpc('eh_super_admin_uid', { _uid: requesterId }),
+      supabaseAdmin.from('user_roles').select('role').eq('user_id', user_id).maybeSingle(),
+    ])
+    if ((alvoSuper || alvoRole?.role === 'admin') && !euSuper) return negar('Somente o super admin pode excluir administradores')
     if (user_id === requesterId) {
       return new Response(JSON.stringify({ error: 'Você não pode excluir a si mesmo' }), { status: 400, headers: corsHeaders })
     }

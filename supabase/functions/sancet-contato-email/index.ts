@@ -1,3 +1,4 @@
+import { dentroDoLimite, ipDentroDoLimite, MSG_LIMITE } from "../_shared/limite.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -56,6 +57,9 @@ async function enviarResend(opts: {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (!(await ipDentroDoLimite(req, "contato", 5, 3600))) {
+    return new Response(JSON.stringify({ ok: false, reason: MSG_LIMITE, error: MSG_LIMITE }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 
   const json = (status: number, obj: unknown) =>
     new Response(JSON.stringify(obj), {

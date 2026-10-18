@@ -1,3 +1,4 @@
+import { dentroDoLimite, ipDentroDoLimite, MSG_LIMITE } from "../_shared/limite.ts";
 import { modeloIA, segredo } from "../_shared/integracoes.ts";
 
 const cors = {
@@ -7,6 +8,10 @@ const cors = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  const interno = (req.headers.get("Authorization") ?? "") === `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
+  if (!interno && !(await ipDentroDoLimite(req, "ler-receita", 20, 3600))) {
+    return new Response(JSON.stringify({ error: MSG_LIMITE }), { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
+  }
 
   try {
     const apiKey = await segredo("OPENROUTER_API_KEY");
