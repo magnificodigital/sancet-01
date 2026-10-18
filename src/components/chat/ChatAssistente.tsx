@@ -25,6 +25,7 @@ type Msg = {
   voz?: boolean;
   autor_nome?: string | null;
   anexo?: { nome: string; mime: string; url: string | null; transcricao?: string | null } | null;
+  evento?: string | null;
 };
 type Atendimento = { status: "ia" | "aguardando" | "humano" | "encerrada"; ia_ativa: boolean; atendente: string | null };
 type Status = {
@@ -62,6 +63,7 @@ type Estado = {
   ultimo?: string | null; // última novidade da equipe já recebida
   atendimento?: Atendimento;
   nao_lidas?: number;
+  avaliada?: boolean;
   mensagens: Msg[];
 };
 const ler = (): Estado => {
@@ -124,7 +126,11 @@ export const ChatAssistente = () => {
   const [aberto, setAberto] = useState(false);
   const [estado, setEstado] = useState<Estado>(ler);
   const [texto, setTexto] = useState("");
-  const [enviando, setEnviando] = useState(false);
+  // Várias mensagens podem estar a caminho (o servidor agrupa e responde tudo junto).
+  const [pendentes, setPendentes] = useState(0);
+  const enviando = pendentes > 0;
+  const [notaSel, setNotaSel] = useState(0);
+  const [comentarioAval, setComentarioAval] = useState("");
   const [status, setStatus] = useState<Status | null>(null);
   const [codigoTeste] = useState(lerCodigoTeste);
   const fimRef = useRef<HTMLDivElement>(null);
@@ -182,6 +188,7 @@ export const ChatAssistente = () => {
         autor_nome: m.autor_nome,
         texto: m.texto ?? "",
         anexo: m.anexo,
+        evento: m.evento ?? null,
       }));
       setEstado((s) => {
         const ids = new Set(s.mensagens.map((m) => m.id).filter(Boolean));
@@ -287,7 +294,7 @@ export const ChatAssistente = () => {
   const comHumano = !!atend && !atend.ia_ativa;
 
   const enviar = async (mensagem: string, anexo?: File) => {
-    if ((!mensagem.trim() && !anexo) || enviando) return;
+    if (!mensagem.trim() && !anexo) return;
     const ehAudio = !!anexo && anexo.type.startsWith("audio/");
     const idLocal = `local-${Date.now()}`;
     const minha: Msg = ehAudio
@@ -295,7 +302,7 @@ export const ChatAssistente = () => {
       : { id: idLocal, autor: "paciente", texto: anexo ? `📎 ${anexo.name}${mensagem ? `\n${mensagem}` : ""}` : mensagem };
     setEstado((s) => ({ ...s, mensagens: [...s.mensagens, minha] }));
     setTexto("");
-    setEnviando(true);
+    setPendentes((n) => n + 1);
     try {
       const corpo: any = { mensagem };
       if (anexo) corpo.anexo = { base64: await paraBase64(anexo), mime: anexo.type, nome: anexo.name };
@@ -330,7 +337,18 @@ export const ChatAssistente = () => {
         mensagens: [...s.mensagens, { autor: "assistente", texto: "Não consegui responder agora. Pode tentar de novo em instantes?" }],
       }));
     } finally {
-      setEnviando(false);
+      setPendentes((n) => Math.max(0, n - 1));
+    }
+  };
+
+  const avaliar = async () => {
+    if (!notaSel) return;
+    try {
+      await chamar({ acao: "avaliar", nota: notaSel, comentario: comentarioAval.trim() || undefined });
+      setEstado((s) => ({ ...s, avaliada: true }));
+      sincronizar();
+    } catch {
+      toast.error("Não foi possível enviar a avaliação.");
     }
   };
 
@@ -464,7 +482,39 @@ export const ChatAssistente = () => {
 
           <div className="flex-1 space-y-3 overflow-y-auto bg-muted/30 p-3 text-sm">
             {estado.mensagens.map((m, i) =>
-              m.autor === "sistema" ? (
+              m.autor === "sistema" && m.evento === "avaliacao" ? (
+                <div key={m.id ?? i} className="mx-auto w-full max-w-[90%] rounded-2xl border bg-white p-3 text-center shadow-sm">
+                  <p className="text-sm text-secondary">{m.texto}</p>
+                  {estado.avaliada ? (
+                    <p className="mt-1 text-xs text-muted-foreground">Avaliação enviada. Obrigado! 💙</p>
+                  ) : (
+                    <>
+                      <div className="mt-2 flex justify-center gap-1">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button key={n} onClick={() => setNotaSel(n)} aria-label={`${n} estrela${n > 1 ? "s" : ""}`} className="p-0.5">
+                            <span className={cn("text-2xl leading-none transition", n <= notaSel ? "text-amber-400" : "text-muted-foreground/30 hover:text-amber-300")}>★</span>
+                          </button>
+                        ))}
+                      </div>
+                      {notaSel > 0 && (
+                        <div className="mt-2 space-y-2">
+                          <textarea
+                            value={comentarioAval}
+                            onChange={(e) => setComentarioAval(e.target.value)}
+                            maxLength={1000}
+                            rows={2}
+                            placeholder={notaSel <= 3 ? "O que podemos melhorar? (opcional)" : "Quer deixar um comentário? (opcional)"}
+                            className="w-full resize-none rounded-xl border px-3 py-2 text-xs outline-none focus:border-brand"
+                          />
+                          <button onClick={avaliar} className="w-full rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white">
+                            Enviar avaliação
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : m.autor === "sistema" ? (
                 <div key={m.id ?? i} className="flex justify-center">
                   <span className="rounded-full bg-muted px-3 py-1 text-center text-[11px] text-muted-foreground">{m.texto}</span>
                 </div>
@@ -600,7 +650,7 @@ export const ChatAssistente = () => {
               ) : (
                 <button
                   type="submit"
-                  disabled={enviando || !texto.trim()}
+                  disabled={!texto.trim()}
                   className="rounded-full bg-brand p-2 text-white disabled:opacity-40"
                   aria-label="Enviar"
                 >

@@ -137,6 +137,8 @@ const StaffDashboard = () => {
         if (!meuId) return;
         if (m.autor === "sistema" && m.meta?.evento === "pediu_humano") {
           avisar(`fila:${m.id}`, "💬 Paciente pediu atendimento no chat — veja em Conversas");
+        } else if (m.autor === "sistema" && m.meta?.evento === "avaliacao_baixa") {
+          avisar(`aval:${m.id}`, `⚠️ Avaliação baixa no chat (${m.meta?.nota ?? "?"}/5) — veja em Conversas`);
         } else if (m.autor === "sistema" && m.meta?.evento === "atribuida" && m.meta?.para === meuId) {
           avisar(`atrib:${m.id}`, "💬 Uma conversa do chat foi direcionada para você — veja em Conversas");
         } else if (m.autor === "sistema" && m.meta?.evento === "transferida" && m.meta?.para === meuId) {

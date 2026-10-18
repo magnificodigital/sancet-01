@@ -61,6 +61,11 @@ type Config = {
   audio_paciente: boolean;
   audio_responder_com_audio: boolean;
   audio_max_seg: number;
+  avaliacao_ativa: boolean;
+  avaliacao_pergunta: string | null;
+  avaliacao_alerta_nota: number;
+  agrupar_seg: number;
+  ia_tarefas: boolean;
   atualizado_em: string | null;
 };
 
@@ -69,7 +74,8 @@ const COLUNAS_EDITAVEIS = [
   "nome_assistente", "boas_vindas", "texto_botao", "posicao", "cor_widget", "abrir_auto_seg", "sugestoes", "paginas_ocultas",
   "qualificar_obrigatorio", "qualificar_campos", "tom",
   "fila_distribuir", "fila_incluir_admins", "fila_max_por_atendente", "fila_prazo_min", "fila_sem_resposta_min",
-  "fila_sem_resposta_acao", "msg_fila_demora", "audio_paciente", "audio_responder_com_audio", "audio_max_seg", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
+  "fila_sem_resposta_acao", "msg_fila_demora", "audio_paciente", "audio_responder_com_audio", "audio_max_seg",
+  "avaliacao_ativa", "avaliacao_pergunta", "avaliacao_alerta_nota", "agrupar_seg", "ia_tarefas", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
   "humano_horario", "fora_horario_acao", "msg_chamar_atendente", "msg_fora_horario", "msg_encerramento",
   "notificar_email", "emails_notificacao", "respostas_rapidas",
 ] as const;
@@ -236,6 +242,8 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
       fila_sem_resposta_min: Math.min(Math.max(Math.round(cfg.fila_sem_resposta_min) || 15, 1), 1440),
       msg_fila_demora: limpo(cfg.msg_fila_demora),
       audio_max_seg: Math.min(Math.max(Math.round(cfg.audio_max_seg) || 180, 15), 600),
+      agrupar_seg: Math.min(Math.max(Math.round(cfg.agrupar_seg ?? 4), 0), 15),
+      avaliacao_pergunta: limpo(cfg.avaliacao_pergunta),
       voz_velocidade: Math.min(Math.max(Number(cfg.voz_velocidade) || 1, 0.5), 1.5),
       sugestoes: cfg.sugestoes.map((s) => s.trim()).filter(Boolean),
       paginas_ocultas: cfg.paginas_ocultas.map((s) => s.trim()).filter(Boolean).map((s) => (s.startsWith("/") ? s : `/${s}`)),
@@ -476,6 +484,22 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
                   <p className="text-xs text-muted-foreground">Protege contra abuso e custo excessivo.</p>
                 </div>
               </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5 rounded-md border p-3">
+                  <Label>Esperar o paciente terminar de escrever (segundos)</Label>
+                  <Input type="number" min={0} max={15} value={cfg.agrupar_seg} disabled={d} onChange={(e) => mudar("agrupar_seg", Number(e.target.value))} />
+                  <p className="text-xs text-muted-foreground">Mensagens seguidas são respondidas de uma vez. 0 = responde cada uma na hora.</p>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                  <div>
+                    <p className="text-sm font-medium">IA executa tarefas</p>
+                    <p className="text-xs text-muted-foreground">
+                      Para o paciente logado: ver resultado, reagendar, cancelar (sempre pedindo confirmação) e mandar o link de pagamento.
+                    </p>
+                  </div>
+                  <Switch checked={cfg.ia_tarefas} disabled={d} onCheckedChange={(v) => mudar("ia_tarefas", v)} />
+                </div>
+              </div>
               <div className="flex items-center justify-between rounded-md border p-3">
                 <div>
                   <p className="text-sm font-medium">Usar emojis</p>
@@ -503,6 +527,7 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
             <TabsContent value="conhecimento" className="space-y-4 pt-4">
               <p className="text-sm text-muted-foreground">
                 Respostas oficiais que a IA usa quando o paciente perguntar o mesmo assunto (estacionamento, formas de pagamento, entrega de resultado, etc.).
+                Perguntas que a IA não soube responder aparecem em <b>Conversas → Qualidade</b>, prontas para virar resposta aqui.
               </p>
               {cfg.faq.map((f, i) => (
                 <div key={i} className="space-y-2 rounded-md border p-3">
@@ -666,6 +691,39 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
                   <Label>Mensagem ao encerrar atendimento</Label>
                   <Textarea rows={3} maxLength={400} value={cfg.msg_encerramento ?? ""} disabled={d} placeholder="Atendimento encerrado. Se precisar de algo, é só escrever aqui. 😊" onChange={(e) => mudar("msg_encerramento", e.target.value)} />
                 </div>
+              </div>
+              <div className="space-y-3 rounded-md border p-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Pedir avaliação ao encerrar</p>
+                    <p className="text-xs text-muted-foreground">O paciente dá de 1 a 5 estrelas (e um comentário). Aparece em Conversas → Qualidade.</p>
+                  </div>
+                  <Switch checked={cfg.avaliacao_ativa} disabled={d} onCheckedChange={(v) => mudar("avaliacao_ativa", v)} />
+                </div>
+                {cfg.avaliacao_ativa && (
+                  <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
+                    <Input
+                      value={cfg.avaliacao_pergunta ?? ""}
+                      disabled={d}
+                      maxLength={200}
+                      placeholder="Como foi o seu atendimento? Toque nas estrelas para avaliar. ⭐"
+                      onChange={(e) => mudar("avaliacao_pergunta", e.target.value)}
+                    />
+                    <Select value={String(cfg.avaliacao_alerta_nota)} disabled={d} onValueChange={(v) => mudar("avaliacao_alerta_nota", Number(v))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Alerta com nota 1</SelectItem>
+                        <SelectItem value="2">Alerta com nota até 2</SelectItem>
+                        <SelectItem value="3">Alerta com nota até 3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground sm:col-span-2">
+                      Nota baixa: alerta na tela da equipe e e-mail para os destinatários abaixo (ou os e-mails de admin do Resend).
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="space-y-3 rounded-md border p-3">
                 <div className="flex items-center justify-between gap-4">

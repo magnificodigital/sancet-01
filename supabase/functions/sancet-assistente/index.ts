@@ -77,15 +77,21 @@ const HABILIDADE_DA_FERRAMENTA: Record<string, string> = {
   buscar_convenios: "convenios",
   datas_agendamento: "datas",
   meus_pedidos: "pedidos",
+  meus_resultados: "pedidos",
+  reagendar_pedido: "pedidos",
+  cancelar_pedido: "pedidos",
+  link_pagamento: "pedidos",
   montar_carrinho: "agendar",
   chamar_atendente: "atendente",
 };
 const habil = (cfg: any, h: string) => cfg?.habilidades?.[h] !== false;
 /** Antes de qualificar, só estas ferramentas funcionam. */
-const ANTES_DE_QUALIFICAR = new Set(["qualificar_atendimento", "listar_unidades", "contato_atendimento"]);
+const ANTES_DE_QUALIFICAR = new Set(["qualificar_atendimento", "listar_unidades", "contato_atendimento", "registrar_pergunta_sem_resposta"]);
 const precisaQualificar = (cfg: any, conversa: any) => cfg?.qualificar_obrigatorio !== false && !!conversa && !conversa.qualificado_em;
+const TAREFAS = new Set(["meus_resultados", "reagendar_pedido", "cancelar_pedido", "link_pagamento"]);
 const ferramentasAtivas = (cfg: any, conversa: any = null) =>
   FERRAMENTAS.filter((f) => {
+    if (TAREFAS.has(f.function.name) && cfg?.ia_tarefas === false) return false;
     if (precisaQualificar(cfg, conversa) && !ANTES_DE_QUALIFICAR.has(f.function.name)) return false;
     const h = HABILIDADE_DA_FERRAMENTA[f.function.name];
     return !h || habil(cfg, h);
@@ -110,7 +116,7 @@ const SISTEMA = (hoje: string, logado: string | null, cfg: any, voz = false, q: 
 
 Hoje é ${hoje} (horário de Brasília). ${logado ? `O paciente está logado como ${logado}.` : "O visitante NÃO está logado."}
 ${q?.pendente ? `
-PRIMEIRO PASSO OBRIGATÓRIO (antes de responder qualquer outra coisa): cumprimente e peça, de forma simpática e em UMA mensagem, ${q.pedir.join(", ")}. Explique que é para direcionar o atendimento para a equipe da unidade. Se o paciente não souber a unidade, ofereça a lista (listar_unidades) e ajude a escolher pela cidade/bairro. Quando tiver os dados, chame qualificar_atendimento. Só depois disso responda as dúvidas dele.${q.conhecidos ? ` Dados que já temos (não pergunte de novo): ${q.conhecidos}.` : ""}
+PRIMEIRO PASSO OBRIGATÓRIO (antes de responder qualquer outra coisa): cumprimente e peça, de forma simpática e em UMA mensagem, ${q.pedir.join(", ")}. Explique que é para direcionar o atendimento para a equipe da unidade. Se o paciente não souber a unidade, ofereça a lista (listar_unidades) e ajude a escolher pela cidade/bairro. Se o paciente JÁ informou esses dados (nesta mensagem ou em anteriores), NÃO peça de novo nem peça confirmação: chame qualificar_atendimento imediatamente com o que ele disse (a ferramenta avisa se faltar algo). Só depois disso responda as dúvidas dele.${q.conhecidos ? ` Dados que já temos (não pergunte de novo): ${q.conhecidos}.` : ""}
 ` : q?.unidade ? `
 Atendimento direcionado para a unidade ${q.unidade}. Use essa unidade em datas_agendamento e no agendamento, salvo se o paciente pedir para trocar (chame qualificar_atendimento com a nova unidade).
 ` : ""}
@@ -118,12 +124,13 @@ O que você faz:
 - Tira dúvidas sobre exames, preços (só particular), preparo/jejum, unidades, horários e convênios aceitos.
 - Ajuda a agendar: descobre se é PARTICULAR ou CONVÊNIO, identifica os exames (o paciente pode mandar FOTO do pedido médico aqui no chat), e então chama montar_carrinho. Depois diga para ele clicar no botão "Continuar agendamento" que aparece no chat, onde escolhe unidade, data e envia os documentos.
 - Documentos para agendar: pedido médico e documento com foto (RG ou CNH, frente e verso); no convênio também a carteirinha.
-- Informa o andamento dos pedidos do paciente logado (meus_pedidos). Se não estiver logado, peça para entrar em sancet.vercel.app/entrar.
-- Reagendar/cancelar: oriente a ir em "Meus agendamentos" (menu do topo > Reagendar / Cancelar agendamento).
+- Informa o andamento dos pedidos do paciente logado (meus_pedidos) e se o resultado já saiu (meus_resultados). Se não estiver logado, peça para entrar em sancet.vercel.app/entrar.
+- Faz pelo chat, para o paciente LOGADO: reagendar (reagendar_pedido), cancelar (cancelar_pedido) e mandar o link de pagamento (link_pagamento). Para reagendar, consulte datas_agendamento na unidade do pedido. Antes de reagendar ou cancelar, repita protocolo e o que vai mudar e peça confirmação EXPLÍCITA ("sim"); só então chame com confirmado=true.
+- Se a pergunta do paciente não for coberta pelas ferramentas nem pelas perguntas frequentes, chame registrar_pergunta_sem_resposta (para a equipe ensinar você) e ofereça falar com um atendente.
 
 Regras OBRIGATÓRIAS:
 - Consulte as ferramentas por conta própria, sem pedir licença, e NUNCA cite nomes de ferramentas, códigos internos ou "sistema" para o paciente.
-- NUNCA invente exames, preços, preparos, endereços ou horários: use SEMPRE as ferramentas ou as Perguntas frequentes abaixo. Se não encontrar, diga que não encontrou e sugira falar com a equipe.
+- NUNCA invente NADA sobre o laboratório: exames, preços, preparos, endereços, horários, prazos de resultado, estrutura, acessibilidade, estacionamento, formas de pagamento, políticas ou serviços. Só afirme o que vier das ferramentas ou das Perguntas frequentes abaixo. Se não houver a informação, NÃO responda "sim" nem "não": chame registrar_pergunta_sem_resposta, diga que não tem essa informação confirmada e ofereça falar com um atendente.
 - NUNCA dê orientação médica, diagnóstico, interpretação de resultado ou indicação de exame. Nesses casos, recomende procurar o médico.
 - Preço só existe para particular. No convênio, a cobertura depende do plano (a equipe confirma).
 - Agendamento: o primeiro dia disponível segue a regra do laboratório (datas_agendamento informa). Domingo e dias em que a unidade fecha não têm atendimento.
@@ -191,7 +198,52 @@ const FERRAMENTAS = [
   },
   {
     type: "function",
-    function: { name: "meus_pedidos", description: "Pedidos/agendamentos do paciente LOGADO e o andamento de cada um.", parameters: { type: "object", properties: {} } },
+    function: { name: "meus_pedidos", description: "Pedidos/agendamentos do paciente LOGADO: situação, agendamento, valor, pagamento, se o resultado saiu e o que dá para fazer.", parameters: { type: "object", properties: {} } },
+  },
+  {
+    type: "function",
+    function: { name: "meus_resultados", description: "Resultados de exames já disponíveis para o paciente LOGADO.", parameters: { type: "object", properties: {} } },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reagendar_pedido",
+      description: "Reagenda um pedido do paciente LOGADO. Só chame com confirmado=true depois que o paciente confirmar.",
+      parameters: {
+        type: "object",
+        properties: {
+          protocolo: { type: "string" },
+          data: { type: "string", description: "Nova data no formato AAAA-MM-DD" },
+          periodo: { type: "string", enum: ["manha", "tarde"] },
+          confirmado: { type: "boolean" },
+        },
+        required: ["protocolo", "data", "periodo"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancelar_pedido",
+      description: "Cancela um pedido do paciente LOGADO (só se ainda não foi confirmado pela equipe). Só chame com confirmado=true depois que o paciente confirmar.",
+      parameters: { type: "object", properties: { protocolo: { type: "string" }, confirmado: { type: "boolean" } }, required: ["protocolo"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "link_pagamento",
+      description: "Link para pagar um pedido particular que está aguardando pagamento (paciente LOGADO).",
+      parameters: { type: "object", properties: { protocolo: { type: "string" } }, required: ["protocolo"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "registrar_pergunta_sem_resposta",
+      description: "Registra uma pergunta do paciente que você NÃO conseguiu responder com as ferramentas nem com as perguntas frequentes.",
+      parameters: { type: "object", properties: { pergunta: { type: "string", description: "A pergunta, resumida em uma frase" } }, required: ["pergunta"] },
+    },
   },
   {
     type: "function",
@@ -377,7 +429,7 @@ Deno.serve(async (req) => {
       if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = {}; } }
       const acoesF: any[] = [];
       const citadosF = new Map<string, { codigo: string; nome: string; tipo: string }>();
-      const resultado = await executar(admin, nomeF, args ?? {}, paciente, acoesF, citadosF, conversaId, { cfg, conversa }).catch((e) => ({ erro: String(e?.message ?? e) }));
+      const resultado = await executar(admin, nomeF, args ?? {}, paciente, acoesF, citadosF, conversaId, { cfg, conversa, jwt }).catch((e) => ({ erro: String(e?.message ?? e) }));
       if (nomeF === "montar_carrinho" && !(resultado as any)?.erro) {
         await admin.from("chat_conversas").update({ contexto: { ...(conversa.contexto ?? {}), tipo: args?.tipo } }).eq("id", conversaId);
       }
@@ -424,6 +476,7 @@ Deno.serve(async (req) => {
           id: m.id,
           autor: m.autor,
           autor_nome: m.autor === "equipe" ? m.autor_nome : null,
+          evento: m.meta?.evento ?? null,
           texto: m.texto,
           anexo: m.anexo_path
             ? {
@@ -459,6 +512,27 @@ Deno.serve(async (req) => {
         texto: `✅ Pedido ${ped.protocolo} enviado a partir desta conversa.`,
         meta: { publico: true, evento: "pedido", pedido_id: ped.id },
       });
+      return json({ conversa_id: conversaId, token: tokenNovo, ok: true });
+    }
+
+    // ---- Avaliação do atendimento (estrelas) ----
+    if (acao === "avaliar") {
+      const nota = Math.round(Number(body.nota));
+      if (!(nota >= 1 && nota <= 5)) return json({ error: "Nota inválida." }, 400);
+      if (!conversa.avaliacao_solicitada_em || conversa.avaliacao_nota) return json({ conversa_id: conversaId, token: tokenNovo, ok: true, ja_avaliada: true });
+      const comentario = String(body.comentario ?? "").trim().slice(0, 1000) || null;
+      await admin.from("chat_conversas").update({ avaliacao_nota: nota, avaliacao_comentario: comentario, avaliacao_em: new Date().toISOString() }).eq("id", conversaId);
+      await admin.from("chat_mensagens").insert({
+        conversa_id: conversaId, autor: "sistema",
+        texto: `${"⭐".repeat(nota)} Avaliação do paciente: ${nota}/5${comentario ? ` — "${comentario}"` : ""}`,
+        meta: { evento: nota <= Number(cfg?.avaliacao_alerta_nota ?? 2) ? "avaliacao_baixa" : "avaliacao_recebida", nota },
+      });
+      await admin.from("chat_mensagens").insert({
+        conversa_id: conversaId, autor: "sistema", texto: "Obrigado pela sua avaliação! 💙", meta: { publico: true, evento: "avaliacao_ok" },
+      });
+      if (nota <= Number(cfg?.avaliacao_alerta_nota ?? 2)) {
+        await avisarNotaBaixa(admin, cfg, conversa, nota, comentario).catch((e) => console.error("nota baixa:", e));
+      }
       return json({ conversa_id: conversaId, token: tokenNovo, ok: true });
     }
 
@@ -529,7 +603,7 @@ Deno.serve(async (req) => {
         " Confirme com o paciente se é particular ou convênio antes de montar o carrinho.]";
     }
 
-    await admin.from("chat_mensagens").insert({
+    const { data: minhaMsg } = await admin.from("chat_mensagens").insert({
       conversa_id: conversaId,
       autor: "paciente",
       texto: [texto, transcricao].filter(Boolean).join("\n") || null,
@@ -543,7 +617,7 @@ Deno.serve(async (req) => {
             ...(notaAnexo ? { leitura: notaAnexo } : {}),
           }
         : {},
-    });
+    }).select("id, created_at").single();
     // Devolve ao site o próprio anexo (link temporário) e a transcrição.
     const meuAnexo = anexoPath
       ? {
@@ -555,6 +629,21 @@ Deno.serve(async (req) => {
 
     if (!iaResponde) {
       return json({ conversa_id: conversaId, token: tokenNovo, resposta: null, aguardando_humano: true, meu_anexo: meuAnexo, ...(await estadoPublico(admin, conversaId)) });
+    }
+    // Agrupa mensagens seguidas: espera o paciente terminar de escrever. Se chegar
+    // outra mensagem nesse tempo, quem responde (tudo junto) é a requisição dela.
+    const espera = Math.min(Math.max(Number(cfg?.agrupar_seg ?? 4), 0), 15);
+    if (espera > 0 && minhaMsg?.created_at) {
+      await new Promise((ok) => setTimeout(ok, espera * 1000));
+      const { count: depois } = await admin
+        .from("chat_mensagens")
+        .select("id", { count: "exact", head: true })
+        .eq("conversa_id", conversaId)
+        .eq("autor", "paciente")
+        .gt("created_at", minhaMsg.created_at);
+      if ((depois ?? 0) > 0) {
+        return json({ conversa_id: conversaId, token: tokenNovo, resposta: null, agrupada: true, meu_anexo: meuAnexo, ...(await estadoPublico(admin, conversaId)) });
+      }
     }
     if (audioPaciente && !transcricao && !texto) {
       const r0 = "Recebi seu áudio, mas não consegui ouvir agora. 😕 Pode escrever sua mensagem, por favor?";
@@ -590,6 +679,18 @@ Deno.serve(async (req) => {
     const citados = new Map<string, { codigo: string; nome: string; tipo: string }>();
     let contexto = { ...(conversa.contexto ?? {}) };
     let resposta = "";
+    const trace: any[] = []; // diagnóstico (só no modo Teste com debug)
+    // Paciente já mandou celular ou nome de unidade e ainda não está qualificado:
+    // a 1ª ação da IA é obrigatoriamente registrar (o modelo às vezes insiste em pedir de novo).
+    let forcarQualif = false;
+    if (precisaQualificar(cfg, conversa)) {
+      const recente = (hist ?? []).filter((m: any) => m.autor === "paciente").slice(0, 3).map((m: any) => m.texto ?? "").join(" ");
+      const temFone = recente.replace(/\D/g, "").length >= 10;
+      const { data: uns } = await admin.from("unidades_cache").select("nome").eq("ativo", true);
+      const alvo = normalizar(recente);
+      const temUnidade = (uns ?? []).some((u: any) => normalizar(u.nome).length >= 4 && alvo.includes(normalizar(u.nome)));
+      forcarQualif = temFone || temUnidade;
+    }
     for (let volta = 0; volta < 6; volta++) {
       const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -599,7 +700,14 @@ Deno.serve(async (req) => {
           "HTTP-Referer": "https://sancet.com.br",
           "X-Title": "Sancet Assistente",
         },
-        body: JSON.stringify({ model: modelo, messages: mensagens, tools: ferramentasAtivas(cfg, conversa), temperature: 0.3, max_tokens: 900 }),
+        body: JSON.stringify({
+          model: modelo,
+          messages: mensagens,
+          tools: ferramentasAtivas(cfg, conversa),
+          ...(volta === 0 && forcarQualif ? { tool_choice: { type: "function", function: { name: "qualificar_atendimento" } } } : {}),
+          temperature: 0.3,
+          max_tokens: 900,
+        }),
       });
       if (!r.ok) throw new Error(`IA ${r.status}: ${(await r.text()).slice(0, 300)}`);
       const msg = (await r.json()).choices?.[0]?.message;
@@ -615,14 +723,29 @@ Deno.serve(async (req) => {
         try {
           args = JSON.parse(c.function?.arguments || "{}");
         } catch { /* args inválidos */ }
-        const resultado = await executar(admin, c.function?.name, args, paciente, acoes, citados, conversaId, { cfg, conversa }).catch((e) => ({
+        const resultado = await executar(admin, c.function?.name, args, paciente, acoes, citados, conversaId, { cfg, conversa, jwt }).catch((e) => ({
           erro: String(e?.message ?? e),
         }));
         if (c.function?.name === "montar_carrinho" && !(resultado as any)?.erro) contexto = { ...contexto, tipo: args.tipo };
+        trace.push({ ferramenta: c.function?.name, args, resultado: JSON.stringify(resultado).slice(0, 400) });
         mensagens.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(resultado).slice(0, 12000) });
       }
     }
     if (!resposta) resposta = "Desculpe, não consegui concluir agora. Pode reformular ou falar com nossa equipe?";
+
+    // A IA disse que não sabe mas esqueceu de registrar: registra a pergunta do paciente.
+    if (!trace.some((t) => t.ferramenta === "registrar_pergunta_sem_resposta") &&
+        /n[ãa]o (tenho|encontrei|possuo) (essa|esta|essas) informa|n[ãa]o tenho informa[çc][ãa]o confirmada/i.test(resposta)) {
+      const ultima = (hist ?? []).find((m: any) => m.autor === "paciente" && m.texto)?.texto;
+      if (ultima) {
+        await admin.from("ia_lacunas").insert({
+          conversa_id: conversaId,
+          pergunta: String(ultima).slice(0, 300),
+          pergunta_norm: normalizar(String(ultima)).replace(/[^A-Z0-9 ]/g, "").slice(0, 200),
+          unidade_nome: conversa.unidade_nome ?? null,
+        });
+      }
+    }
 
     // Paciente mandou áudio: a IA responde em áudio também (além do texto).
     let respAudio: { path: string; url: string | null } | null = null;
@@ -649,6 +772,7 @@ Deno.serve(async (req) => {
     return json({
       conversa_id: conversaId, token: tokenNovo, resposta, acoes, meu_anexo: meuAnexo,
       ...(respAudio?.url ? { resposta_audio: respAudio.url } : {}),
+      ...(body.debug && cfg?.chat_modo === "teste" ? { debug: { trace, ferramentas: ferramentasAtivas(cfg, conversa).map((f) => f.function.name), qualificada: !!conversa.qualificado_em } } : {}),
       ...(await estadoPublico(admin, conversaId)),
     });
   } catch (e) {
@@ -675,7 +799,7 @@ async function executar(
   admin: any, nome: string, a: any, paciente: any, acoes: any[],
   citados: Map<string, { codigo: string; nome: string; tipo: string }>,
   conversaId = "",
-  ctx: { cfg: any; conversa: any } = { cfg: null, conversa: null },
+  ctx: { cfg: any; conversa: any; jwt?: string } = { cfg: null, conversa: null },
 ): Promise<unknown> {
   if (precisaQualificar(ctx.cfg, ctx.conversa) && !ANTES_DE_QUALIFICAR.has(nome)) {
     return { erro: "Antes, peça os dados do paciente e a unidade e chame qualificar_atendimento." };
@@ -838,20 +962,117 @@ async function executar(
       if (!paciente) return { erro: "O paciente não está logado. Peça para entrar em sancet.vercel.app/entrar." };
       const { data } = await admin
         .from("pedidos")
-        .select("protocolo, status, tipo_solicitacao, unidade_nome, data_agendamento, periodo_agendamento, itens, created_at")
+        .select("protocolo, status, tipo_solicitacao, modalidade_coleta, unidade_nome, data_agendamento, periodo_agendamento, itens, valor_total_centavos, created_at, convenio_nome")
         .eq("paciente_id", paciente.id)
         .order("created_at", { ascending: false })
         .limit(6);
+      const protocolos = (data ?? []).map((p: any) => p.protocolo);
+      const { data: res } = protocolos.length
+        ? await admin.from("resultados").select("pedido_protocolo").in("pedido_protocolo", protocolos)
+        : { data: [] as any[] };
+      const comResultado = new Set((res ?? []).map((r: any) => r.pedido_protocolo));
+      const site = await siteUrl(admin);
       return (data ?? []).map((p: any) => ({
         protocolo: p.protocolo,
         situacao: STATUS[p.status] ?? p.status,
-        tipo: p.tipo_solicitacao,
+        tipo: p.tipo_solicitacao === "convenio" ? `convênio ${p.convenio_nome ?? ""}`.trim() : "particular",
         unidade: p.unidade_nome,
         agendamento: p.data_agendamento
           ? `${String(p.data_agendamento).split("-").reverse().join("/")} ${p.periodo_agendamento === "tarde" ? "tarde" : "manhã"}`
           : null,
-        exames: Array.isArray(p.itens) ? p.itens.length : 0,
+        exames: Array.isArray(p.itens) ? p.itens.map((i: any) => i?.nome).filter(Boolean).slice(0, 15) : [],
+        valor: p.tipo_solicitacao === "particular" && p.valor_total_centavos ? brl(p.valor_total_centavos / 100) : null,
+        resultado_disponivel: comResultado.has(p.protocolo) || p.status === "concluido",
+        pode_reagendar: ["novo", "em_analise", "aguardando_pagamento", "confirmado"].includes(p.status) && p.modalidade_coleta !== "domicilio",
+        pode_cancelar: ["novo", "em_analise"].includes(p.status),
+        ...(p.status === "aguardando_pagamento" ? { link_pagamento: `${site}/pagamento/${p.protocolo}` } : {}),
       }));
+    }
+    case "meus_resultados": {
+      if (!paciente || !ctx.jwt) return { erro: "O paciente não está logado. Peça para entrar em sancet.vercel.app/entrar." };
+      const { data, error } = await comoPaciente(ctx.jwt).rpc("resultados_do_paciente_auth");
+      if (error) return { erro: "Não consegui consultar os resultados agora." };
+      const site = await siteUrl(admin);
+      const lista = (Array.isArray(data) ? data : []).slice(0, 10).map((r: any) => ({
+        protocolo: r.pedido_protocolo,
+        arquivo: r.nome_arquivo,
+        disponivel_desde: String(r.created_at ?? "").slice(0, 10).split("-").reverse().join("/"),
+      }));
+      return {
+        resultados: lista,
+        onde_ver: `${site}/agendamentos (aba Resultados, já logado)`,
+        obs: lista.length ? "Não interprete resultados; oriente levar ao médico." : "Nenhum resultado disponível ainda. Os prazos variam por exame.",
+      };
+    }
+    case "reagendar_pedido": {
+      if (!paciente || !ctx.jwt) return { erro: "O paciente precisa estar logado para reagendar. Peça para entrar em sancet.vercel.app/entrar." };
+      const protocolo = String(a.protocolo ?? "").trim().toUpperCase();
+      const data = String(a.data ?? "").slice(0, 10);
+      const periodo = a.periodo === "tarde" ? "tarde" : "manha";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { erro: "Data inválida (use AAAA-MM-DD)." };
+      const { data: ped } = await admin.from("pedidos").select("protocolo, unidade_codigo_shift, unidade_nome, data_agendamento, periodo_agendamento, paciente_id").eq("protocolo", protocolo).maybeSingle();
+      if (!ped || ped.paciente_id !== paciente.id) return { erro: "Pedido não encontrado para este paciente." };
+      // A unidade atende nesse dia/período?
+      const { data: un } = await admin.from("unidades_cache").select("horarios").eq("codigo_shift", ped.unidade_codigo_shift).maybeSingle();
+      const dia = new Date(`${data}T12:00:00`).getDay();
+      const disp = (un?.horarios?.dias?.[String(dia)] ?? AGENDA_PADRAO[String(dia)]) as string;
+      if (disp === "fechado" || (disp === "manha" && periodo === "tarde") || (disp === "tarde" && periodo === "manha")) {
+        return { erro: `A unidade ${ped.unidade_nome ?? ""} não atende ${DIAS[dia]} ${periodo === "tarde" ? "à tarde" : "de manhã"}. Use datas_agendamento.` };
+      }
+      if (a.confirmado !== true) {
+        return {
+          confirmar: true,
+          instrucao: `Peça confirmação: reagendar ${protocolo} para ${data.split("-").reverse().join("/")} (${periodo === "tarde" ? "tarde" : "manhã"}) na unidade ${ped.unidade_nome}? Só depois chame de novo com confirmado=true.`,
+        };
+      }
+      const { data: r, error } = await comoPaciente(ctx.jwt).rpc("reagendar_meu_pedido_auth", { p_protocolo: protocolo, p_data: data, p_periodo: periodo });
+      if (error || r?.error) return { erro: r?.error ?? "Não consegui reagendar agora." };
+      if (conversaId) {
+        await admin.from("chat_mensagens").insert({
+          conversa_id: conversaId, autor: "sistema",
+          texto: `📅 Pedido ${protocolo} reagendado pela IA para ${data.split("-").reverse().join("/")} (${periodo === "tarde" ? "tarde" : "manhã"})`,
+          meta: { evento: "tarefa", tarefa: "reagendar", protocolo },
+        });
+      }
+      return { ok: true, instrucao: "Confirme ao paciente e lembre que a equipe vai rever o pedido." };
+    }
+    case "cancelar_pedido": {
+      if (!paciente || !ctx.jwt) return { erro: "O paciente precisa estar logado para cancelar. Peça para entrar em sancet.vercel.app/entrar." };
+      const protocolo = String(a.protocolo ?? "").trim().toUpperCase();
+      const { data: ped } = await admin.from("pedidos").select("protocolo, status, paciente_id").eq("protocolo", protocolo).maybeSingle();
+      if (!ped || ped.paciente_id !== paciente.id) return { erro: "Pedido não encontrado para este paciente." };
+      if (!["novo", "em_analise"].includes(ped.status)) {
+        return { erro: "Este pedido já foi confirmado pela equipe e não pode ser cancelado pelo chat. Ofereça falar com um atendente." };
+      }
+      if (a.confirmado !== true) return { confirmar: true, instrucao: `Peça confirmação explícita: cancelar o pedido ${protocolo}? Isso não pode ser desfeito.` };
+      const { data: ok, error } = await comoPaciente(ctx.jwt).rpc("cancelar_meu_pedido_auth", { p_protocolo: protocolo });
+      if (error || !ok) return { erro: "Não consegui cancelar agora." };
+      if (conversaId) {
+        await admin.from("chat_mensagens").insert({
+          conversa_id: conversaId, autor: "sistema", texto: `❌ Pedido ${protocolo} cancelado pela IA a pedido do paciente`,
+          meta: { evento: "tarefa", tarefa: "cancelar", protocolo },
+        });
+      }
+      return { ok: true };
+    }
+    case "link_pagamento": {
+      if (!paciente) return { erro: "O paciente precisa estar logado. Peça para entrar em sancet.vercel.app/entrar." };
+      const protocolo = String(a.protocolo ?? "").trim().toUpperCase();
+      const { data: ped } = await admin.from("pedidos").select("protocolo, status, paciente_id, valor_total_centavos").eq("protocolo", protocolo).maybeSingle();
+      if (!ped || ped.paciente_id !== paciente.id) return { erro: "Pedido não encontrado para este paciente." };
+      if (ped.status !== "aguardando_pagamento") return { erro: `Este pedido não está aguardando pagamento (situação: ${STATUS[ped.status] ?? ped.status}).` };
+      return { link: `${await siteUrl(admin)}/pagamento/${protocolo}`, valor: ped.valor_total_centavos ? brl(ped.valor_total_centavos / 100) : null };
+    }
+    case "registrar_pergunta_sem_resposta": {
+      const pergunta = String(a.pergunta ?? "").trim().slice(0, 300);
+      if (!pergunta) return { ok: false };
+      await admin.from("ia_lacunas").insert({
+        conversa_id: conversaId || null,
+        pergunta,
+        pergunta_norm: normalizar(pergunta).replace(/[^A-Z0-9 ]/g, "").slice(0, 200),
+        unidade_nome: ctx.conversa?.unidade_nome ?? null,
+      });
+      return { ok: true, instrucao: "Diga com honestidade que não tem essa informação e ofereça falar com um atendente." };
     }
     case "montar_carrinho": {
       const codigos = (Array.isArray(a.codigos) ? a.codigos : []).map(String).slice(0, 60);
@@ -1094,4 +1315,50 @@ async function falar(texto: string, voz?: string): Promise<Uint8Array | null> {
     return null;
   }
   return new Uint8Array(await r.arrayBuffer());
+}
+
+/** Cliente Supabase com o login do paciente (para as funções "meu pedido"). */
+function comoPaciente(jwt: string) {
+  return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: `Bearer ${jwt}` } },
+  });
+}
+
+let siteCache: string | null = null;
+async function siteUrl(admin: any) {
+  if (siteCache) return siteCache;
+  const { data } = await admin.from("configuracoes").select("valor").eq("chave", "SITE_URL").maybeSingle();
+  siteCache = String(data?.valor || "https://sancet.vercel.app").trim().replace(/\/$/, "");
+  return siteCache;
+}
+
+/** Nota baixa: e-mail para a equipe/gestão (mesmos destinatários dos avisos do chat). */
+async function avisarNotaBaixa(admin: any, cfg: any, conversa: any, nota: number, comentario: string | null) {
+  const { data: rows } = await admin.from("configuracoes").select("chave, valor").in("chave", ["RESEND_API_KEY", "RESEND_EMAIL_FROM", "RESEND_EMAILS_ADMIN"]);
+  const c: Record<string, string> = {};
+  (rows ?? []).forEach((r: any) => (c[r.chave] = r.valor ?? ""));
+  const para = String(cfg?.emails_notificacao || c.RESEND_EMAILS_ADMIN || "")
+    .split(/[,;\s]+/).map((x) => x.trim()).filter((x) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)).slice(0, 10);
+  if (!c.RESEND_API_KEY || !para.length) return;
+  const atendente = conversa.avaliacao_atendente || conversa.responsavel_id
+    ? (await admin.from("user_roles").select("nome, email").eq("user_id", conversa.avaliacao_atendente || conversa.responsavel_id).maybeSingle()).data
+    : null;
+  const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]!);
+  const site = await siteUrl(admin);
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${c.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: c.RESEND_EMAIL_FROM?.trim() || "onboarding@resend.dev",
+      to: para,
+      subject: `[Sancet] Avaliação baixa no chat (${nota}/5)`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:560px">
+        <h2 style="color:#c8102e">⚠️ Avaliação baixa: ${nota}/5</h2>
+        <p><b>Paciente:</b> ${esc(conversa.lead_nome ?? "Visitante")} · <b>Unidade:</b> ${esc(conversa.unidade_nome ?? "—")}</p>
+        <p><b>Atendente:</b> ${esc(atendente?.nome || atendente?.email || "—")}</p>
+        ${comentario ? `<p><b>Comentário:</b> "${esc(comentario)}"</p>` : ""}
+        <p><a href="${site}/staff/dashboard?aba=conversas" style="background:#1d3a6b;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">Ver a conversa</a></p>
+      </div>`,
+    }),
+  });
 }

@@ -22,6 +22,8 @@ import {
   Users,
   Zap,
   MoreVertical,
+  Star,
+  Gauge,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -40,6 +42,9 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FichaPacienteChat } from "./FichaPacienteChat";
+import { PainelQualidade } from "./PainelQualidade";
+import { useStaffPerfil } from "@/hooks/useStaffPerfil";
+import { pode } from "@/lib/permissoes";
 import { PlayerAudio } from "@/components/audio/PlayerAudio";
 import { BarraGravando, BotaoMicrofone, gravacaoSuportada, useGravadorAudio } from "@/components/audio/useGravadorAudio";
 import { ModalPedidoStaff } from "./ModalPedidoStaff";
@@ -72,6 +77,8 @@ type Conversa = {
   fila_desde: string | null;
   resumo: string | null;
   resumo_em: string | null;
+  avaliacao_nota: number | null;
+  avaliacao_comentario: string | null;
 };
 type Mensagem = {
   id: string;
@@ -104,7 +111,7 @@ const STATUS_LABEL: Record<Conversa["status"], { label: string; cls: string; dot
 };
 
 const COLS_CONVERSA =
-  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo, fila_desde, resumo, resumo_em";
+  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo, fila_desde, resumo, resumo_em, avaliacao_nota, avaliacao_comentario";
 
 const nomeConversa = (c: Conversa) =>
   c.pacientes?.nome_social || c.pacientes?.nome || c.lead_nome || `Visitante ${c.id.slice(0, 4).toUpperCase()}`;
@@ -207,6 +214,9 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   const [pedidoModal, setPedidoModal] = useState<any | null>(null);
   const [resumo, setResumo] = useState<{ texto: string | null; carregando: boolean }>({ texto: null, carregando: false });
   const [sugerindo, setSugerindo] = useState(false);
+  const [qualidadeAberta, setQualidadeAberta] = useState(false);
+  const [lacunasAbertas, setLacunasAbertas] = useState(0);
+  const perfilStaff = useStaffPerfil();
   const fimRef = useRef<HTMLDivElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
   const enviarRef = useRef<(f?: File) => void>(() => {});
@@ -247,6 +257,9 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
     db.rpc("chat_atendentes").then(({ data }: any) => setAtendentes(data ?? []));
     db.rpc("chat_respostas_rapidas").then(({ data }: any) => setRapidas(Array.isArray(data) ? data : []));
     db.rpc("chat_fila_config").then(({ data }: any) => data && setFilaCfg(data));
+    db.from("ia_lacunas").select("pergunta_norm").eq("status", "aberta").limit(500).then(({ data }: any) =>
+      setLacunasAbertas(new Set((data ?? []).map((x: any) => x.pergunta_norm)).size),
+    );
     const iv = window.setInterval(() => setTick((n) => n + 1), 30_000);
     return () => window.clearInterval(iv);
   }, [carregarConversas]);
@@ -478,7 +491,18 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
       if (!m.texto && !acoes.length) return sep ? <Separador iso={m.created_at} /> : null;
       corpo = (
         <div className="flex justify-center py-0.5">
-          <span className="max-w-[85%] rounded-full border bg-white/80 px-3 py-1 text-center text-[11px] text-muted-foreground shadow-sm">
+          <span
+            className={cn(
+              "max-w-[85%] rounded-full border px-3 py-1 text-center text-[11px] shadow-sm",
+              m.meta?.evento === "avaliacao_baixa"
+                ? "border-red-200 bg-red-50 font-medium text-red-700"
+                : m.meta?.evento === "avaliacao_recebida"
+                  ? "border-amber-200 bg-amber-50 text-amber-800"
+                  : m.meta?.evento === "tarefa"
+                    ? "border-blue-200 bg-blue-50 text-blue-800"
+                    : "bg-white/80 text-muted-foreground",
+            )}
+          >
             {m.texto ?? `🛒 Carrinho montado pela voz: ${acoes.flatMap((a) => a.itens?.map((i: any) => i.nome) ?? []).join(", ")}`}
             <span className="ml-2 opacity-60">{hora(m.created_at)}</span>
           </span>
@@ -585,6 +609,14 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
             </button>
           ))}
         </div>
+        <Button variant="outline" size="sm" className="relative rounded-full" onClick={() => setQualidadeAberta(true)}>
+          <Gauge className="mr-1 h-4 w-4" /> Qualidade
+          {lacunasAbertas > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white" title="Perguntas que a IA não soube responder">
+              {lacunasAbertas}
+            </span>
+          )}
+        </Button>
         <div className="flex items-center gap-1 rounded-full border bg-background p-1 text-xs shadow-sm">
           {(["online", "ausente"] as const).map((st) => (
             <button
@@ -701,6 +733,17 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                       </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1">
                         <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", STATUS_LABEL[c.status].cls)}>{STATUS_LABEL[c.status].label}</span>
+                        {c.avaliacao_nota && (
+                          <span
+                            className={cn(
+                              "flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                              c.avaliacao_nota <= 2 ? "bg-red-100 text-red-700" : "bg-amber-50 text-amber-700",
+                            )}
+                            title={c.avaliacao_comentario ?? "Avaliação do paciente"}
+                          >
+                            <Star className="h-2.5 w-2.5 fill-current" /> {c.avaliacao_nota}
+                          </span>
+                        )}
                         {c.unidade_nome && (
                           <span className="flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
                             <MapPin className="h-2.5 w-2.5" /> {c.unidade_nome}
@@ -1027,6 +1070,23 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
       </Sheet>
 
       <ModalPedidoStaff pedido={pedidoModal} onClose={() => setPedidoModal(null)} />
+
+      <PainelQualidade
+        aberto={qualidadeAberta}
+        onFechar={() => {
+          setQualidadeAberta(false);
+          db.from("ia_lacunas").select("pergunta_norm").eq("status", "aberta").limit(500).then(({ data }: any) =>
+            setLacunasAbertas(new Set((data ?? []).map((x: any) => x.pergunta_norm)).size),
+          );
+        }}
+        nomeAtendente={nomeAtendente}
+        podeEditarIA={isAdmin || pode(perfilStaff.permissoes as any, "config", "editar")}
+        onAbrirConversa={(id) => {
+          setQualidadeAberta(false);
+          setFiltro(conversas.find((c) => c.id === id)?.status === "encerrada" ? "encerradas" : "todas");
+          setSelId(id);
+        }}
+      />
 
       <Dialog open={!!transferir} onOpenChange={(o) => !o && setTransferir(null)}>
         <DialogContent>
