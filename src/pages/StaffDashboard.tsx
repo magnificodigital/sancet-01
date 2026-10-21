@@ -136,14 +136,26 @@ const StaffDashboard = () => {
         const m = payload.new;
         const meuId = (await supabase.auth.getSession()).data.session?.user.id;
         if (!meuId) return;
+        // Quem é: nome, situação do cadastro, pedidos em aberto e unidade.
+        const quem = async () => {
+          const [{ data: c }, { data: rs }] = await Promise.all([
+            (supabase as any).from("chat_conversas").select("lead_nome, unidade_nome").eq("id", m.conversa_id).maybeSingle(),
+            (supabase as any).rpc("chat_resumo_pacientes", { _conversas: [m.conversa_id] }),
+          ]);
+          const r = rs?.[0];
+          const nome = r?.paciente_nome || c?.lead_nome || "Visitante";
+          const sit = r?.situacao === "cadastrado" ? "paciente cadastrado" : r?.situacao === "possivel" ? "possível cadastro" : "novo contato";
+          const ped = r?.pedidos_abertos ? `, ${r.pedidos_abertos} pedido(s) em aberto` : "";
+          return `${nome} (${sit}${ped})${c?.unidade_nome ? ` — ${c.unidade_nome}` : ""}`;
+        };
         if (m.autor === "sistema" && m.meta?.evento === "pediu_humano") {
-          avisar(`fila:${m.id}`, "💬 Paciente pediu atendimento no chat — veja em Conversas");
+          avisar(`fila:${m.id}`, `💬 ${await quem()} pediu atendimento no chat`);
         } else if (m.autor === "sistema" && m.meta?.evento === "avaliacao_baixa") {
           avisar(`aval:${m.id}`, `⚠️ Avaliação baixa no chat (${m.meta?.nota ?? "?"}/5) — veja em Conversas`);
         } else if (m.autor === "sistema" && m.meta?.evento === "atribuida" && m.meta?.para === meuId) {
-          avisar(`atrib:${m.id}`, "💬 Uma conversa do chat foi direcionada para você — veja em Conversas");
+          avisar(`atrib:${m.id}`, `💬 ${await quem()} — conversa direcionada para você`);
         } else if (m.autor === "sistema" && m.meta?.evento === "transferida" && m.meta?.para === meuId) {
-          avisar(`transf:${m.id}`, "💬 Uma conversa do chat foi transferida para você");
+          avisar(`transf:${m.id}`, `💬 ${await quem()} — conversa transferida para você`);
         } else if (m.autor === "paciente") {
           const { data: c } = await (supabase as any)
             .from("chat_conversas")

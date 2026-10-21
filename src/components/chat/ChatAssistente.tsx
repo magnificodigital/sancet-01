@@ -7,11 +7,13 @@ import { useSacola, type ItemSacola } from "@/stores/sacola";
 import { cn } from "@/lib/utils";
 import { useLigacaoVoz, type SessaoVoz } from "./useLigacaoVoz";
 import { salvarVinculoChat } from "@/lib/chatVinculo";
+import { CartaoAgendamento, type AcoesAgendamento } from "./CartaoAgendamento";
 import { PlayerAudio } from "@/components/audio/PlayerAudio";
 import { BarraGravando, BotaoMicrofone, gravacaoSuportada, useGravadorAudio } from "@/components/audio/useGravadorAudio";
 
 type Acao = {
-  tipo: "carrinho";
+  tipo: string; // "carrinho" ou cartões do agendamento (login, convenio, datas, documentos...)
+  [k: string]: any;
   tipo_compra: "particular" | "convenio";
   itens: ItemSacola[];
   unidade_codigo_shift?: string | null;
@@ -235,6 +237,14 @@ export const ChatAssistente = () => {
   }, [aberto, estado.nao_lidas]);
 
   const enviarRef = useRef<(m: string, a?: File) => void>(() => {});
+  // Entrou na conta com o cartão de login aberto: continua o agendamento sozinho.
+  const aposLoginRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((evento) => {
+      if (evento === "SIGNED_IN") setTimeout(() => aposLoginRef.current(), 300);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
   const gravador = useGravadorAudio({
     maxSeg: status?.audio_max_seg ?? 180,
     onPronto: (f) => enviarRef.current("", f),
@@ -358,6 +368,59 @@ export const ChatAssistente = () => {
   };
 
   enviarRef.current = enviar;
+
+  // ---------- agendamento pelos cartões do chat ----------
+  const addResposta = (data: any) => {
+    if (!data?.resposta) return;
+    setEstado((s) => ({ ...s, mensagens: [...s.mensagens, { autor: "assistente", texto: data.resposta, acoes: data.acoes ?? [] }] }));
+  };
+  const fnAgendamento: AcoesAgendamento = {
+    passo: async (campo, valor, rotulo) => {
+      setEstado((s) => ({ ...s, mensagens: [...s.mensagens, { autor: "paciente", texto: rotulo }] }));
+      try {
+        addResposta(await chamar({ acao: "agendar", campo, valor, rotulo }));
+      } catch (e: any) {
+        toast.error(e?.message && e.message !== "erro" ? e.message : "Não foi possível continuar agora.");
+      }
+    },
+    documento: async (chave, arquivo) => {
+      const nomes: Record<string, string> = { pedido_medico: "Pedido médico", rg_frente: "Documento (frente)", rg_verso: "Documento (verso)", carteirinha: "Carteirinha", relatorio: "Relatório médico" };
+      setEstado((s) => ({ ...s, mensagens: [...s.mensagens, { autor: "paciente", texto: `📎 ${nomes[chave] ?? "Documento"} — ${arquivo.name}` }] }));
+      try {
+        const base64 = await paraBase64(arquivo);
+        addResposta(await chamar({ acao: "agendar_documento", documento: chave, anexo: { base64, mime: arquivo.type, nome: arquivo.name } }));
+      } catch (e: any) {
+        toast.error(e?.message && e.message !== "erro" ? e.message : "Não foi possível enviar o arquivo.");
+      }
+    },
+    confirmar: async (dados) => {
+      try {
+        addResposta(await chamar({ acao: "agendar_confirmar", termos: true, ...dados }));
+      } catch (e: any) {
+        toast.error(e?.message && e.message !== "erro" ? e.message : "Não foi possível enviar o pedido.");
+      }
+    },
+    pagar: async (protocolo, metodo) => {
+      try {
+        const d = await chamar({ acao: "agendar_pagar", protocolo, metodo });
+        return d?.pagamento;
+      } catch (e: any) {
+        toast.error(e?.message && e.message !== "erro" ? e.message : "Não foi possível gerar o pagamento.");
+        return null;
+      }
+    },
+  };
+  aposLoginRef.current = () => {
+    const ult = estado.mensagens[idxUltimoCartao];
+    if (estado.conversa_id && ult?.acoes?.some((a) => a.tipo === "login")) fnAgendamento.passo("iniciar", null, "Entrei na minha conta");
+  };
+  // Último cartão interativo (os anteriores ficam só para consulta).
+  const idxUltimoCartao = (() => {
+    for (let k = estado.mensagens.length - 1; k >= 0; k--) {
+      if ((estado.mensagens[k].acoes ?? []).some((a) => a.tipo !== "carrinho")) return k;
+    }
+    return -1;
+  })();
 
   const continuarAgendamento = (a: Acao) => {
     if (emLigacao) ligacao.encerrar();
@@ -556,10 +619,12 @@ export const ChatAssistente = () => {
                       </a>
                     ))}
                   {(m.acoes ?? []).map((a, j) =>
-                    a.tipo === "carrinho" ? (
+                    a.tipo !== "carrinho" ? (
+                      <CartaoAgendamento key={j} acao={a} ativo={i === idxUltimoCartao} fn={fnAgendamento} />
+                    ) : a.tipo === "carrinho" ? (
                       <button
                         key={j}
-                        onClick={() => continuarAgendamento(a)}
+                        onClick={() => continuarAgendamento(a as any)}
                         className="mt-2 block w-full rounded-lg bg-brand-2 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-[#162f58]"
                       >
                         Continuar agendamento ({a.itens.length} exame{a.itens.length > 1 ? "s" : ""})

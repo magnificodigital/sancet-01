@@ -13,6 +13,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { modeloIA, segredo } from "../_shared/integracoes.ts";
 import { ipDentroDoLimite, MSG_LIMITE } from "../_shared/limite.ts";
 import { gerarEmbeddings, vetorTexto } from "../_shared/embeddings.ts";
+import {
+  aplicar, anexarDocumento, confirmarPedido, gerarPagamento, modosAtendimento, proximoPasso, type Rascunho,
+} from "./agendamento.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -133,7 +136,8 @@ Atendimento direcionado para a unidade ${q.unidade}. Use essa unidade em datas_a
 ` : ""}
 O que você faz:
 - Tira dúvidas sobre exames, preços (só particular), preparo/jejum, unidades, horários e convênios aceitos.
-- Ajuda a agendar: descobre se é PARTICULAR ou CONVÊNIO, identifica os exames (o paciente pode mandar FOTO do pedido médico aqui no chat), e então chama montar_carrinho. Depois diga para ele clicar no botão "Continuar agendamento" que aparece no chat, onde escolhe unidade, data e envia os documentos.
+- AGENDA PELO PRÓPRIO CHAT, do começo ao fim: quando o paciente quiser agendar/marcar exames, chame iniciar_agendamento. O chat mostra cartões para cada etapa (login, convênio, plano, carteirinha, unidade, data, documentos, confirmação e pagamento). Você só orienta e responde dúvidas; se o paciente responder por texto (ex.: "dia 24 de manhã", "meu convênio é Unimed"), chame definir_agendamento. NUNCA peça documentos, CPF ou dados de pagamento por texto: os cartões cuidam disso. Nunca diga que o pedido foi enviado: só o cartão de confirmação envia.
+- ${cfg?._modos ? `Modos de atendimento online AGORA: ${[cfg._modos.convenio ? "convênio: SIM" : "convênio: NÃO", cfg._modos.particular ? "particular: SIM" : "particular: NÃO (não agende nem monte carrinho particular; se pedirem, diga que o particular é feito direto na unidade/telefones e ofereça o convênio)", cfg._modos.casa ? "coleta em casa: SIM" : "coleta em casa: NÃO", cfg._modos.somenteMatriz ? "agendamento online só na unidade Matriz" : "qualquer unidade"].join("; ")}.` : ""}
 - Documentos para agendar: pedido médico e documento com foto (RG ou CNH, frente e verso); no convênio também a carteirinha.
 - Informa o andamento dos pedidos do paciente logado (meus_pedidos) e se o resultado já saiu (meus_resultados). Se não estiver logado, peça para entrar em sancet.vercel.app/entrar.
 - Faz pelo chat, para o paciente LOGADO: reagendar (reagendar_pedido), cancelar (cancelar_pedido) e mandar o link de pagamento (link_pagamento). Para reagendar, consulte datas_agendamento na unidade do pedido. Antes de reagendar ou cancelar, repita protocolo e o que vai mudar e peça confirmação EXPLÍCITA ("sim"); só então chame com confirmado=true.
@@ -251,6 +255,35 @@ const FERRAMENTAS = [
       name: "link_pagamento",
       description: "Link para pagar um pedido particular que está aguardando pagamento (paciente LOGADO).",
       parameters: { type: "object", properties: { protocolo: { type: "string" } }, required: ["protocolo"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "iniciar_agendamento",
+      description: "Começa (ou retoma) o agendamento completo pelo chat. O chat mostra o próximo cartão (login, convênio, data, documentos...).",
+      parameters: { type: "object", properties: { tipo: { type: "string", enum: ["convenio", "particular"], description: "Se o paciente já disse" } } },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "definir_agendamento",
+      description: "Registra no agendamento o que o paciente respondeu por texto. Envie só os campos que ele informou.",
+      parameters: {
+        type: "object",
+        properties: {
+          tipo: { type: "string", enum: ["convenio", "particular"] },
+          convenio: { type: "string", description: "Nome do convênio" },
+          plano: { type: "string", description: "Nome do plano" },
+          carteirinha: { type: "string", description: "Número da carteirinha" },
+          unidade: { type: "string", description: "Nome da unidade" },
+          data: { type: "string", description: "AAAA-MM-DD" },
+          periodo: { type: "string", enum: ["manha", "tarde"] },
+          modalidade: { type: "string", enum: ["unidade", "domicilio"] },
+          deficiencias: { type: "string", description: "Necessidades especiais (opcional)" },
+        },
+      },
     },
   },
   {
@@ -601,6 +634,147 @@ Deno.serve(async (req) => {
       return json({ conversa_id: conversaId, token: tokenNovo, ok: true });
     }
 
+    // ---- Agendamento pelos cartões do chat (determinístico, sem IA) ----
+    if (acao === "agendar" || acao === "agendar_documento" || acao === "agendar_confirmar" || acao === "agendar_pagar") {
+      const modos = await modosAtendimento(admin);
+      const r: Rascunho = { ...(conversa.contexto?.agendamento ?? {}) };
+      const responder = async (texto: string, acaoCard: any | null, extra: any = {}) => {
+        await admin.from("chat_mensagens").insert({
+          conversa_id: conversaId, autor: "assistente", texto,
+          meta: { ...(acaoCard ? { acoes: [acaoCard] } : {}), agendamento: true },
+        });
+        return json({ conversa_id: conversaId, token: tokenNovo, resposta: texto, acoes: acaoCard ? [acaoCard] : [], ...extra, ...(await estadoPublico(admin, conversaId)) });
+      };
+      if (!conversa.ia_ativa && conversa.status === "humano") {
+        // Atendimento humano em andamento: o agendamento continua valendo (a equipe acompanha).
+      }
+
+      if (acao === "agendar") {
+        const campo = String(body.campo ?? "");
+        const rotulo = String(body.rotulo ?? "").slice(0, 200);
+        if (rotulo) {
+          await admin.from("chat_mensagens").insert({ conversa_id: conversaId, autor: "paciente", texto: rotulo, meta: { agendamento: true } });
+        }
+        const erro = campo === "iniciar" ? null : await aplicar(admin, r, modos, campo, body.valor, paciente);
+        const passo = await proximoPasso(admin, r, modos, paciente);
+        await salvarRascunho(admin, conversa, r);
+        return responder(erro ? `${erro} ${passo.texto}` : passo.texto, passo.acao);
+      }
+
+      if (acao === "agendar_documento") {
+        if (!paciente) return responder("Entre na sua conta para enviar documentos.", { tipo: "login" });
+        const chave = String(body.documento ?? "");
+        const doc = body.anexo as { base64?: string; mime?: string; nome?: string } | undefined;
+        const mime = String(doc?.mime ?? "").split(";")[0].toLowerCase();
+        if (!doc?.base64 || doc.base64.length > MAX_ANEXO || !/^(image\/|application\/pdf)/.test(mime)) {
+          return json({ error: "Envie uma foto ou PDF de até 10 MB." }, 400);
+        }
+        const ext = EXT_MIME[mime] ?? "jpg";
+        const caminho = `${conversaId}/${crypto.randomUUID()}.${ext}`;
+        const bytes = Uint8Array.from(atob(doc.base64), (ch) => ch.charCodeAt(0));
+        const { error: upErr } = await admin.storage.from("chat-anexos").upload(caminho, bytes, { contentType: mime });
+        if (upErr) return json({ error: "Não foi possível guardar o arquivo." }, 500);
+        const nomeArq = String(doc.nome ?? `documento.${ext}`).slice(0, 200);
+        const erro = anexarDocumento(r, chave, { path: caminho, nome: nomeArq, mime });
+        const ROT: Record<string, string> = { pedido_medico: "Pedido médico", rg_frente: "Documento (frente)", rg_verso: "Documento (verso)", carteirinha: "Carteirinha", relatorio: "Relatório médico" };
+        await admin.from("chat_mensagens").insert({
+          conversa_id: conversaId, autor: "paciente", texto: `📎 ${ROT[chave] ?? "Documento"}`,
+          anexo_path: caminho, anexo_nome: nomeArq, anexo_mime: mime, meta: { agendamento: true, documento: chave },
+        });
+        let extra = "";
+        // Pedido médico: a IA lê e encontra os exames (como no site).
+        if (!erro && chave === "pedido_medico") {
+          const tipoCat = r.tipo === "particular" ? "particular" : "convenio";
+          const catalogo = await catalogoParaLeitura(admin, tipoCat);
+          const lido = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sancet-ler-receita`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" },
+            body: JSON.stringify({ fileBase64: doc.base64, mimeType: mime, catalogo }),
+          }).then((x) => x.json()).catch(() => null);
+          const cods: string[] = Array.isArray(lido?.encontrados) ? lido.encontrados.map(String) : [];
+          const porCod = new Map(catalogo.map((c: any) => [String(c.codigo_shift), c.nome]));
+          const novos = cods.filter((c) => porCod.has(c)).map((c) => ({ codigo_shift: c, nome: porCod.get(c) as string }));
+          const ja = new Set((r.exames_ia ?? []).map((e) => e.codigo_shift));
+          r.exames_ia = [...(r.exames_ia ?? []), ...novos.filter((e) => !ja.has(e.codigo_shift))];
+          if (tipoCat === "particular" && !(r.itens ?? []).length && r.exames_ia.length) {
+            const { data: ex } = await admin
+              .from("exames_cache")
+              .select("codigo_shift, nome, outros_nomes, preco_particular, prazo_resultado, preparo, disponivel_na_unidade, disponivel_em_casa")
+              .in("codigo_shift", r.exames_ia.map((e) => e.codigo_shift))
+              .eq("ativo", true);
+            r.itens = (ex ?? []).map((e: any) => ({
+              codigoShift: String(e.codigo_shift), tipo: "exame", nome: e.nome, outrosNomes: (e.outros_nomes ?? []).join(", "),
+              precoParticular: e.preco_particular ?? null, precoCentavos: null, prazoResultado: e.prazo_resultado ?? null,
+              preparo: e.preparo ?? null, disponivelNaUnidade: e.disponivel_na_unidade ?? true, disponivelEmCasa: e.disponivel_em_casa ?? false,
+            }));
+          }
+          if (novos.length) extra = `Encontrei no pedido: ${novos.map((e) => e.nome).join(", ")}. `;
+          else extra = "Recebi o pedido médico (a equipe confere os exames). ";
+        }
+        const passo = await proximoPasso(admin, r, modos, paciente);
+        await salvarRascunho(admin, conversa, r);
+        return responder(erro ? `${erro} ${passo.texto}` : `✔ Recebido! ${extra}${passo.texto}`, passo.acao);
+      }
+
+      if (acao === "agendar_confirmar") {
+        if (!paciente || !jwt) return responder("Entre na sua conta para enviar o pedido.", { tipo: "login" });
+        if (body.termos !== true) return json({ error: "É preciso aceitar os termos de uso." }, 400);
+        if (body.deficiencias !== undefined) await aplicar(admin, r, modos, "deficiencias", body.deficiencias, paciente);
+        if (body.tipo_documento) await aplicar(admin, r, modos, "tipo_documento", body.tipo_documento, paciente);
+        if (body.salvar_convenio !== undefined) await aplicar(admin, r, modos, "salvar_convenio", body.salvar_convenio, paciente);
+        // Revalida tudo (as regras podem ter mudado desde o começo).
+        if (r.tipo && !(r.tipo === "particular" ? modos.particular : modos.convenio)) {
+          return responder("Esse tipo de atendimento não está disponível online agora. Fale com a nossa equipe, por favor.", null);
+        }
+        if (r.modalidade === "unidade" && r.unidade && r.data) {
+          const e = await (await import("./agendamento.ts")).validarData(admin, r.unidade.codigo_shift, r.data, String(r.periodo));
+          if (e) {
+            r.data = null;
+            r.periodo = null;
+            const passo = await proximoPasso(admin, r, modos, paciente);
+            await salvarRascunho(admin, conversa, r);
+            return responder(`${e} ${passo.texto}`, passo.acao);
+          }
+        }
+        const passo = await proximoPasso(admin, r, modos, paciente);
+        if (!passo.completo) {
+          await salvarRascunho(admin, conversa, r);
+          return responder(passo.texto, passo.acao);
+        }
+        try {
+          const criado = await confirmarPedido(admin, jwt, paciente, r);
+          await admin.from("chat_conversas").update({
+            pedido_id: criado.pedidoId, pedido_protocolo: criado.protocolo, paciente_id: paciente.id,
+            contexto: { ...(conversa.contexto ?? {}), agendamento: null, carrinho: null, ultimo_pedido: criado.protocolo },
+            ...(r.unidade ? { unidade_codigo_shift: r.unidade.codigo_shift, unidade_nome: r.unidade.nome } : {}),
+          }).eq("id", conversaId);
+          await admin.from("chat_mensagens").insert({
+            conversa_id: conversaId, autor: "sistema", texto: `✅ Pedido ${criado.protocolo} enviado pelo chat.`,
+            meta: { publico: true, evento: "pedido", pedido_id: criado.pedidoId },
+          });
+          const particular = r.tipo === "particular" && criado.valor_centavos > 0;
+          const texto = particular
+            ? `🎉 Pedido **${criado.protocolo}** enviado! Agora é só fazer o pagamento de **${(criado.valor_centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}**:`
+            : `🎉 Pedido **${criado.protocolo}** enviado! Nossa equipe vai conferir os documentos e confirmar o agendamento. Você recebe as atualizações por e-mail e em "Meus agendamentos".`;
+          return responder(texto, particular
+            ? { tipo: "pagamento", protocolo: criado.protocolo, valor_centavos: criado.valor_centavos }
+            : { tipo: "pedido_criado", protocolo: criado.protocolo });
+        } catch (e) {
+          return responder(`Não consegui enviar o pedido: ${(e as Error).message}`, passo.acao);
+        }
+      }
+
+      if (acao === "agendar_pagar") {
+        if (!paciente || !jwt) return json({ error: "Entre na sua conta para pagar." }, 401);
+        const protocolo = String(body.protocolo ?? "");
+        const { data: ped } = await admin.from("pedidos").select("paciente_id").eq("protocolo", protocolo).maybeSingle();
+        if (!ped || ped.paciente_id !== paciente.id) return json({ error: "Pedido não encontrado." }, 404);
+        const pg = await gerarPagamento(jwt, protocolo, String(body.metodo ?? "pix"));
+        if (pg?.error || pg?.ok === false) return json({ error: pg?.mensagem ?? pg?.error ?? "Falha ao gerar o pagamento." }, 400);
+        return json({ conversa_id: conversaId, token: tokenNovo, pagamento: pg });
+      }
+    }
+
     if (acao === "pedir_humano") {
       if (!habil(cfg, "atendente")) return json({ error: "Atendimento humano pelo chat desativado." }, 403);
       await chamarHumano(admin, conversaId, "Paciente clicou em falar com atendente");
@@ -761,6 +935,7 @@ Deno.serve(async (req) => {
 
     const sp = agoraSP();
     const hoje = `${DIAS[sp.getDay()]}, ${sp.toLocaleDateString("pt-BR")} ${String(sp.getHours()).padStart(2, "0")}:${String(sp.getMinutes()).padStart(2, "0")}`;
+    cfg._modos = await modosAtendimento(admin);
     const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null, cfg, false, qualif(cfg, conversa, paciente)) }];
     // Base de conhecimento: trechos relevantes para a última mensagem do paciente.
     const ultimaPac = [texto, transcricao].filter(Boolean).join(" ").trim();
@@ -783,6 +958,10 @@ Deno.serve(async (req) => {
     let contexto = { ...(conversa.contexto ?? {}) };
     let resposta = "";
     const trace: any[] = []; // diagnóstico (só no modo Teste com debug)
+    // Pediu para agendar e não há agendamento em andamento: a IA é obrigada a iniciar
+    // (depois da qualificação, se ainda faltar).
+    const querAgendar = /\b(agend\w*|marcar|marca[cç][aã]o|quero fazer (os |meus )?exames?)\b/i.test(ultimaPac) && !conversa.contexto?.agendamento?.tipo;
+    let forcarAgendar = querAgendar;
     if (baseTrechos.length) trace.push({ ferramenta: "base_conhecimento (automático)", args: { pergunta: ultimaPac.slice(0, 120) }, resultado: baseTrechos.map((t) => t.titulo).join(" | ") });
     // Paciente já mandou celular ou nome de unidade e ainda não está qualificado:
     // a 1ª ação da IA é obrigatoriamente registrar (o modelo às vezes insiste em pedir de novo).
@@ -808,7 +987,11 @@ Deno.serve(async (req) => {
           model: modelo,
           messages: mensagens,
           tools: ferramentasAtivas(cfg, conversa),
-          ...(volta === 0 && forcarQualif ? { tool_choice: { type: "function", function: { name: "qualificar_atendimento" } } } : {}),
+          ...(volta === 0 && forcarQualif
+            ? { tool_choice: { type: "function", function: { name: "qualificar_atendimento" } } }
+            : forcarAgendar && !precisaQualificar(cfg, conversa) && !trace.some((t) => t.ferramenta === "iniciar_agendamento")
+              ? { tool_choice: { type: "function", function: { name: "iniciar_agendamento" } } }
+              : {}),
           temperature: 0.3,
           max_tokens: 900,
         }),
@@ -872,7 +1055,7 @@ Deno.serve(async (req) => {
         ...(respAudio ? { audio: true } : {}),
       },
     });
-    await admin.from("chat_conversas").update({ contexto, updated_at: new Date().toISOString() }).eq("id", conversaId);
+    await admin.from("chat_conversas").update({ contexto: { ...(conversa.contexto ?? {}), tipo: contexto.tipo ?? conversa.contexto?.tipo }, updated_at: new Date().toISOString() }).eq("id", conversaId);
 
     return json({
       conversa_id: conversaId, token: tokenNovo, resposta, acoes, meu_anexo: meuAnexo,
@@ -931,7 +1114,15 @@ async function executar(
       }
       if (campos.unidade !== false && !un) falta.push("unidade (uma destas: " + (unidades ?? []).map((u: any) => u.nome).join(", ") + ")");
       if (falta.length) return { ok: false, faltando: falta, instrucao: "Peça ao paciente o que falta e chame de novo." };
+      // Visitante não logado: tenta achar o cadastro pelo celular (a equipe confirma o vínculo).
+      let sugerido: string | null = null;
+      if (!paciente && telL.length >= 10) {
+        const { data: ps } = await admin.from("pacientes").select("id, celular").ilike("celular", `%${telL.slice(-8)}`).limit(5);
+        const iguais = (ps ?? []).filter((x: any) => String(x.celular ?? "").replace(/\D/g, "").endsWith(telL.slice(-8)));
+        if (iguais.length === 1) sugerido = iguais[0].id;
+      }
       const upd: any = {
+        ...(sugerido ? { paciente_sugerido_id: sugerido } : {}),
         lead_nome: nomeL || null,
         lead_telefone: telL || null,
         lead_email: emailL || null,
@@ -1168,6 +1359,51 @@ async function executar(
       if (ped.status !== "aguardando_pagamento") return { erro: `Este pedido não está aguardando pagamento (situação: ${STATUS[ped.status] ?? ped.status}).` };
       return { link: `${await siteUrl(admin)}/pagamento/${protocolo}`, valor: ped.valor_total_centavos ? brl(ped.valor_total_centavos / 100) : null };
     }
+    case "iniciar_agendamento":
+    case "definir_agendamento": {
+      if (!conversaId || !ctx.conversa) return { erro: "conversa inválida" };
+      const modos = await modosAtendimento(admin);
+      const r: Rascunho = { ...(ctx.conversa.contexto?.agendamento ?? {}) };
+      const erros: string[] = [];
+      const set = async (campo: string, valor: any) => {
+        const e = await aplicar(admin, r, modos, campo, valor, paciente);
+        if (e) erros.push(e);
+      };
+      if (a.tipo) await set("tipo", a.tipo);
+      if (!r.itens?.length && ctx.conversa.contexto?.carrinho?.itens?.length && (!r.tipo || r.tipo === ctx.conversa.contexto.carrinho.tipo)) {
+        r.itens = ctx.conversa.contexto.carrinho.itens;
+      }
+      if (nome === "definir_agendamento") {
+        if (a.convenio) {
+          const { data: cs } = await admin.from("convenios_cache").select("id, nome").eq("ativo", true).ilike("nome", `%${limparBusca(a.convenio)}%`).limit(5);
+          if ((cs ?? []).length === 1) await set("convenio", cs![0].id);
+          else erros.push((cs ?? []).length ? `Encontrei mais de um convênio: ${cs!.map((c: any) => c.nome).join(", ")}. Peça para escolher no cartão.` : "Convênio não encontrado na lista de aceitos.");
+        }
+        if (a.plano && r.convenio) {
+          const { data: ps } = await admin.from("convenios_planos").select("codigo_item, descricao").eq("convenio_id", r.convenio.id).eq("ativo", true).ilike("descricao", `%${limparBusca(a.plano)}%`).limit(5);
+          if ((ps ?? []).length === 1) await set("plano", ps![0].codigo_item);
+          else erros.push((ps ?? []).length ? "Há vários planos parecidos. Peça para escolher no cartão." : "Plano não encontrado. Peça para escolher no cartão.");
+        }
+        if (a.carteirinha) await set("carteirinha", a.carteirinha);
+        if (a.modalidade) await set("modalidade", a.modalidade);
+        if (a.unidade) {
+          const { data: us } = await admin.from("unidades_cache").select("codigo_shift, nome").eq("ativo", true).ilike("nome", `%${limparBusca(a.unidade)}%`).limit(3);
+          if ((us ?? []).length === 1) await set("unidade", us![0].codigo_shift);
+          else erros.push("Unidade não identificada. Peça para escolher no cartão.");
+        }
+        if (a.data && a.periodo) await set("data", { data: a.data, periodo: a.periodo });
+        else if (a.data || a.periodo) erros.push("Preciso do dia E do período (manhã ou tarde).");
+        if (a.deficiencias) await set("deficiencias", a.deficiencias);
+      }
+      const passo = await proximoPasso(admin, r, modos, paciente);
+      await salvarRascunho(admin, ctx.conversa, r);
+      if (passo.acao) acoes.push(passo.acao);
+      return {
+        ...(erros.length ? { problemas: erros } : {}),
+        proximo_passo: passo.texto,
+        instrucao: "Diga ao paciente, em poucas palavras, o próximo passo (o cartão para isso já aparece no chat logo abaixo da sua mensagem). Se houver problemas, explique-os.",
+      };
+    }
     case "consultar_base_conhecimento": {
       const trechos = await buscarConhecimento(admin, String(a.pergunta ?? ""), ctx.conversa?.unidade_codigo_shift ?? null, Number(ctx.cfg?.conhecimento_max_trechos) || 4);
       if (!trechos.length) return { encontrado: false, instrucao: "Nada na base de conhecimento. Não invente: registre a pergunta e ofereça um atendente." };
@@ -1228,11 +1464,20 @@ async function executar(
         });
       }
       const carrinho = existente ?? acoes[acoes.length - 1];
+      if (ctx.conversa) {
+        const ag = ctx.conversa.contexto?.agendamento;
+        ctx.conversa.contexto = {
+          ...(ctx.conversa.contexto ?? {}),
+          carrinho: { tipo: a.tipo, itens: carrinho.itens },
+          ...(ag && (!ag.tipo || ag.tipo === a.tipo) ? { agendamento: { ...ag, itens: carrinho.itens } } : {}),
+        };
+        await admin.from("chat_conversas").update({ contexto: ctx.conversa.contexto }).eq("id", conversaId);
+      }
       return {
         ok: true,
         adicionados: carrinho.itens.map((i: any) => i.nome),
         ...(naoEncontrados.length ? { nao_encontrados: naoEncontrados, aviso: "Estes códigos NÃO entraram no carrinho; busque-os com buscar_exames." } : {}),
-        instrucao: 'Diga ao paciente para clicar em "Continuar agendamento" no chat.',
+        instrucao: "Para agendar, chame iniciar_agendamento (o agendamento é feito aqui mesmo no chat).",
       };
     }
     case "chamar_atendente": {
@@ -1493,4 +1738,10 @@ async function buscarConhecimento(admin: any, pergunta: string, unidade: string 
     _embedding: vq?.[0] ? vetorTexto(vq[0]) : null,
   });
   return (data ?? []) as { titulo: string; categoria: string; texto: string; relevancia: number }[];
+}
+
+/** Guarda o rascunho do agendamento no contexto da conversa. */
+async function salvarRascunho(admin: any, conversa: any, r: Rascunho) {
+  conversa.contexto = { ...(conversa.contexto ?? {}), agendamento: r };
+  await admin.from("chat_conversas").update({ contexto: conversa.contexto, updated_at: new Date().toISOString() }).eq("id", conversa.id);
 }

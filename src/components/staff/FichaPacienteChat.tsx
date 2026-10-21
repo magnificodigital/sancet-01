@@ -10,6 +10,7 @@ const db = supabase as any;
 type ConversaFicha = {
   id: string;
   paciente_id: string | null;
+  paciente_sugerido_id?: string | null;
   lead_nome: string | null;
   lead_telefone: string | null;
   lead_email: string | null;
@@ -63,8 +64,12 @@ export const FichaPacienteChat = ({
   anexosNaConversa,
   onAbrirPedido,
   onAbrirConversa,
+  podeVincular = false,
+  onVinculado,
 }: {
   conversa: ConversaFicha;
+  podeVincular?: boolean;
+  onVinculado?: () => void;
   anexosNaConversa: number;
   onAbrirPedido: (pedidoId: string) => void;
   onAbrirConversa: (id: string) => void;
@@ -90,6 +95,10 @@ export const FichaPacienteChat = ({
       if (conversa.paciente_id) {
         const { data } = await db.from("pacientes").select(cols).eq("id", conversa.paciente_id).maybeSingle();
         p = data ?? null;
+      } else if (conversa.paciente_sugerido_id) {
+        const { data } = await db.from("pacientes").select(cols).eq("id", conversa.paciente_sugerido_id).maybeSingle();
+        p = data ?? null;
+        ehPossivel = !!p;
       } else {
         // Visitante: tenta achar o cadastro pelo celular informado na qualificação.
         const tel = (conversa.lead_telefone ?? "").replace(/\D/g, "");
@@ -138,7 +147,18 @@ export const FichaPacienteChat = ({
     return () => {
       vivo = false;
     };
-  }, [conversa.id, conversa.paciente_id, conversa.lead_telefone]);
+  }, [conversa.id, conversa.paciente_id, conversa.paciente_sugerido_id, conversa.lead_telefone]);
+
+  const [vinculando, setVinculando] = useState(false);
+  const vincular = async () => {
+    if (!paciente) return;
+    if (!window.confirm(`Confirmar que este visitante é ${paciente.nome_social || paciente.nome}? Confira nome e celular antes.`)) return;
+    setVinculando(true);
+    const { error } = await db.rpc("chat_vincular_paciente", { _conversa: conversa.id, _paciente: paciente.id });
+    setVinculando(false);
+    if (error) return alert(error.message);
+    onVinculado?.();
+  };
 
   const nome = paciente?.nome_social || paciente?.nome || conversa.lead_nome || "Visitante";
   const anos = idade(paciente?.data_nascimento ?? null);
@@ -147,7 +167,16 @@ export const FichaPacienteChat = ({
     <div className="text-sm">
       <Secao titulo="Paciente" icone={UserRound}>
         <p className="font-semibold">{nome}</p>
-        {possivel && <p className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-800">Possível cadastro encontrado pelo celular (visitante não logado).</p>}
+        {possivel && (
+          <div className="space-y-1.5 rounded bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+            <p>Possível cadastro encontrado pelo celular (visitante não logado). Confira antes de vincular.</p>
+            {podeVincular && (
+              <Button size="sm" variant="outline" className="h-7 w-full border-amber-300 bg-white text-xs" disabled={vinculando} onClick={vincular}>
+                {vinculando ? "Vinculando..." : "Vincular ao cadastro"}
+              </Button>
+            )}
+          </div>
+        )}
         {!paciente && !carregando && <p className="text-xs text-muted-foreground">Sem cadastro no site (ainda).</p>}
         <div className="space-y-0.5 text-xs text-muted-foreground">
           {(paciente?.celular || conversa.lead_telefone) && <p>📱 {fone(paciente?.celular || conversa.lead_telefone)}</p>}

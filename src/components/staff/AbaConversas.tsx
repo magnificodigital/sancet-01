@@ -79,7 +79,28 @@ type Conversa = {
   resumo_em: string | null;
   avaliacao_nota: number | null;
   avaliacao_comentario: string | null;
+  paciente_sugerido_id: string | null;
 };
+type ResumoPac = { situacao: "cadastrado" | "possivel" | "novo"; paciente_nome: string | null; pedidos_abertos: number; ultimo_protocolo: string | null };
+
+const SITUACAO: Record<ResumoPac["situacao"], { rotulo: string; cls: string }> = {
+  cadastrado: { rotulo: "✓ Paciente cadastrado", cls: "bg-green-100 text-green-800" },
+  possivel: { rotulo: "Possível cadastro", cls: "bg-amber-100 text-amber-800" },
+  novo: { rotulo: "Novo contato", cls: "bg-slate-100 text-slate-700" },
+};
+const EtiquetaPaciente = ({ r, compacta = false }: { r?: ResumoPac; compacta?: boolean }) =>
+  r ? (
+    <>
+      <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", SITUACAO[r.situacao].cls)}>
+        {compacta && r.situacao === "cadastrado" ? "✓ Paciente" : SITUACAO[r.situacao].rotulo}
+      </span>
+      {r.pedidos_abertos > 0 && (
+        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700" title={r.ultimo_protocolo ?? ""}>
+          📋 {r.pedidos_abertos} em aberto
+        </span>
+      )}
+    </>
+  ) : null;
 type Mensagem = {
   id: string;
   autor: "paciente" | "assistente" | "equipe" | "nota" | "sistema";
@@ -111,7 +132,7 @@ const STATUS_LABEL: Record<Conversa["status"], { label: string; cls: string; dot
 };
 
 const COLS_CONVERSA =
-  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo, fila_desde, resumo, resumo_em, avaliacao_nota, avaliacao_comentario";
+  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo, fila_desde, resumo, resumo_em, avaliacao_nota, avaliacao_comentario, paciente_sugerido_id";
 
 const nomeConversa = (c: Conversa) =>
   c.pacientes?.nome_social || c.pacientes?.nome || c.lead_nome || `Visitante ${c.id.slice(0, 4).toUpperCase()}`;
@@ -216,6 +237,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   const [sugerindo, setSugerindo] = useState(false);
   const [qualidadeAberta, setQualidadeAberta] = useState(false);
   const [lacunasAbertas, setLacunasAbertas] = useState(0);
+  const [resumoPac, setResumoPac] = useState<Record<string, ResumoPac>>({});
   const perfilStaff = useStaffPerfil();
   const fimRef = useRef<HTMLDivElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
@@ -237,6 +259,15 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
       .limit(300);
     if (error) toast.error("Não foi possível carregar as conversas.");
     setConversas(data ?? []);
+    // Situação do cadastro e pedidos em aberto (etiquetas da lista).
+    const ids = (data ?? []).map((c: any) => c.id).slice(0, 300);
+    if (ids.length) {
+      db.rpc("chat_resumo_pacientes", { _conversas: ids }).then(({ data: rs }: any) => {
+        const m: Record<string, ResumoPac> = {};
+        (rs ?? []).forEach((x: any) => (m[x.conversa_id] = x));
+        setResumoPac(m);
+      });
+    }
     setCarregando(false);
   }, []);
 
@@ -734,6 +765,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                       </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1">
                         <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", STATUS_LABEL[c.status].cls)}>{STATUS_LABEL[c.status].label}</span>
+                        <EtiquetaPaciente r={resumoPac[c.id]} compacta />
                         {c.avaliacao_nota && (
                           <span
                             className={cn(
@@ -800,6 +832,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                     {STATUS_LABEL[sel.status].label}
                     {sel.responsavel_id && ` · ${ehMinha ? "com você" : nomeAtendente(sel.responsavel_id)}`}
                   </span>
+                  <EtiquetaPaciente r={resumoPac[sel.id]} />
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                   {telefone(sel) && <span>{telefone(sel)}</span>}
@@ -1036,6 +1069,8 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
           <div className="hidden min-h-0 overflow-y-auto border-l xl:block">
             <FichaPacienteChat
               conversa={sel}
+              podeVincular={podeMexer}
+              onVinculado={carregarConversas}
               anexosNaConversa={mensagens.filter((m) => m.anexo_path).length}
               onAbrirPedido={abrirPedido}
               onAbrirConversa={(id) => {
@@ -1055,6 +1090,8 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
           {sel && (
             <FichaPacienteChat
               conversa={sel}
+              podeVincular={podeMexer}
+              onVinculado={carregarConversas}
               anexosNaConversa={mensagens.filter((m) => m.anexo_path).length}
               onAbrirPedido={(id) => {
                 setFichaAberta(false);
