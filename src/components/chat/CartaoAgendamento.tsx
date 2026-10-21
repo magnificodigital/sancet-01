@@ -3,7 +3,7 @@ import { CalendarDays, Check, CheckCircle2, Copy, CreditCard, FileText, Loader2,
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SeletorPlano, type Plano } from "@/components/convenio/SeletorPlano";
+import { type Plano } from "@/components/convenio/SeletorPlano";
 import { cn } from "@/lib/utils";
 
 const db = supabase as any;
@@ -100,10 +100,10 @@ export const CartaoAgendamento = ({ acao, ativo, fn }: { acao: any; ativo: boole
       );
 
     case "convenio":
-      return wrap(<EscolherConvenio salvos={acao.salvos ?? []} travado={travado} exec={exec} fn={fn} />);
+      return wrap(<EscolherConvenio salvos={acao.salvos ?? []} buscaInicial={acao.busca ?? ""} travado={travado} exec={exec} fn={fn} />);
 
     case "plano":
-      return wrap(<EscolherPlano convenioId={acao.convenio_id} travado={travado} exec={exec} fn={fn} />);
+      return wrap(<EscolherPlano convenioId={acao.convenio_id} buscaInicial={acao.busca ?? ""} travado={travado} exec={exec} fn={fn} />);
 
     case "carteirinha":
       return wrap(<CampoTexto rotulo="Número da carteirinha" travado={travado} onEnviar={(v) => exec(() => fn.passo("carteirinha", v, `Carteirinha: ${v}`))} />);
@@ -232,16 +232,13 @@ const CampoTexto = ({ rotulo, travado, onEnviar }: { rotulo: string; travado: bo
   );
 };
 
-const EscolherConvenio = ({ salvos, travado, exec, fn }: { salvos: any[]; travado: boolean; exec: (f: () => Promise<unknown>) => void; fn: AcoesAgendamento }) => {
+const EscolherConvenio = ({ salvos, buscaInicial, travado, exec, fn }: { salvos: any[]; buscaInicial: string; travado: boolean; exec: (f: () => Promise<unknown>) => void; fn: AcoesAgendamento }) => {
   const [lista, setLista] = useState<{ id: string; nome: string }[]>([]);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(buscaInicial);
   useEffect(() => {
     db.from("convenios_cache").select("id, nome").eq("ativo", true).order("nome").then(({ data }: any) => setLista(data ?? []));
   }, []);
-  const filtrados = useMemo(() => {
-    const t = q.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
-    return t ? lista.filter((c) => c.nome.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().includes(t)) : lista;
-  }, [lista, q]);
+  const filtrados = useMemo(() => filtrarPorPalavras(lista, q, (c) => c.nome), [lista, q]);
   return (
     <>
       {salvos.length > 0 && (
@@ -275,7 +272,7 @@ const EscolherConvenio = ({ salvos, travado, exec, fn }: { salvos: any[]; travad
         />
       </div>
       <div className="max-h-44 space-y-0.5 overflow-y-auto">
-        {filtrados.slice(0, 60).map((c) => (
+        {filtrados.map((c) => (
           <button
             key={c.id}
             type="button"
@@ -292,18 +289,61 @@ const EscolherConvenio = ({ salvos, travado, exec, fn }: { salvos: any[]; travad
   );
 };
 
-const EscolherPlano = ({ convenioId, travado, exec, fn }: { convenioId: string; travado: boolean; exec: (f: () => Promise<unknown>) => void; fn: AcoesAgendamento }) => {
-  const [planos, setPlanos] = useState<Plano[]>([]);
+const EscolherPlano = ({ convenioId, buscaInicial, travado, exec, fn }: { convenioId: string; buscaInicial: string; travado: boolean; exec: (f: () => Promise<unknown>) => void; fn: AcoesAgendamento }) => {
+  const [planos, setPlanos] = useState<Plano[] | null>(null);
+  const [q, setQ] = useState(buscaInicial);
   useEffect(() => {
-    db.from("convenios_planos").select("codigo_item, descricao").eq("convenio_id", convenioId).eq("ativo", true).limit(2000).then(({ data }: any) => setPlanos(data ?? []));
+    db.from("convenios_planos").select("codigo_item, descricao").eq("convenio_id", convenioId).eq("ativo", true).limit(1000).then(({ data }: any) => setPlanos(data ?? []));
   }, [convenioId]);
-  if (travado && !planos.length) return null;
+  const ordenados = useMemo(
+    () => [...(planos ?? [])].sort((a, b) => a.descricao.localeCompare(b.descricao, "pt-BR", { numeric: true })),
+    [planos],
+  );
+  const filtrados = useMemo(() => filtrarPorPalavras(ordenados, q, (p) => p.descricao), [ordenados, q]);
+  if (!planos) return <p className="text-[11px] text-muted-foreground">Carregando planos...</p>;
   return (
-    <div className={cn(travado && "pointer-events-none")}>
-      <SeletorPlano planos={planos} valor={null} onChange={(p) => exec(() => fn.passo("plano", p.codigo_item, `Plano: ${p.descricao}`))} />
-    </div>
+    <>
+      <div className="relative">
+        <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+        <input
+          value={q}
+          disabled={travado}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Digite o nome do plano (está na carteirinha)"
+          className="w-full rounded-lg border py-1.5 pl-7 pr-2 text-xs outline-none focus:border-brand"
+        />
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        {filtrados.length} de {planos.length} planos{filtrados.length > 80 ? " — digite para filtrar" : ""}
+      </p>
+      <div className="max-h-52 space-y-0.5 overflow-y-auto">
+        {filtrados.slice(0, 80).map((p) => (
+          <button
+            key={p.codigo_item}
+            type="button"
+            disabled={travado}
+            onClick={() => exec(() => fn.passo("plano", p.codigo_item, `Plano: ${p.descricao}`))}
+            className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-white disabled:opacity-50"
+          >
+            {p.descricao}
+          </button>
+        ))}
+        {!filtrados.length && <p className="px-2 py-1 text-[11px] text-muted-foreground">Nenhum plano com esse nome. Tente outra palavra da carteirinha.</p>}
+      </div>
+    </>
   );
 };
+
+/** Filtro sem acento e por palavras em qualquer ordem (igual ao servidor). */
+function filtrarPorPalavras<T>(lista: T[], termo: string, nome: (x: T) => string): T[] {
+  const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const palavras = norm(termo).split(/[^a-z0-9]+/).filter((w) => w.length >= 2);
+  if (!palavras.length) return lista;
+  return lista.filter((x) => {
+    const n = norm(nome(x));
+    return palavras.every((w) => n.includes(w));
+  });
+}
 
 const FormEndereco = ({ sugestao, travado, onEnviar }: { sugestao: any; travado: boolean; onEnviar: (e: any) => void }) => {
   const [e, setE] = useState({

@@ -107,3 +107,12 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
+
+/* "Digitando…" do chat (três pontinhos, como no WhatsApp) */
+@keyframes sancet-digitando {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.sancet-digitando-ponto {
+  animation: sancet-digitando 1.2s infinite ease-in-out;
+}

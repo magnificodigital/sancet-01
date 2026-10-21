@@ -655,8 +655,10 @@ export const ChatAssistente = () => {
             {enviando && !comHumano && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <AvatarAgente avatar={status.avatar} className="h-7 w-7" />
-                <span className="flex items-center gap-1 rounded-2xl border bg-white px-3 py-2">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> digitando...
+                <span className="flex items-center gap-1 rounded-2xl rounded-bl-md border bg-white px-3.5 py-3" aria-label="digitando">
+                  {[0, 0.18, 0.36].map((d) => (
+                    <span key={d} className="sancet-digitando-ponto h-2 w-2 rounded-full bg-slate-400" style={{ animationDelay: `${d}s` }} />
+                  ))}
                 </span>
               </div>
             )}

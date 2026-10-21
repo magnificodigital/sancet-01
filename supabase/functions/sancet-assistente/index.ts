@@ -1146,14 +1146,11 @@ async function executar(
       const termo = limparBusca(a.termo);
       if (!termo) return { erro: "termo vazio" };
       if (a.tipo === "convenio") {
-        const { data } = await admin
-          .from("exames_convenio")
-          .select("codigo_shift, nome")
-          .eq("ativo", true)
-          .ilike("nome_norm", `%${normalizar(termo)}%`)
-          .order("nome")
-          .limit(12);
-        (data ?? []).forEach((e: any) => citados.set(`convenio:${e.codigo_shift}`, { codigo: String(e.codigo_shift), nome: e.nome, tipo: "convenio" }));
+        // Todas as palavras, sem acento, em qualquer ordem (1.190 exames: filtra no banco).
+        const palavras = normalizar(termo).replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean).slice(0, 6);
+        let qy = admin.from("exames_convenio").select("codigo_shift, nome").eq("ativo", true);
+        for (const w of palavras) qy = qy.ilike("nome_norm", `%${w}%`);
+        const { data } = await qy.order("nome").limit(20);
         return { tipo: "convenio", exames: data ?? [], obs: "Cobertura depende do plano do convênio." };
       }
       // Particular: ~500 exames ativos; filtra em memória por nome E sinônimos
@@ -1188,22 +1185,42 @@ async function executar(
       };
     }
     case "preparo_exames": {
-      const nomes: string[] = (Array.isArray(a.exames) ? a.exames : []).slice(0, 30).map(String);
-      const chaves = [...new Set(nomes.map(normalizar))];
-      const { data } = await admin.from("exame_preparo").select("nome_norm, jejum_horas, instrucoes").in("nome_norm", chaves);
-      const mapa = new Map((data ?? []).map((r: any) => [r.nome_norm, r]));
-      let maior = 0;
-      const porExame = nomes.map((n) => {
-        const r: any = mapa.get(normalizar(n));
-        if (r && r.jejum_horas > maior) maior = r.jejum_horas;
-        return {
-          exame: n,
-          jejum_horas: r ? r.jejum_horas : null,
-          orientacoes: r
-            ? (r.instrucoes ?? []).filter((l: string) => !/jejum/i.test(l) && !/vide informa/i.test(l))
-            : ["Sem preparo cadastrado — confirme com a equipe."],
-        };
+      const nomes: string[] = (Array.isArray(a.exames) ? a.exames : []).slice(0, 20).map(String);
+      const fmt = (r: any) => ({
+        nome: r.nome_norm,
+        jejum_horas: r.jejum_horas,
+        orientacoes: (r.instrucoes ?? []).filter((l: string) => !/vide informa/i.test(l)),
       });
+      let maior = 0;
+      const porExame = [];
+      for (const n of nomes) {
+        const chave = normalizar(n);
+        // 1) nome exato
+        const { data: exato } = await admin.from("exame_preparo").select("nome_norm, jejum_horas, instrucoes").eq("nome_norm", chave).maybeSingle();
+        if (exato) {
+          if ((exato.jejum_horas ?? 0) > maior) maior = exato.jejum_horas;
+          porExame.push({ exame: n, ...fmt(exato) });
+          continue;
+        }
+        // 2) pelas palavras, sem acento (ex.: "glicemia" → GLICEMIA DE JEJUM, AO ACASO, PÓS-PRANDIAL)
+        const palavras = chave.replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length >= 1).slice(0, 6);
+        let qy = admin.from("exame_preparo").select("nome_norm, jejum_horas, instrucoes");
+        for (const w of palavras) qy = qy.ilike("nome_norm", `%${w}%`);
+        const { data: cands } = await qy.limit(12);
+        const lista = (cands ?? []).sort((x: any, y: any) => x.nome_norm.length - y.nome_norm.length);
+        if (lista.length === 1) {
+          if ((lista[0].jejum_horas ?? 0) > maior) maior = lista[0].jejum_horas;
+          porExame.push({ exame: n, ...fmt(lista[0]) });
+        } else if (lista.length > 1) {
+          porExame.push({
+            exame: n,
+            varias_versoes: lista.slice(0, 5).map(fmt),
+            instrucao: "Há mais de uma versão deste exame: diga o preparo de cada uma ou pergunte qual está no pedido médico.",
+          });
+        } else {
+          porExame.push({ exame: n, orientacoes: ["Sem preparo cadastrado para este nome — confirme com a equipe."], jejum_horas: null });
+        }
+      }
       return { jejum_do_pedido_horas: maior, regra: "Vale o MAIOR jejum entre os exames.", exames: porExame };
     }
     case "listar_unidades": {
@@ -1225,9 +1242,13 @@ async function executar(
       }));
     }
     case "buscar_convenios": {
-      const termo = limparBusca(a.termo);
-      const { data } = await admin.from("convenios_cache").select("nome").eq("ativo", true).ilike("nome", `%${termo}%`).limit(15);
-      return { aceitos: (data ?? []).map((c: any) => c.nome), obs: data?.length ? "" : "Não encontrado na lista de convênios aceitos." };
+      const { data } = await admin.from("convenios_cache").select("id, nome").eq("ativo", true).order("nome");
+      const achados = buscarPorPalavras(data ?? [], String(a.termo ?? ""), (c: any) => c.nome);
+      return {
+        aceitos: achados.slice(0, 40).map((c: any) => c.nome),
+        total: achados.length,
+        obs: achados.length ? "" : "Não encontrado na lista de convênios aceitos (confira a grafia ou peça o nome que aparece na carteirinha).",
+      };
     }
     case "datas_agendamento": {
       const sp = agoraSP();
@@ -1236,8 +1257,8 @@ async function executar(
       min.setDate(min.getDate() + 3 + (sp.getHours() >= 16 ? 1 : 0));
       let dias: any = null;
       if (a.unidade) {
-        const { data } = await admin.from("unidades_cache").select("nome, horarios").ilike("nome", `%${limparBusca(a.unidade)}%`).limit(1).maybeSingle();
-        dias = data?.horarios?.dias ?? null;
+        const { data: uns } = await admin.from("unidades_cache").select("nome, horarios").eq("ativo", true);
+        dias = buscarPorPalavras(uns ?? [], String(a.unidade), (u: any) => u.nome)[0]?.horarios?.dias ?? null;
       }
       const proximos: string[] = [];
       const d = new Date(min);
@@ -1366,6 +1387,7 @@ async function executar(
       const modos = await modosAtendimento(admin);
       const r: Rascunho = { ...(ctx.conversa.contexto?.agendamento ?? {}) };
       const erros: string[] = [];
+      let buscaCartao: { tipo: string; busca: string } | null = null;
       const set = async (campo: string, valor: any) => {
         const e = await aplicar(admin, r, modos, campo, valor, paciente);
         if (e) erros.push(e);
@@ -1377,21 +1399,36 @@ async function executar(
       if (nome === "definir_agendamento" && a.refazer) await set("editar", a.refazer);
       if (nome === "definir_agendamento") {
         if (a.convenio) {
-          const { data: cs } = await admin.from("convenios_cache").select("id, nome").eq("ativo", true).ilike("nome", `%${limparBusca(a.convenio)}%`).limit(5);
-          if ((cs ?? []).length === 1) await set("convenio", cs![0].id);
-          else erros.push((cs ?? []).length ? `Encontrei mais de um convênio: ${cs!.map((c: any) => c.nome).join(", ")}. Peça para escolher no cartão.` : "Convênio não encontrado na lista de aceitos.");
+          const { data: cs } = await admin.from("convenios_cache").select("id, nome").eq("ativo", true).order("nome");
+          const achados = buscarPorPalavras(cs ?? [], String(a.convenio), (c: any) => c.nome);
+          const exato = achados.find((c: any) => normalizar(c.nome) === normalizar(String(a.convenio)));
+          if (exato || achados.length === 1) await set("convenio", (exato ?? achados[0]).id);
+          else {
+            buscaCartao = { tipo: "convenio", busca: String(a.convenio) };
+            erros.push(achados.length
+              ? `Há ${achados.length} convênios com esse nome: ${achados.map((c: any) => c.nome).join(", ")}. Peça para o paciente tocar no certo (o cartão já abre filtrado).`
+              : "Convênio não encontrado na lista de aceitos. Peça para conferir o nome na carteirinha e escolher no cartão.");
+          }
         }
         if (a.plano && r.convenio) {
-          const { data: ps } = await admin.from("convenios_planos").select("codigo_item, descricao").eq("convenio_id", r.convenio.id).eq("ativo", true).ilike("descricao", `%${limparBusca(a.plano)}%`).limit(5);
-          if ((ps ?? []).length === 1) await set("plano", ps![0].codigo_item);
-          else erros.push((ps ?? []).length ? "Há vários planos parecidos. Peça para escolher no cartão." : "Plano não encontrado. Peça para escolher no cartão.");
+          const { data: ps } = await admin.from("convenios_planos").select("codigo_item, descricao").eq("convenio_id", r.convenio.id).eq("ativo", true).limit(1000);
+          const achados = buscarPorPalavras(ps ?? [], String(a.plano), (p: any) => p.descricao);
+          const exato = achados.find((p: any) => normalizar(p.descricao) === normalizar(String(a.plano)));
+          if (exato || achados.length === 1) await set("plano", (exato ?? achados[0]).codigo_item);
+          else {
+            buscaCartao = { tipo: "plano", busca: String(a.plano) };
+            erros.push(achados.length
+              ? `Há ${achados.length} planos parecidos (ex.: ${achados.slice(0, 6).map((p: any) => p.descricao).join("; ")}). Peça para tocar no plano exato no cartão, que já abre filtrado.`
+              : `Nenhum plano com "${a.plano}" neste convênio (${(ps ?? []).length} planos cadastrados). Peça para escolher no cartão.`);
+          }
         }
         if (a.carteirinha) await set("carteirinha", a.carteirinha);
         if (a.modalidade) await set("modalidade", a.modalidade);
         if (a.unidade) {
-          const { data: us } = await admin.from("unidades_cache").select("codigo_shift, nome").eq("ativo", true).ilike("nome", `%${limparBusca(a.unidade)}%`).limit(3);
-          if ((us ?? []).length === 1) await set("unidade", us![0].codigo_shift);
-          else erros.push("Unidade não identificada. Peça para escolher no cartão.");
+          const { data: us } = await admin.from("unidades_cache").select("codigo_shift, nome").eq("ativo", true);
+          const achados = buscarPorPalavras(us ?? [], String(a.unidade), (u: any) => u.nome);
+          if (achados.length === 1) await set("unidade", achados[0].codigo_shift);
+          else erros.push(achados.length ? `Unidades parecidas: ${achados.map((u: any) => u.nome).join(", ")}. Peça para escolher no cartão.` : "Unidade não identificada. Peça para escolher no cartão.");
         }
         if (a.data && a.periodo) await set("data", { data: a.data, periodo: a.periodo });
         else if (a.data || a.periodo) erros.push("Preciso do dia E do período (manhã ou tarde).");
@@ -1399,6 +1436,7 @@ async function executar(
       }
       const passo = await proximoPasso(admin, r, modos, paciente);
       await salvarRascunho(admin, ctx.conversa, r);
+      if (passo.acao && buscaCartao && passo.acao.tipo === buscaCartao.tipo) passo.acao.busca = buscaCartao.busca;
       if (passo.acao) acoes.push(passo.acao);
       return {
         ...(erros.length ? { problemas: erros } : {}),
@@ -1746,4 +1784,28 @@ async function buscarConhecimento(admin: any, pergunta: string, unidade: string 
 async function salvarRascunho(admin: any, conversa: any, r: Rascunho) {
   conversa.contexto = { ...(conversa.contexto ?? {}), agendamento: r };
   await admin.from("chat_conversas").update({ contexto: conversa.contexto, updated_at: new Date().toISOString() }).eq("id", conversa.id);
+}
+
+const PALAVRAS_VAZIAS = new Set(["DE", "DA", "DO", "DAS", "DOS", "E", "O", "A", "OS", "AS", "MEU", "MINHA", "PLANO", "CONVENIO", "UNIDADE", "SAUDE"]);
+/**
+ * Busca sem acento e por palavras (em qualquer ordem) numa lista completa.
+ * Ordena: nome igual > começa igual > menor nome. Não corta resultados.
+ */
+function buscarPorPalavras<T>(lista: T[], termo: string, nome: (x: T) => string): T[] {
+  const alvo = normalizar(termo).replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  if (!alvo) return [];
+  let palavras = alvo.split(" ").filter((p) => p.length >= 2 && !PALAVRAS_VAZIAS.has(p));
+  if (!palavras.length) palavras = alvo.split(" ");
+  const pontos = (x: T) => {
+    const n = normalizar(nome(x)).replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+    if (!palavras.every((p) => n.includes(p))) return -1;
+    if (n === alvo) return 0;
+    if (n.startsWith(alvo) || n.startsWith(palavras[0])) return 1;
+    return 2;
+  };
+  return lista
+    .map((x) => ({ x, p: pontos(x) }))
+    .filter((o) => o.p >= 0)
+    .sort((a, b) => a.p - b.p || nome(a.x).length - nome(b.x).length || nome(a.x).localeCompare(nome(b.x)))
+    .map((o) => o.x);
 }
