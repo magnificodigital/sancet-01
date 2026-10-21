@@ -136,7 +136,7 @@ Atendimento direcionado para a unidade ${q.unidade}. Use essa unidade em datas_a
 ` : ""}
 O que você faz:
 - Tira dúvidas sobre exames, preços (só particular), preparo/jejum, unidades, horários e convênios aceitos.
-- AGENDA PELO PRÓPRIO CHAT, do começo ao fim: quando o paciente quiser agendar/marcar exames, chame iniciar_agendamento. O chat mostra cartões para cada etapa (login, convênio, plano, carteirinha, unidade, data, documentos, confirmação e pagamento). Você só orienta e responde dúvidas; se o paciente responder por texto (ex.: "dia 24 de manhã", "meu convênio é Unimed"), chame definir_agendamento. NUNCA peça documentos, CPF ou dados de pagamento por texto: os cartões cuidam disso. Nunca diga que o pedido foi enviado: só o cartão de confirmação envia.
+- AGENDA PELO PRÓPRIO CHAT, do começo ao fim: quando o paciente quiser agendar/marcar exames, chame iniciar_agendamento. O chat mostra cartões para cada etapa (login, convênio, plano, carteirinha, unidade, data, documentos, confirmação e pagamento). Você só orienta e responde dúvidas; se o paciente responder por texto (ex.: "dia 24 de manhã", "meu convênio é Unimed"), chame definir_agendamento. NUNCA peça documentos, CPF ou dados de pagamento por texto: os cartões cuidam disso. Nunca diga que o pedido foi enviado: só o cartão de confirmação envia. Se o paciente disser que errou ou quer trocar algo (convênio, plano, carteirinha, data, documentos...), chame definir_agendamento com refazer=<item> (e o novo valor, se ele já disse); os cartões também têm "Voltar" e "Alterar".
 - ${cfg?._modos ? `Modos de atendimento online AGORA: ${[cfg._modos.convenio ? "convênio: SIM" : "convênio: NÃO", cfg._modos.particular ? "particular: SIM" : "particular: NÃO (não agende nem monte carrinho particular; se pedirem, diga que o particular é feito direto na unidade/telefones e ofereça o convênio)", cfg._modos.casa ? "coleta em casa: SIM" : "coleta em casa: NÃO", cfg._modos.somenteMatriz ? "agendamento online só na unidade Matriz" : "qualquer unidade"].join("; ")}.` : ""}
 - Documentos para agendar: pedido médico e documento com foto (RG ou CNH, frente e verso); no convênio também a carteirinha.
 - Informa o andamento dos pedidos do paciente logado (meus_pedidos) e se o resultado já saiu (meus_resultados). Se não estiver logado, peça para entrar em sancet.vercel.app/entrar.
@@ -282,6 +282,7 @@ const FERRAMENTAS = [
           periodo: { type: "string", enum: ["manha", "tarde"] },
           modalidade: { type: "string", enum: ["unidade", "domicilio"] },
           deficiencias: { type: "string", description: "Necessidades especiais (opcional)" },
+          refazer: { type: "string", enum: ["tipo", "convenio", "plano", "carteirinha", "unidade", "data", "endereco", "documentos"], description: "O paciente quer corrigir/trocar este item (sem dizer o novo valor)" },
         },
       },
     },
@@ -1373,6 +1374,7 @@ async function executar(
       if (!r.itens?.length && ctx.conversa.contexto?.carrinho?.itens?.length && (!r.tipo || r.tipo === ctx.conversa.contexto.carrinho.tipo)) {
         r.itens = ctx.conversa.contexto.carrinho.itens;
       }
+      if (nome === "definir_agendamento" && a.refazer) await set("editar", a.refazer);
       if (nome === "definir_agendamento") {
         if (a.convenio) {
           const { data: cs } = await admin.from("convenios_cache").select("id, nome").eq("ativo", true).ilike("nome", `%${limparBusca(a.convenio)}%`).limit(5);

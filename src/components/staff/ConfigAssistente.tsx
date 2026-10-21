@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { AVATARES_PRESET, AvatarAgente } from "@/components/chat/AvatarAgente";
+import { cn } from "@/lib/utils";
 
 type Modo = "desligado" | "teste" | "ligado";
 type Faq = { pergunta: string; resposta: string };
@@ -27,6 +29,7 @@ type Config = {
   voz_paciencia: "low" | "medium" | "high" | "auto";
   instrucoes_extras: string | null;
   nome_assistente: string;
+  avatar: string;
   boas_vindas: string | null;
   texto_botao: string;
   posicao: "direita" | "esquerda";
@@ -77,7 +80,7 @@ type Config = {
 
 const COLUNAS_EDITAVEIS = [
   "voz_nome", "voz_max_minutos", "voz_saudacao", "voz_velocidade", "voz_paciencia", "instrucoes_extras",
-  "nome_assistente", "boas_vindas", "texto_botao", "posicao", "cor_widget", "abrir_auto_seg", "sugestoes", "paginas_ocultas",
+  "nome_assistente", "avatar", "boas_vindas", "texto_botao", "posicao", "cor_widget", "abrir_auto_seg", "sugestoes", "paginas_ocultas",
   "qualificar_obrigatorio", "qualificar_campos", "tom",
   "fila_distribuir", "fila_incluir_admins", "fila_max_por_atendente", "fila_prazo_min", "fila_sem_resposta_min",
   "fila_sem_resposta_acao", "msg_fila_demora", "audio_paciente", "audio_responder_com_audio", "audio_max_seg",
@@ -456,6 +459,58 @@ export const ConfigAssistente = ({ podeEditar, secao }: { podeEditar: boolean; s
 
             {/* Aparência */}
             <TabsContent value="aparencia" className="space-y-4 pt-4">
+              <div className="space-y-2 rounded-md border p-3">
+                <Label>Avatar do assistente</Label>
+                <p className="text-xs text-muted-foreground">Aparece no botão do chat, no topo da conversa e ao lado de cada resposta da IA.</p>
+                <div className="flex flex-wrap items-end gap-3">
+                  {AVATARES_PRESET.map((a) => {
+                    const v = `preset:${a.id}`;
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        disabled={d}
+                        onClick={() => mudar("avatar", v)}
+                        className={cn(
+                          "flex flex-col items-center gap-1 rounded-xl p-1.5 text-[11px] transition",
+                          cfg.avatar === v ? "bg-secondary/10 font-semibold text-secondary ring-2 ring-secondary" : "hover:bg-muted",
+                        )}
+                      >
+                        <AvatarAgente avatar={v} className="h-14 w-14" />
+                        {a.nome}
+                      </button>
+                    );
+                  })}
+                  {!cfg.avatar.startsWith("preset:") && (
+                    <div className="flex flex-col items-center gap-1 rounded-xl bg-secondary/10 p-1.5 text-[11px] font-semibold text-secondary ring-2 ring-secondary">
+                      <AvatarAgente avatar={cfg.avatar} className="h-14 w-14" />
+                      Sua imagem
+                    </div>
+                  )}
+                  <label className={cn("flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed p-1.5 text-[11px] text-muted-foreground hover:bg-muted", d && "pointer-events-none opacity-50")}>
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-xl">+</span>
+                    Enviar imagem
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        if (!f) return;
+                        if (f.size > 2 * 1024 * 1024) return toast.error("Imagem muito grande (máx. 2 MB).");
+                        const ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 4);
+                        const path = `avatares/${crypto.randomUUID()}.${ext}`;
+                        const { error } = await supabase.storage.from("imagens-exames").upload(path, f, { contentType: f.type });
+                        if (error) return toast.error("Não foi possível enviar a imagem.");
+                        mudar("avatar", supabase.storage.from("imagens-exames").getPublicUrl(path).data.publicUrl);
+                        toast.success("Imagem carregada. Clique em Salvar configurações.");
+                      }}
+                    />
+                  </label>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Imagem própria: quadrada, PNG/JPG, até 2 MB (ex.: 256×256).</p>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Nome do assistente</Label>

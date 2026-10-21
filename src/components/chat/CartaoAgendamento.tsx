@@ -52,6 +52,16 @@ export const CartaoAgendamento = ({ acao, ativo, fn }: { acao: any; ativo: boole
   const wrap = (children: React.ReactNode) => (
     <div className={cn("mt-2 space-y-2 rounded-xl border bg-muted/30 p-2.5 text-secondary", !ativo && "opacity-60")}>
       {children}
+      {ativo && acao.pode_voltar && (
+        <button
+          type="button"
+          disabled={ocupado}
+          onClick={() => exec(() => fn.passo("voltar", acao.tipo, "‹ Voltar para corrigir"))}
+          className="text-[11px] font-medium text-muted-foreground underline-offset-2 hover:text-secondary hover:underline disabled:opacity-50"
+        >
+          ‹ Voltar
+        </button>
+      )}
       {ocupado && (
         <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" /> Processando...
@@ -169,7 +179,16 @@ export const CartaoAgendamento = ({ acao, ativo, fn }: { acao: any; ativo: boole
       return wrap(<FormEndereco sugestao={acao.sugestao ?? {}} travado={travado} onEnviar={(e) => exec(() => fn.passo("endereco", e, `Endereço: ${e.logradouro}, ${e.numero} — ${e.bairro}`))} />);
 
     case "documentos":
-      return wrap(<Documentos itens={acao.itens ?? []} tipoDoc={acao.tipo_documento ?? "rg"} travado={travado} exec={exec} fn={fn} />);
+      return wrap(
+        <>
+          <Documentos itens={acao.itens ?? []} tipoDoc={acao.tipo_documento ?? "rg"} travado={travado} exec={exec} fn={fn} />
+          {acao.pode_continuar && (
+            <Botao primario className="w-full" disabled={travado} onClick={() => exec(() => fn.passo("docs_ok", true, "Documentos conferidos"))}>
+              Tudo certo, continuar
+            </Botao>
+          )}
+        </>,
+      );
 
     case "confirmar_agendamento":
       return wrap(<Confirmacao resumo={acao.resumo ?? {}} travado={travado} exec={exec} fn={fn} />);
@@ -361,14 +380,14 @@ const Documentos = ({ itens, tipoDoc, travado, exec, fn }: { itens: any[]; tipoD
               {i.rotulo}
               {i.multiplo && i.qtd > 0 && <span className="text-muted-foreground"> ({i.qtd})</span>}
             </span>
-            {(!i.ok || i.multiplo) && (
+            {(!i.ok || i.multiplo || i.ok) && (
               <button
                 type="button"
                 disabled={travado}
                 onClick={() => escolher(i.chave)}
                 className="flex items-center gap-1 rounded-md bg-brand-2 px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-50"
               >
-                <Upload className="h-3 w-3" /> {i.ok ? "Mais um" : "Enviar"}
+                <Upload className="h-3 w-3" /> {!i.ok ? "Enviar" : i.multiplo ? "Mais um" : "Trocar"}
               </button>
             )}
           </div>
@@ -383,25 +402,38 @@ const Confirmacao = ({ resumo, travado, exec, fn }: { resumo: any; travado: bool
   const [aceito, setAceito] = useState(false);
   const [salvar, setSalvar] = useState(resumo.salvar_convenio ?? true);
   const [def, setDef] = useState("");
-  const linha = (k: string, v: any) =>
+  const editaveis: string[] = resumo.editaveis ?? [];
+  const linha = (k: string, v: any, campo?: string) =>
     v ? (
-      <p>
-        <span className="text-muted-foreground">{k}:</span> <b>{Array.isArray(v) ? v.join(", ") : v}</b>
-      </p>
+      <div className="flex items-start gap-2">
+        <p className="min-w-0 flex-1">
+          <span className="text-muted-foreground">{k}:</span> <b>{Array.isArray(v) ? v.join(", ") : v}</b>
+        </p>
+        {campo && editaveis.includes(campo) && (
+          <button
+            type="button"
+            disabled={travado}
+            onClick={() => exec(() => fn.passo("editar", campo, `Quero alterar: ${k.toLowerCase()}`))}
+            className="shrink-0 text-[10px] font-semibold text-brand underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            Alterar
+          </button>
+        )}
+      </div>
     ) : null;
   return (
     <>
       <div className="space-y-0.5 rounded-lg bg-white p-2 text-[11px]">
         {linha("Paciente", resumo.paciente)}
-        {linha("Atendimento", resumo.tipo === "convenio" ? "Convênio" : "Particular")}
-        {linha("Convênio", resumo.convenio)}
-        {linha("Plano", resumo.plano)}
-        {linha("Carteirinha", resumo.carteirinha)}
+        {linha("Atendimento", resumo.tipo === "convenio" ? "Convênio" : "Particular", "tipo")}
+        {linha("Convênio", resumo.convenio, "convenio")}
+        {linha("Plano", resumo.plano, "plano")}
+        {linha("Carteirinha", resumo.carteirinha, "carteirinha")}
         {linha("Exames", resumo.exames?.length ? resumo.exames : resumo.exames_ia?.length ? resumo.exames_ia : "conforme o pedido médico")}
         {linha("Total", resumo.total)}
-        {linha("Onde", resumo.onde)}
-        {linha("Quando", resumo.quando)}
-        {linha("Documentos", resumo.documentos)}
+        {linha("Onde", resumo.onde, editaveis.includes("unidade") ? "unidade" : editaveis.includes("endereco") ? "endereco" : "modalidade")}
+        {linha("Quando", resumo.quando, "data")}
+        {linha("Documentos", resumo.documentos, "documentos")}
       </div>
       <textarea
         value={def}

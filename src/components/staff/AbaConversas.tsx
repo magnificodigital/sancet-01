@@ -43,6 +43,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FichaPacienteChat } from "./FichaPacienteChat";
 import { PainelQualidade } from "./PainelQualidade";
+import { AvatarAgente } from "@/components/chat/AvatarAgente";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { pode } from "@/lib/permissoes";
 import { PlayerAudio } from "@/components/audio/PlayerAudio";
@@ -238,6 +239,10 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   const [qualidadeAberta, setQualidadeAberta] = useState(false);
   const [lacunasAbertas, setLacunasAbertas] = useState(0);
   const [resumoPac, setResumoPac] = useState<Record<string, ResumoPac>>({});
+  const [avatarIA, setAvatarIA] = useState<string | null>(null);
+  useEffect(() => {
+    db.rpc("assistente_status").then(({ data }: any) => setAvatarIA(data?.avatar ?? null));
+  }, []);
   const perfilStaff = useStaffPerfil();
   const fimRef = useRef<HTMLDivElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
@@ -556,9 +561,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
       const avatar = doPaciente ? (
         <Avatar nome={rotulo} />
       ) : m.autor === "assistente" ? (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
-          <Bot className="h-4 w-4" />
-        </div>
+        <AvatarAgente avatar={avatarIA} className="h-7 w-7" />
       ) : (
         <Avatar nome={rotulo} escuro />
       );

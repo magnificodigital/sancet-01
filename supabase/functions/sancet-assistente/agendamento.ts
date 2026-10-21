@@ -23,6 +23,8 @@ export type Rascunho = {
   documentos?: { pedido_medico?: Doc[]; rg_frente?: Doc; rg_verso?: Doc; carteirinha?: Doc; relatorio?: Doc };
   exames_ia?: { codigo_shift: string; nome: string }[];
   deficiencias?: string;
+  _auto?: string[]; // preenchidos automaticamente (não entram no "voltar")
+  _rever_docs?: boolean; // paciente pediu para rever/trocar documentos
 };
 export type Modos = { particular: boolean; convenio: boolean; casa: boolean; somenteMatriz: boolean; pularCatalogo: boolean };
 export type Passo = { texto: string; acao: any | null; completo: boolean };
@@ -133,6 +135,10 @@ export function resumo(r: Rascunho, paciente: any) {
     documentos: docsObrigatorios(r).filter((d) => d.ok).map((d) => d.rotulo + (d.qtd && d.qtd > 1 ? ` (${d.qtd})` : "")),
     tipo_documento: r.tipo_documento ?? "rg",
     salvar_convenio: !!r.salvar_convenio,
+    // Itens que o paciente pode alterar (os automáticos, como a unidade só Matriz, não).
+    editaveis: ["tipo", "convenio", "plano", "carteirinha", "modalidade", "unidade", "data", "endereco"]
+      .filter((c) => preenchido(r, c) && !(r._auto ?? []).includes(c))
+      .concat(["documentos"]),
   };
 }
 
@@ -141,6 +147,11 @@ export function resumo(r: Rascunho, paciente: any) {
  * paciente e a "ação" (cartão interativo) que o chat mostra.
  */
 export async function proximoPasso(admin: any, r: Rascunho, modos: Modos, paciente: any): Promise<Passo> {
+  const p = await calcularPasso(admin, r, modos, paciente);
+  return { ...p, acao: comVoltar(r, p.acao) };
+}
+
+async function calcularPasso(admin: any, r: Rascunho, modos: Modos, paciente: any): Promise<Passo> {
   if (!paciente) {
     return {
       texto: "Para fazer o seu agendamento eu preciso que você entre na sua conta (ou crie uma, é rapidinho). Assim seus dados e documentos ficam seguros. Depois é só voltar aqui que a gente continua de onde parou. 🙂",
@@ -150,7 +161,10 @@ export async function proximoPasso(admin: any, r: Rascunho, modos: Modos, pacien
   }
   if (!r.tipo) {
     const opcoes = [modos.convenio && "convenio", modos.particular && "particular"].filter(Boolean);
-    if (opcoes.length === 1) r.tipo = opcoes[0] as any;
+    if (opcoes.length === 1) {
+      r.tipo = opcoes[0] as any;
+      r._auto = [...new Set([...(r._auto ?? []), "tipo"])];
+    }
     else if (!opcoes.length) return { texto: "No momento o agendamento online está indisponível. Fale com a nossa equipe, por favor.", acao: null, completo: false };
     else return { texto: "Vai ser pelo **convênio** ou **particular**?", acao: { tipo: "escolher_tipo", opcoes }, completo: false };
   }
@@ -181,12 +195,16 @@ export async function proximoPasso(admin: any, r: Rascunho, modos: Modos, pacien
     const podeCasa = modos.casa && (r.itens ?? []).length > 0 && (r.itens ?? []).every((i) => i.disponivelEmCasa === true);
     if (podeCasa) return { texto: "Prefere ir a uma **unidade** ou fazer a **coleta em casa** (Sancet em Casa)?", acao: { tipo: "modalidade" }, completo: false };
     r.modalidade = "unidade";
+    r._auto = [...new Set([...(r._auto ?? []), "modalidade"])];
   }
   if (r.modalidade === "unidade") {
     if (!r.unidade) {
       if (modos.somenteMatriz) {
         const { data: m } = await admin.from("unidades_cache").select("codigo_shift, nome").eq("codigo_shift", MATRIZ_CODIGO).maybeSingle();
-        if (m) r.unidade = { codigo_shift: m.codigo_shift, nome: m.nome };
+        if (m) {
+          r.unidade = { codigo_shift: m.codigo_shift, nome: m.nome };
+          r._auto = [...new Set([...(r._auto ?? []), "unidade"])];
+        }
       }
       if (!r.unidade) {
         const { data: uns } = await admin.from("unidades_cache").select("codigo_shift, nome, bairro, cidade").eq("ativo", true).order("nome");
@@ -205,10 +223,10 @@ export async function proximoPasso(admin: any, r: Rascunho, modos: Modos, pacien
     return { texto: "Qual o **endereço** para a coleta?", acao: { tipo: "endereco", sugestao: p ?? {} }, completo: false };
   }
   const docs = docsObrigatorios(r);
-  if (docs.some((d) => !d.ok && !d.opcional)) {
+  if (docs.some((d) => !d.ok && !d.opcional) || r._rever_docs) {
     return {
       texto: "Agora preciso dos **documentos**. Toque em cada item para enviar a foto ou o PDF:",
-      acao: { tipo: "documentos", itens: docs, tipo_documento: r.tipo_documento ?? "rg" },
+      acao: { tipo: "documentos", itens: docs, tipo_documento: r.tipo_documento ?? "rg", pode_continuar: !docs.some((d) => !d.ok && !d.opcional) },
       completo: false,
     };
   }
@@ -227,6 +245,8 @@ export async function aplicar(admin: any, r: Rascunho, modos: Modos, campo: stri
       if (valor === "convenio" && !modos.convenio) return "No momento o agendamento por convênio online não está disponível.";
       if (valor !== "particular" && valor !== "convenio") return "Escolha convênio ou particular.";
       if (r.tipo !== valor) Object.assign(r, { tipo: valor, convenio: null, plano: null, carteirinha: null, itens: valor === "convenio" && modos.pularCatalogo ? [] : r.itens });
+      // Só um tipo disponível: não há escolha para "voltar".
+      if (!(modos.particular && modos.convenio)) r._auto = [...new Set([...(r._auto ?? []), "tipo"])];
       return null;
     case "convenio_salvo": {
       const { data: s } = await admin.from("paciente_convenios").select("*").eq("id", String(valor)).eq("paciente_id", paciente?.id ?? "").maybeSingle();
@@ -294,6 +314,20 @@ export async function aplicar(admin: any, r: Rascunho, modos: Modos, campo: stri
       return null;
     case "salvar_convenio":
       r.salvar_convenio = !!valor;
+      return null;
+    case "voltar": {
+      const campo = campoAnterior(r, String(valor ?? ""));
+      if (!campo) return "Não há etapa anterior para voltar.";
+      limparCampo(r, campo);
+      return null;
+    }
+    case "editar":
+      if (!ORDEM.includes(String(valor))) return "Item inválido.";
+      if (valor === "documentos") r._rever_docs = true;
+      else limparCampo(r, String(valor));
+      return null;
+    case "docs_ok":
+      r._rever_docs = false;
       return null;
     case "remover_documento": {
       const k = String(valor ?? "");
@@ -410,4 +444,64 @@ export async function gerarPagamento(jwt: string, protocolo: string, metodo: str
     body: JSON.stringify({ protocolo, metodo: ["pix", "cartao", "boleto"].includes(metodo) ? metodo : "pix" }),
   });
   return await r.json().catch(() => ({ error: "Falha ao gerar o pagamento." }));
+}
+
+// ---------- voltar / editar ----------
+const ORDEM = ["tipo", "convenio", "plano", "carteirinha", "modalidade", "unidade", "data", "endereco", "documentos"];
+const CAMPO_DO_CARTAO: Record<string, string> = {
+  escolher_tipo: "tipo", convenio: "convenio", plano: "plano", carteirinha: "carteirinha", modalidade: "modalidade",
+  unidade: "unidade", datas: "data", endereco: "endereco", documentos: "documentos", confirmar_agendamento: "fim",
+};
+const preenchido = (r: Rascunho, c: string) =>
+  c === "tipo" ? !!r.tipo : c === "convenio" ? !!r.convenio : c === "plano" ? !!r.plano : c === "carteirinha" ? !!r.carteirinha
+  : c === "modalidade" ? !!r.modalidade : c === "unidade" ? !!r.unidade : c === "data" ? !!r.data
+  : c === "endereco" ? !!r.endereco?.logradouro : false;
+
+/** Etapa anterior (preenchida pelo paciente) em relação ao cartão atual. */
+export function campoAnterior(r: Rascunho, cartaoAtual: string): string | null {
+  const atual = CAMPO_DO_CARTAO[cartaoAtual] ?? cartaoAtual;
+  const idx = atual === "fim" ? ORDEM.length : ORDEM.indexOf(atual);
+  for (let i = (idx < 0 ? ORDEM.length : idx) - 1; i >= 0; i--) {
+    const c = ORDEM[i];
+    if (c === "documentos") continue;
+    if (preenchido(r, c) && !(r._auto ?? []).includes(c)) return c;
+  }
+  return null;
+}
+
+/** Limpa um item (e o que depende dele) para o paciente escolher de novo. */
+export function limparCampo(r: Rascunho, campo: string) {
+  switch (campo) {
+    case "tipo":
+      Object.assign(r, { tipo: undefined, convenio: null, plano: null, carteirinha: null, carteirinha_salva_url: null });
+      break;
+    case "convenio":
+      Object.assign(r, { convenio: null, plano: null, carteirinha: null, carteirinha_salva_url: null });
+      break;
+    case "plano":
+      r.plano = null;
+      break;
+    case "carteirinha":
+      r.carteirinha = null;
+      break;
+    case "modalidade":
+      Object.assign(r, { modalidade: undefined, unidade: null, data: null, periodo: null, endereco: null });
+      break;
+    case "unidade":
+      Object.assign(r, { unidade: null, data: null, periodo: null });
+      break;
+    case "data":
+      Object.assign(r, { data: null, periodo: null });
+      break;
+    case "endereco":
+      r.endereco = null;
+      break;
+  }
+  r._auto = (r._auto ?? []).filter((x) => x !== campo);
+}
+
+/** Acrescenta ao cartão se dá para voltar (botão "‹ Voltar"). */
+export function comVoltar(r: Rascunho, acao: any) {
+  if (!acao || acao.tipo === "login" || acao.tipo === "pedido_criado" || acao.tipo === "pagamento") return acao;
+  return { ...acao, pode_voltar: !!campoAnterior(r, acao.tipo) };
 }

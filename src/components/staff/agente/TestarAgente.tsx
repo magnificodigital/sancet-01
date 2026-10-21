@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { AvatarAgente } from "@/components/chat/AvatarAgente";
 
 type Uso = { ferramenta: string; resultado?: string };
 type Msg = { autor: "voce" | "ia"; texto: string; usos?: Uso[] };
@@ -39,6 +40,10 @@ export const TestarAgente = ({ podeEditar }: { podeEditar: boolean }) => {
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const fimRef = useRef<HTMLDivElement>(null);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  useEffect(() => {
+    (supabase as any).rpc("assistente_status").then(({ data }: any) => setAvatar(data?.avatar ?? null));
+  }, []);
 
   useEffect(() => {
     fimRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -101,9 +106,13 @@ export const TestarAgente = ({ podeEditar }: { podeEditar: boolean }) => {
         )}
         {msgs.map((m, i) => (
           <div key={i} className={cn("flex gap-2", m.autor === "voce" ? "flex-row-reverse" : "")}>
-            <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", m.autor === "voce" ? "bg-secondary text-white" : "bg-violet-100 text-violet-700")}>
-              {m.autor === "voce" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
-            </div>
+            {m.autor === "voce" ? (
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-white">
+                <User className="h-3.5 w-3.5" />
+              </div>
+            ) : (
+              <AvatarAgente avatar={avatar} className="h-7 w-7" />
+            )}
             <div className={cn("max-w-[78%] space-y-1.5", m.autor === "voce" && "items-end")}>
               <div className={cn("whitespace-pre-line rounded-2xl px-3.5 py-2 text-sm shadow-sm", m.autor === "voce" ? "bg-secondary text-white" : "border bg-white")}>{m.texto}</div>
               {m.usos && m.usos.length > 0 && (

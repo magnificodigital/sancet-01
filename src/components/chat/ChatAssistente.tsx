@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useLigacaoVoz, type SessaoVoz } from "./useLigacaoVoz";
 import { salvarVinculoChat } from "@/lib/chatVinculo";
 import { CartaoAgendamento, type AcoesAgendamento } from "./CartaoAgendamento";
+import { AvatarAgente } from "./AvatarAgente";
 import { PlayerAudio } from "@/components/audio/PlayerAudio";
 import { BarraGravando, BotaoMicrofone, gravacaoSuportada, useGravadorAudio } from "@/components/audio/useGravadorAudio";
 
@@ -34,6 +35,7 @@ type Status = {
   chat: "desligado" | "teste" | "ligado";
   voz: boolean;
   nome?: string;
+  avatar?: string | null;
   boas_vindas?: string | null;
   texto_botao?: string;
   posicao?: "direita" | "esquerda";
@@ -462,13 +464,14 @@ export const ChatAssistente = () => {
         <button
           onClick={() => setAberto(true)}
           className={cn(
-            "fixed bottom-24 z-50 flex items-center gap-2 rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:brightness-110 md:bottom-6",
+            "fixed bottom-24 z-50 flex items-center gap-2 rounded-full bg-brand py-1.5 pl-1.5 pr-4 text-sm font-semibold text-white shadow-lg transition hover:brightness-110 md:bottom-6",
             lado,
           )}
           style={cor ? { backgroundColor: cor } : undefined}
           aria-label="Abrir assistente virtual"
         >
-          <MessageCircle className="h-5 w-5" /> <span className="hidden sm:inline">{status.texto_botao || "Fale com a Sancet"}</span>
+          <AvatarAgente avatar={status.avatar} alt={status.nome || "Assistente"} className="h-10 w-10 ring-2 ring-white/70" />
+          <span className="hidden sm:inline">{status.texto_botao || "Fale com a Sancet"}</span>
           {!!estado.nao_lidas && (
             <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold">
               {estado.nao_lidas}
@@ -483,7 +486,7 @@ export const ChatAssistente = () => {
             ladoSm,
           )}>
           <div className="flex items-center gap-2 bg-brand px-4 py-3 text-white" style={cor ? { backgroundColor: cor } : undefined}>
-            <MessageCircle className="h-5 w-5" />
+            <AvatarAgente avatar={status.avatar} alt={status.nome || "Assistente"} className="h-9 w-9 ring-2 ring-white/60" />
             <div className="flex-1">
               <p className="text-sm font-semibold">{comHumano && atend?.atendente ? atend.atendente : status.nome || "Assistente Sancet"}</p>
               <p className="text-[11px] opacity-90">
@@ -587,7 +590,8 @@ export const ChatAssistente = () => {
                   <span className="rounded-full bg-muted px-3 py-1 text-center text-[11px] text-muted-foreground">{m.texto}</span>
                 </div>
               ) : (
-              <div key={m.id ?? i} className={cn("flex", m.autor === "paciente" ? "justify-end" : "justify-start")}>
+              <div key={m.id ?? i} className={cn("flex items-end gap-1.5", m.autor === "paciente" ? "justify-end" : "justify-start")}>
+                {m.autor === "assistente" && <AvatarAgente avatar={status.avatar} alt={status.nome || "Assistente"} className="mb-0.5 h-7 w-7" />}
                 <div
                   className={cn(
                     "max-w-[85%] rounded-2xl px-3 py-2",
@@ -649,8 +653,11 @@ export const ChatAssistente = () => {
               </div>
             )}
             {enviando && !comHumano && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> digitando...
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <AvatarAgente avatar={status.avatar} className="h-7 w-7" />
+                <span className="flex items-center gap-1 rounded-2xl border bg-white px-3 py-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> digitando...
+                </span>
               </div>
             )}
             <div ref={fimRef} />
