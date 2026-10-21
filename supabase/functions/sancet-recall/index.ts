@@ -49,15 +49,13 @@ Deno.serve(async (req) => {
       if (jwt) {
         const { data: u } = await admin.auth.getUser(jwt);
         if (u?.user) {
-          const { data: isAdmin } = await admin.rpc("has_role", {
-            _user_id: u.user.id,
-            _role: "admin",
-          });
-          autorizado = isAdmin === true;
+          // Quem pode editar o Recall (Super Admin > Permissões).
+          const { data: pode } = await admin.rpc("tem_permissao_uid", { _uid: u.user.id, _modulo: "recall", _acao: "editar" });
+          autorizado = pode === true;
         }
       }
     }
-    if (!autorizado) return json({ error: "não autorizado" }, 401);
+    if (!autorizado) return json({ error: "Sem permissão para rodar o Recall." }, 403);
 
     // Config Resend + site.
     const { data: cfgRows } = await admin

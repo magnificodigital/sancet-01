@@ -27,11 +27,11 @@ export const AbaRecall = () => {
 
   const carregar = async () => {
     const [{ data: cfg }, { data: rg }, { data: cand }] = await Promise.all([
-      supabase.from("configuracoes").select("valor").eq("chave", "RECALL_ATIVO").maybeSingle(),
+      (supabase as any).rpc("recall_ativo"),
       supabase.from("recall_regras").select("*").order("nome"),
       supabase.rpc("recall_candidatos"),
     ]);
-    setAtivo((cfg as any)?.valor === "true");
+    setAtivo(cfg === true);
     setRegras((rg as Regra[]) ?? []);
     setDevidos(Array.isArray(cand) ? (cand as any[]).length : 0);
     setCarregando(false);
@@ -43,11 +43,9 @@ export const AbaRecall = () => {
 
   const alternarAtivo = async (v: boolean) => {
     setAtivo(v);
-    const { error } = await supabase
-      .from("configuracoes")
-      .upsert({ chave: "RECALL_ATIVO", valor: v ? "true" : "false" }, { onConflict: "chave" });
+    const { error } = await (supabase as any).rpc("recall_definir_ativo", { _ativo: v });
     if (error) {
-      toast.error("Erro ao salvar.");
+      toast.error(error.message || "Erro ao salvar.");
       setAtivo(!v);
     } else {
       toast.success(v ? "Recall ativado." : "Recall desativado.");
@@ -95,9 +93,14 @@ export const AbaRecall = () => {
       ativo: true,
     });
     if (error) {
-      toast.error("Erro ao adicionar (só admin pode).");
+      toast.error(
+        /row-level security|permission denied/i.test(error.message)
+          ? "Você não tem permissão para editar o Recall (Super Admin → Permissões)."
+          : `Erro ao adicionar: ${error.message}`,
+      );
       return;
     }
+    toast.success(`${ex.nome} adicionado ao recall (a cada 12 meses — ajuste abaixo).`);
     setBusca("");
     setResultados([]);
     carregar();
@@ -105,17 +108,23 @@ export const AbaRecall = () => {
 
   const salvarMeses = async (id: string, meses: number) => {
     if (!meses || meses < 1) return;
-    await supabase.from("recall_regras").update({ meses }).eq("id", id);
+    const { error } = await supabase.from("recall_regras").update({ meses }).eq("id", id);
+    if (error) toast.error("Não foi possível salvar a periodicidade.");
   };
 
   const alternarRegra = async (id: string, ativo: boolean) => {
     setRegras((rs) => rs.map((r) => (r.id === id ? { ...r, ativo } : r)));
-    await supabase.from("recall_regras").update({ ativo }).eq("id", id);
+    const { error } = await supabase.from("recall_regras").update({ ativo }).eq("id", id);
+    if (error) {
+      toast.error("Não foi possível alterar a regra.");
+      carregar();
+    }
   };
 
   const excluir = async (id: string) => {
     setRegras((rs) => rs.filter((r) => r.id !== id));
-    await supabase.from("recall_regras").delete().eq("id", id);
+    const { error } = await supabase.from("recall_regras").delete().eq("id", id);
+    if (error) toast.error("Não foi possível excluir a regra.");
     carregar();
   };
 
