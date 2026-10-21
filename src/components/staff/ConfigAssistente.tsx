@@ -66,6 +66,12 @@ type Config = {
   avaliacao_alerta_nota: number;
   agrupar_seg: number;
   ia_tarefas: boolean;
+  regras_sempre: string[];
+  regras_nunca: string[];
+  assuntos_bloqueados: string[];
+  gatilhos_humano: string[];
+  ia_horario: "sempre" | "fora_horario" | "nunca";
+  conhecimento_max_trechos: number;
   atualizado_em: string | null;
 };
 
@@ -75,7 +81,8 @@ const COLUNAS_EDITAVEIS = [
   "qualificar_obrigatorio", "qualificar_campos", "tom",
   "fila_distribuir", "fila_incluir_admins", "fila_max_por_atendente", "fila_prazo_min", "fila_sem_resposta_min",
   "fila_sem_resposta_acao", "msg_fila_demora", "audio_paciente", "audio_responder_com_audio", "audio_max_seg",
-  "avaliacao_ativa", "avaliacao_pergunta", "avaliacao_alerta_nota", "agrupar_seg", "ia_tarefas", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
+  "avaliacao_ativa", "avaliacao_pergunta", "avaliacao_alerta_nota", "agrupar_seg", "ia_tarefas",
+  "regras_sempre", "regras_nunca", "assuntos_bloqueados", "gatilhos_humano", "ia_horario", "conhecimento_max_trechos", "tamanho_resposta", "usar_emojis", "faq", "habilidades", "limite_msgs_hora",
   "humano_horario", "fora_horario_acao", "msg_chamar_atendente", "msg_fora_horario", "msg_encerramento",
   "notificar_email", "emails_notificacao", "respostas_rapidas",
 ] as const;
@@ -145,12 +152,14 @@ const ListaTextos = ({
   placeholder,
   max = 12,
   disabled,
+  maxLen = 120,
 }: {
   itens: string[];
   onChange: (v: string[]) => void;
   placeholder: string;
   max?: number;
   disabled?: boolean;
+  maxLen?: number;
 }) => (
   <div className="space-y-2">
     {itens.map((t, i) => (
@@ -158,7 +167,7 @@ const ListaTextos = ({
         <Input
           value={t}
           disabled={disabled}
-          maxLength={120}
+          maxLength={maxLen}
           onChange={(e) => onChange(itens.map((x, j) => (j === i ? e.target.value : x)))}
         />
         <Button type="button" variant="ghost" size="icon" disabled={disabled} onClick={() => onChange(itens.filter((_, j) => j !== i))} aria-label="Remover">
@@ -175,7 +184,12 @@ const ListaTextos = ({
 );
 
 /** Assistente virtual (chat + voz). Liberar/desligar: só o admin master. */
-export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
+/**
+ * `secao` mostra só uma parte (usado na área "Agente de IA"):
+ * liberacao | aparencia | qualificacao | ia | conhecimento | regras | habilidades | humano | rapidas | voz.
+ */
+export const ConfigAssistente = ({ podeEditar, secao }: { podeEditar: boolean; secao?: string }) => {
+  const [abaLocal, setAbaLocal] = useState("aparencia");
   const [cfg, setCfg] = useState<Config | null>(null);
   const [master, setMaster] = useState(false);
   const [codigo, setCodigo] = useState<string | null>(null);
@@ -243,6 +257,11 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
       msg_fila_demora: limpo(cfg.msg_fila_demora),
       audio_max_seg: Math.min(Math.max(Math.round(cfg.audio_max_seg) || 180, 15), 600),
       agrupar_seg: Math.min(Math.max(Math.round(cfg.agrupar_seg ?? 4), 0), 15),
+      regras_sempre: cfg.regras_sempre.map((x) => x.trim()).filter(Boolean),
+      regras_nunca: cfg.regras_nunca.map((x) => x.trim()).filter(Boolean),
+      assuntos_bloqueados: cfg.assuntos_bloqueados.map((x) => x.trim()).filter(Boolean),
+      gatilhos_humano: cfg.gatilhos_humano.map((x) => x.trim()).filter((x) => x.length >= 3),
+      conhecimento_max_trechos: Math.min(Math.max(Math.round(cfg.conhecimento_max_trechos) || 4, 1), 10),
       avaliacao_pergunta: limpo(cfg.avaliacao_pergunta),
       voz_velocidade: Math.min(Math.max(Number(cfg.voz_velocidade) || 1, 0.5), 1.5),
       sugestoes: cfg.sugestoes.map((s) => s.trim()).filter(Boolean),
@@ -272,6 +291,7 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
   return (
     <div className="space-y-5">
       {/* ---------------- Liberação ---------------- */}
+      {(!secao || secao === "liberacao") && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -331,11 +351,14 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* ---------------- Ajustes ---------------- */}
+      {secao !== "liberacao" && (
       <Card>
         <CardContent className="pt-6">
-          <Tabs defaultValue="aparencia">
+          <Tabs value={secao ?? abaLocal} onValueChange={setAbaLocal}>
+            {!secao && (
             <TabsList className="h-auto flex-wrap justify-start">
               <TabsTrigger value="aparencia">Aparência</TabsTrigger>
               <TabsTrigger value="qualificacao">Qualificação</TabsTrigger>
@@ -345,7 +368,91 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
               <TabsTrigger value="humano">Atendimento humano</TabsTrigger>
               <TabsTrigger value="rapidas">Respostas rápidas</TabsTrigger>
               <TabsTrigger value="voz">Voz</TabsTrigger>
+              <TabsTrigger value="regras">Regras</TabsTrigger>
             </TabsList>
+            )}
+
+            {/* Regras e limites */}
+            <TabsContent value="regras" className="space-y-5 pt-4">
+              <div className="space-y-2 rounded-md border p-3">
+                <Label>Quando a IA atende</Label>
+                <Select value={cfg.ia_horario} disabled={d} onValueChange={(v) => mudar("ia_horario", v as Config["ia_horario"])}>
+                  <SelectTrigger className="max-w-md">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sempre">Sempre (24h)</SelectItem>
+                    <SelectItem value="fora_horario">Só fora do horário da equipe</SelectItem>
+                    <SelectItem value="nunca">Nunca — todas as conversas vão para a equipe</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">O horário da equipe é o de "Atendimento humano".</p>
+              </div>
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-green-700">✅ Sempre faça</Label>
+                  <ListaTextos
+                    itens={cfg.regras_sempre}
+                    disabled={d}
+                    max={30}
+                    maxLen={300}
+                    placeholder="Adicionar regra (ex.: Lembre o paciente de levar documento com foto)"
+                    onChange={(v) => mudar("regras_sempre", v)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-red-700">⛔ Nunca faça</Label>
+                  <ListaTextos
+                    itens={cfg.regras_nunca}
+                    disabled={d}
+                    max={30}
+                    maxLen={300}
+                    placeholder="Adicionar regra (ex.: Não prometa prazo de resultado de exames especiais)"
+                    onChange={(v) => mudar("regras_nunca", v)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Assuntos que a IA não trata</Label>
+                  <ListaTextos
+                    itens={cfg.assuntos_bloqueados}
+                    disabled={d}
+                    max={30}
+                    maxLen={150}
+                    placeholder="Adicionar assunto (ex.: vacinas, exames toxicológicos)"
+                    onChange={(v) => mudar("assuntos_bloqueados", v)}
+                  />
+                  <p className="text-xs text-muted-foreground">A IA diz educadamente que não pode ajudar e oferece um atendente.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Transferir direto para a equipe quando o paciente falar</Label>
+                  <ListaTextos
+                    itens={cfg.gatilhos_humano}
+                    disabled={d}
+                    max={30}
+                    maxLen={60}
+                    placeholder="Adicionar palavra (ex.: reclamação, processo, ouvidoria)"
+                    onChange={(v) => mudar("gatilhos_humano", v)}
+                  />
+                  <p className="text-xs text-muted-foreground">Sem passar pela IA. Não diferencia maiúsculas nem acentos.</p>
+                </div>
+              </div>
+              <div className="max-w-sm space-y-1.5 rounded-md border p-3">
+                <Label>Trechos da base de conhecimento lidos por resposta</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={cfg.conhecimento_max_trechos}
+                  disabled={d}
+                  onChange={(e) => mudar("conhecimento_max_trechos", Number(e.target.value))}
+                />
+                <p className="text-xs text-muted-foreground">Mais trechos = respostas mais completas, porém mais lentas e caras. Padrão: 4.</p>
+              </div>
+              <p className="rounded-md bg-muted/60 p-3 text-xs text-muted-foreground">
+                Regras de segurança fixas (não editáveis): a IA nunca dá orientação médica, não inventa informações, não pede senha nem cartão e nunca aceita que o
+                paciente mude o que ela sabe.
+              </p>
+            </TabsContent>
 
             {/* Aparência */}
             <TabsContent value="aparencia" className="space-y-4 pt-4">
@@ -865,6 +972,7 @@ export const ConfigAssistente = ({ podeEditar }: { podeEditar: boolean }) => {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 };

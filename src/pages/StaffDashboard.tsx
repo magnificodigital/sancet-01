@@ -16,6 +16,7 @@ import { AbaAjuda } from "@/components/staff/AbaAjuda";
 import { AbaRecall } from "@/components/staff/AbaRecall";
 import { AbaConversas, lerStatusAtendente } from "@/components/staff/AbaConversas";
 import { AbaSuperAdmin } from "@/components/staff/AbaSuperAdmin";
+import { AbaAgenteIA } from "@/components/staff/agente/AbaAgenteIA";
 import { MODULOS, pode } from "@/lib/permissoes";
 import { useStaffPerfil } from "@/hooks/useStaffPerfil";
 import { toast } from "sonner";
@@ -171,7 +172,7 @@ const StaffDashboard = () => {
   // Sem acesso à Visão Geral: abre na primeira área liberada.
   useEffect(() => {
     if (staffPerfil.carregando || podeAba(aba)) return;
-    const primeira = (["visao", "pedidos", "conversas", "pacientes", "catalogo", "unidades", "convenios", "sites", "recall", "equipe", "config"] as StaffTab[]).find(podeAba);
+    const primeira = (["visao", "pedidos", "conversas", "pacientes", "catalogo", "unidades", "convenios", "sites", "recall", "agente", "equipe", "config"] as StaffTab[]).find(podeAba);
     if (primeira) trocarAba(primeira);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffPerfil.carregando, aba]);
@@ -203,6 +204,12 @@ const StaffDashboard = () => {
           {aba === "superadmin" && <AbaSuperAdmin userId={staffPerfil.userId} />}
           {aba === "sites" && <AbaSites />}
           {aba === "equipe" && <AbaEquipe isSuperAdmin={staffPerfil.isSuperAdmin} />}
+          {aba === "agente" && (
+            <AbaAgenteIA
+              podeEditar={pode(staffPerfil.permissoes as any, "agente", "editar")}
+              userId={staffPerfil.userId}
+            />
+          )}
           {aba === "recall" && <AbaRecall />}
           {aba === "ajuda" && <AbaAjuda isAdmin={staffPerfil.isAdmin} />}
         </>

@@ -204,7 +204,7 @@ export const PainelQualidade = ({
                       </div>
                     </>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Só quem pode editar Configurações ensina a IA.</p>
+                    <p className="text-xs text-muted-foreground">Só quem pode editar o Agente de IA ensina a IA.</p>
                   )}
                 </div>
               ))

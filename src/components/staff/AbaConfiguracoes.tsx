@@ -125,13 +125,6 @@ const SECOES: Secao[] = [
     superOnly: true,
   },
   {
-    id: "assistente",
-    titulo: "Assistente virtual",
-    descricao: "Chat do site e atendimento por voz",
-    icone: Bot,
-    adminOnly: true,
-  },
-  {
     id: "pagamento",
     titulo: "Pagamentos",
     descricao: "Asaas, Mercado Pago e Paghiper",
@@ -933,8 +926,6 @@ export const AbaConfiguracoes = ({ permissoes, isAdmin = false, isSuperAdmin = f
               </CardContent>
             </Card>
           )}
-
-          {secaoAtiva === "assistente" && isAdmin && <ConfigAssistente podeEditar={podeEditar} />}
 
           {secaoAtiva === "risco" && isAdmin && (
             <Card className="border-destructive/40">

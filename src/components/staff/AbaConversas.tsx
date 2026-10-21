@@ -1081,7 +1081,7 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
           );
         }}
         nomeAtendente={nomeAtendente}
-        podeEditarIA={isAdmin || pode(perfilStaff.permissoes as any, "config", "editar")}
+        podeEditarIA={pode(perfilStaff.permissoes as any, "agente", "editar")}
         onAbrirConversa={(id) => {
           setQualidadeAberta(false);
           setFiltro(conversas.find((c) => c.id === id)?.status === "encerrada" ? "encerradas" : "todas");

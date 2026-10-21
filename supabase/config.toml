@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.sancet-copiloto]
 verify_jwt = false
+
+[functions.sancet-conhecimento]
+verify_jwt = false

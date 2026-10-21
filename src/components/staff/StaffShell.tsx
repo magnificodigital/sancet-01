@@ -7,6 +7,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Crown,
+  Bot,
   ClipboardList,
   FileText,
   FlaskConical,
@@ -54,6 +55,7 @@ export type StaffTab =
   | "equipe"
   | "recall"
   | "superadmin"
+  | "agente"
   | "ajuda";
 
 type ItemMenu = { id: StaffTab | "checkin"; label: string; icon: typeof LayoutDashboard; modulo?: string; superOnly?: boolean };
@@ -88,6 +90,7 @@ const GRUPOS: { titulo: string | null; itens: ItemMenu[] }[] = [
   {
     titulo: "Administração",
     itens: [
+      { id: "agente", label: "Agente de IA", icon: Bot, modulo: "agente" },
       { id: "equipe", label: "Equipe", icon: UserCog, modulo: "equipe" },
       { id: "config", label: "Configurações", icon: Settings2, modulo: "config" },
       { id: "superadmin", label: "Super Admin", icon: Crown, superOnly: true },

@@ -18,6 +18,7 @@ export const MODULOS: Modulo[] = [
   { id: "convenios", label: "Convênios", grupo: "Cadastros", acoes: ["ver", "editar"] },
   { id: "paginas", label: "Sites e páginas", grupo: "Marketing", acoes: ["ver", "editar", "excluir"] },
   { id: "recall", label: "Recall", grupo: "Marketing", acoes: ["ver", "editar"] },
+  { id: "agente", label: "Agente de IA", grupo: "Administração", acoes: ["ver", "editar"], dica: "Base de conhecimento, regras, testes e configurações do assistente." },
   { id: "equipe", label: "Equipe", grupo: "Administração", acoes: ["ver", "editar", "excluir"] },
   { id: "config", label: "Configurações", grupo: "Administração", acoes: ["ver", "editar"] },
   { id: "sync", label: "Sincronizar Shift", grupo: "Administração", acoes: ["ver"] },
