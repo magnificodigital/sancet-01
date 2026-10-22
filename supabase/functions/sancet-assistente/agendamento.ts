@@ -5,7 +5,7 @@
 // O rascunho fica em chat_conversas.contexto.agendamento.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-export type Doc = { path: string; nome: string; mime: string };
+export type Doc = { path: string; nome: string; mime: string; origem?: "pedido" }; // origem "pedido" = reaproveitado do último pedido
 export type Rascunho = {
   tipo?: "particular" | "convenio";
   convenio?: { id: string; nome: string; codigo_shift: string | null } | null;
@@ -25,6 +25,7 @@ export type Rascunho = {
   deficiencias?: string;
   _auto?: string[]; // preenchidos automaticamente (não entram no "voltar")
   _rever_docs?: boolean; // paciente pediu para rever/trocar documentos
+  _docs_reuso?: boolean; // já tentou reaproveitar RG/CNH do último pedido
 };
 export type Modos = { particular: boolean; convenio: boolean; casa: boolean; somenteMatriz: boolean; pularCatalogo: boolean };
 export type Passo = { texto: string; acao: any | null; completo: boolean };
@@ -106,8 +107,8 @@ const docsObrigatorios = (r: Rascunho) => {
   const rot = r.tipo_documento === "cnh" ? "CNH" : "RG";
   const lista: { chave: string; rotulo: string; multiplo?: boolean; opcional?: boolean; ok: boolean; qtd?: number }[] = [
     { chave: "pedido_medico", rotulo: "Pedido médico", multiplo: true, ok: !!r.documentos?.pedido_medico?.length, qtd: r.documentos?.pedido_medico?.length ?? 0 },
-    { chave: "rg_frente", rotulo: `${rot} — frente`, ok: !!r.documentos?.rg_frente },
-    { chave: "rg_verso", rotulo: `${rot} — verso`, ok: !!r.documentos?.rg_verso },
+    { chave: "rg_frente", rotulo: `${rot} — frente${r.documentos?.rg_frente?.origem ? " (do seu último pedido)" : ""}`, ok: !!r.documentos?.rg_frente },
+    { chave: "rg_verso", rotulo: `${rot} — verso${r.documentos?.rg_verso?.origem ? " (do seu último pedido)" : ""}`, ok: !!r.documentos?.rg_verso },
   ];
   if (r.tipo === "convenio") lista.push({ chave: "carteirinha", rotulo: "Carteirinha do convênio (foto)", ok: !!r.documentos?.carteirinha || !!r.carteirinha_salva_url });
   lista.push({ chave: "relatorio", rotulo: "Relatório médico (opcional)", opcional: true, ok: !!r.documentos?.relatorio });
@@ -154,8 +155,8 @@ export async function proximoPasso(admin: any, r: Rascunho, modos: Modos, pacien
 async function calcularPasso(admin: any, r: Rascunho, modos: Modos, paciente: any): Promise<Passo> {
   if (!paciente) {
     return {
-      texto: "Para fazer o seu agendamento eu preciso que você entre na sua conta (ou crie uma, é rapidinho). Assim seus dados e documentos ficam seguros. Depois é só voltar aqui que a gente continua de onde parou. 🙂",
-      acao: { tipo: "login" },
+      texto: "Primeiro preciso confirmar quem é você. Se você já é paciente da Sancet, eu uso os dados que já temos (cadastro, convênio e documentos) e você não precisa preencher tudo de novo. 🙂",
+      acao: { tipo: "identificar", modo: "entrar", continuar: "agendar" },
       completo: false,
     };
   }
@@ -176,7 +177,15 @@ async function calcularPasso(admin: any, r: Rascunho, modos: Modos, paciente: an
         .eq("paciente_id", paciente.id)
         .order("principal", { ascending: false })
         .limit(5);
-      return { texto: "Qual é o seu **convênio**?", acao: { tipo: "convenio", salvos: salvos ?? [] }, completo: false };
+      const p = (salvos ?? [])[0];
+      const final = p?.numero_carteirinha ? `, carteirinha final ${String(p.numero_carteirinha).replace(/\D/g, "").slice(-4)}` : "";
+      return {
+        texto: p
+          ? `Vai usar o seu convênio **${p.convenio_nome}**${p.plano_descricao ? ` (${p.plano_descricao}${final})` : final ? ` (${final.slice(2)})` : ""}? Toque nele abaixo ou escolha outro.`
+          : "Qual é o seu **convênio**?",
+        acao: { tipo: "convenio", salvos: salvos ?? [] },
+        completo: false,
+      };
     }
     if (!r.plano) {
       const { count } = await admin.from("convenios_planos").select("id", { count: "exact", head: true }).eq("convenio_id", r.convenio.id).eq("ativo", true);
@@ -222,6 +231,7 @@ async function calcularPasso(admin: any, r: Rascunho, modos: Modos, paciente: an
     const { data: p } = await admin.from("pacientes").select("cep, logradouro, numero, complemento, bairro, cidade, uf").eq("id", paciente.id).maybeSingle();
     return { texto: "Qual o **endereço** para a coleta?", acao: { tipo: "endereco", sugestao: p ?? {} }, completo: false };
   }
+  await reaproveitarDocumento(admin, r, paciente);
   const docs = docsObrigatorios(r);
   if (docs.some((d) => !d.ok && !d.opcional) || r._rever_docs) {
     return {
@@ -306,9 +316,16 @@ export async function aplicar(admin: any, r: Rascunho, modos: Modos, campo: stri
       r.endereco = limpo;
       return null;
     }
-    case "tipo_documento":
-      r.tipo_documento = valor === "cnh" ? "cnh" : "rg";
+    case "tipo_documento": {
+      const novo = valor === "cnh" ? "cnh" : "rg";
+      // Trocou RG↔CNH: o documento reaproveitado do último pedido não serve mais.
+      if (novo !== r.tipo_documento && r.documentos) {
+        if (r.documentos.rg_frente?.origem) delete r.documentos.rg_frente;
+        if (r.documentos.rg_verso?.origem) delete r.documentos.rg_verso;
+      }
+      r.tipo_documento = novo;
       return null;
+    }
     case "deficiencias":
       r.deficiencias = String(valor ?? "").trim().slice(0, 2000);
       return null;
@@ -365,7 +382,9 @@ export async function confirmarPedido(admin: any, jwt: string, paciente: any, r:
   if (!pac?.cpf) throw new Error("Cadastro sem CPF. Complete seus dados em Minha conta.");
   const copiar = async (doc: Doc | undefined, sufixo: string) => {
     if (!doc) return null;
-    const { data: blob, error } = await admin.storage.from("chat-anexos").download(doc.path);
+    // Reaproveitado: só vale arquivo da pasta do próprio CPF.
+    if (doc.origem === "pedido" && !doc.path.startsWith(`${String(pac.cpf).replace(/\D/g, "")}/`) && !doc.path.startsWith(`${pac.cpf}/`)) return null;
+    const { data: blob, error } = await admin.storage.from(doc.origem === "pedido" ? "documentos-pedidos" : "chat-anexos").download(doc.path);
     if (error || !blob) throw new Error(`Não encontrei o arquivo "${doc.nome}". Envie de novo, por favor.`);
     const ext = (doc.nome.split(".").pop() || doc.path.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5);
     const destino = `${pac.cpf}/${Date.now()}-${sufixo}.${ext}`;
@@ -502,6 +521,34 @@ export function limparCampo(r: Rascunho, campo: string) {
 
 /** Acrescenta ao cartão se dá para voltar (botão "‹ Voltar"). */
 export function comVoltar(r: Rascunho, acao: any) {
-  if (!acao || acao.tipo === "login" || acao.tipo === "pedido_criado" || acao.tipo === "pagamento") return acao;
+  if (!acao || acao.tipo === "login" || acao.tipo === "identificar" || acao.tipo === "pedido_criado" || acao.tipo === "pagamento") return acao;
   return { ...acao, pode_voltar: !!campoAnterior(r, acao.tipo) };
+}
+
+/**
+ * Documento com foto (RG/CNH) já enviado no último pedido do paciente: entra
+ * pronto no agendamento (ele pode "Trocar"). Só uma tentativa por rascunho.
+ */
+async function reaproveitarDocumento(admin: any, r: Rascunho, paciente: any) {
+  if (r._docs_reuso || !paciente?.id) return;
+  r._docs_reuso = true;
+  if (r.documentos?.rg_frente || r.documentos?.rg_verso) return;
+  const { data: ult } = await admin
+    .from("pedidos")
+    .select("url_rg_frente, url_rg_verso, tipo_documento_identidade, created_at")
+    .eq("paciente_id", paciente.id)
+    .not("url_rg_frente", "is", null)
+    .not("url_rg_verso", "is", null)
+    .neq("status", "cancelado")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!ult) return;
+  // Documento de mais de 5 anos: melhor pedir de novo.
+  if (Date.now() - new Date(ult.created_at).getTime() > 5 * 365 * 86400_000) return;
+  const nome = (p: string) => p.split("/").pop() ?? "documento";
+  r.documentos = r.documentos ?? {};
+  r.documentos.rg_frente = { path: ult.url_rg_frente, nome: nome(ult.url_rg_frente), mime: "", origem: "pedido" };
+  r.documentos.rg_verso = { path: ult.url_rg_verso, nome: nome(ult.url_rg_verso), mime: "", origem: "pedido" };
+  r.tipo_documento = ult.tipo_documento_identidade === "cnh" ? "cnh" : "rg";
 }

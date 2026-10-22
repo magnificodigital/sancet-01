@@ -377,6 +377,22 @@ export const ChatAssistente = () => {
     setEstado((s) => ({ ...s, mensagens: [...s.mensagens, { autor: "assistente", texto: data.resposta, acoes: data.acoes ?? [] }] }));
   };
   const fnAgendamento: AcoesAgendamento = {
+    mostrar: (texto, acao) => addResposta({ resposta: texto, acoes: [acao] }),
+    identificar: async (corpo, rotulo) => {
+      setEstado((s) => ({ ...s, mensagens: [...s.mensagens, { autor: "paciente", texto: rotulo }] }));
+      try {
+        const d = await chamar(corpo);
+        if (!d?.token_hash) return addResposta(d);
+        // Código conferido: abre a sessão do paciente aqui mesmo (sem senha).
+        const { error } = await supabase.auth.verifyOtp({ token_hash: d.token_hash, type: "magiclink" });
+        if (error) throw new Error("Não foi possível concluir a identificação. Peça um novo código.");
+        addResposta(d);
+        if (d.continuar === "agendar") addResposta(await chamar({ acao: "agendar", campo: "iniciar" }));
+        else enviarRef.current("Pronto, já me identifiquei.");
+      } catch (e: any) {
+        toast.error(e?.message && e.message !== "erro" ? e.message : "Não foi possível continuar agora.");
+      }
+    },
     passo: async (campo, valor, rotulo) => {
       setEstado((s) => ({ ...s, mensagens: [...s.mensagens, { autor: "paciente", texto: rotulo }] }));
       try {

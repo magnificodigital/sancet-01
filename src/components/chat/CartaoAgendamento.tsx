@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 const db = supabase as any;
 
 export type AcoesAgendamento = {
+  identificar: (corpo: Record<string, unknown>, rotulo: string) => Promise<void>;
+  mostrar: (texto: string, acao: any) => void;
   passo: (campo: string, valor: unknown, rotulo: string) => Promise<void>;
   documento: (chave: string, arquivo: File) => Promise<void>;
   confirmar: (dados: { deficiencias: string; salvar_convenio: boolean; tipo_documento: string }) => Promise<void>;
@@ -87,6 +89,12 @@ export const CartaoAgendamento = ({ acao, ativo, fn }: { acao: any; ativo: boole
           </Botao>
         </>,
       );
+
+    case "identificar":
+      return wrap(<Identificar acao={acao} travado={travado} exec={exec} fn={fn} />);
+
+    case "codigo":
+      return wrap(<CodigoEmail acao={acao} travado={travado} exec={exec} fn={fn} />);
 
     case "escolher_tipo":
       return wrap(
@@ -212,6 +220,149 @@ export const CartaoAgendamento = ({ acao, ativo, fn }: { acao: any; ativo: boole
 };
 
 // ---------- partes ----------
+
+const soDigitos = (v: string) => v.replace(/\D/g, "");
+const mascaraCpf = (v: string) =>
+  soDigitos(v).slice(0, 11).replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+const mascaraData = (v: string) => soDigitos(v).slice(0, 8).replace(/(\d{2})(\d)/, "$1/$2").replace(/(\d{2})(\d)/, "$1/$2");
+const mascaraCel = (v: string) => {
+  const d = soDigitos(v).slice(0, 11);
+  return d.length <= 10 ? d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2") : d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+};
+/** DD/MM/AAAA → AAAA-MM-DD (ou "" se incompleta). */
+const dataIso = (v: string) => {
+  const d = soDigitos(v);
+  return d.length === 8 ? `${d.slice(4)}-${d.slice(2, 4)}-${d.slice(0, 2)}` : "";
+};
+const Campo = (p: React.InputHTMLAttributes<HTMLInputElement>) => (
+  <input {...p} className={cn("w-full rounded-lg border bg-white px-2.5 py-1.5 text-xs outline-none focus:border-brand", p.className)} />
+);
+
+/**
+ * Identificação sem sair do chat: quem já é paciente informa CPF + nascimento
+ * (código no e-mail do cadastro); quem é novo faz o cadastro rápido aqui.
+ */
+const Identificar = ({ acao, travado, exec, fn }: { acao: any; travado: boolean; exec: (f: () => Promise<unknown>) => void; fn: AcoesAgendamento }) => {
+  const navigate = useNavigate();
+  const [modo, setModo] = useState<"entrar" | "cadastro">(acao.modo === "cadastro" ? "cadastro" : "entrar");
+  const [cpf, setCpf] = useState("");
+  const [nasc, setNasc] = useState("");
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [cel, setCel] = useState("");
+  const [termos, setTermos] = useState(false);
+  const continuar = acao.continuar;
+
+  if (acao.modo === "email") {
+    return (
+      <div className="space-y-1.5">
+        <Campo type="email" inputMode="email" autoComplete="email" placeholder="seu@email.com" value={email} disabled={travado} onChange={(e) => setEmail(e.target.value)} />
+        <Botao primario className="w-full" disabled={travado || !email.includes("@")} onClick={() => exec(() => fn.identificar({ acao: "identificar", modo: "email", cpf: acao.cpf, nascimento: acao.nascimento, email: email.trim(), continuar }, "📧 Informei meu e-mail"))}>
+          Enviar código
+        </Botao>
+      </div>
+    );
+  }
+
+  const cpfOk = soDigitos(cpf).length === 11;
+  const nascOk = !!dataIso(nasc);
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-1 rounded-lg bg-white p-0.5 text-[11px] font-semibold">
+        {(["entrar", "cadastro"] as const).map((m) => (
+          <button key={m} type="button" disabled={travado} onClick={() => setModo(m)} className={cn("rounded-md py-1.5", modo === m ? "bg-brand-2 text-white" : "text-muted-foreground")}>
+            {m === "entrar" ? "Já sou paciente" : "Primeira vez"}
+          </button>
+        ))}
+      </div>
+      {modo === "cadastro" && <Campo autoComplete="name" placeholder="Nome completo" value={nome} disabled={travado} onChange={(e) => setNome(e.target.value)} />}
+      <div className="grid grid-cols-2 gap-1.5">
+        <Campo inputMode="numeric" placeholder="CPF" value={cpf} disabled={travado} onChange={(e) => setCpf(mascaraCpf(e.target.value))} />
+        <Campo inputMode="numeric" placeholder="Nascimento (DD/MM/AAAA)" value={nasc} disabled={travado} onChange={(e) => setNasc(mascaraData(e.target.value))} />
+      </div>
+      {modo === "entrar" ? (
+        <>
+          <Botao primario className="w-full" disabled={travado || !cpfOk || !nascOk} onClick={() => exec(() => fn.identificar({ acao: "identificar", modo: "entrar", cpf: soDigitos(cpf), nascimento: dataIso(nasc), continuar }, "🔐 Informei CPF e data de nascimento"))}>
+            Continuar
+          </Botao>
+          <p className="text-[10px] text-muted-foreground">
+            Vamos enviar um código para o e-mail do seu cadastro. Prefere senha?{" "}
+            <button type="button" className="underline" onClick={() => navigate(`/entrar?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`)}>
+              Entrar com senha
+            </button>
+          </p>
+          {acao.sugerir_cadastro && (
+            <button type="button" disabled={travado} onClick={() => setModo("cadastro")} className="text-[11px] font-semibold text-brand-2 underline">
+              É sua primeira vez? Cadastre-se aqui
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-1.5">
+            <Campo type="email" inputMode="email" autoComplete="email" placeholder="E-mail" value={email} disabled={travado} onChange={(e) => setEmail(e.target.value)} />
+            <Campo inputMode="tel" autoComplete="tel" placeholder="Celular com DDD" value={cel} disabled={travado} onChange={(e) => setCel(mascaraCel(e.target.value))} />
+          </div>
+          <label className="flex items-start gap-1.5 text-[10px] text-muted-foreground">
+            <input type="checkbox" className="mt-0.5" checked={termos} disabled={travado} onChange={(e) => setTermos(e.target.checked)} />
+            <span>
+              Li e aceito a{" "}
+              <a href="/politica-de-privacidade" target="_blank" rel="noreferrer" className="underline">política de privacidade</a>.
+            </span>
+          </label>
+          <Botao
+            primario
+            className="w-full"
+            disabled={travado || !cpfOk || !nascOk || nome.trim().split(/\s+/).length < 2 || !email.includes("@") || soDigitos(cel).length < 10 || !termos}
+            onClick={() =>
+              exec(() =>
+                fn.identificar(
+                  { acao: "identificar", modo: "cadastro", continuar, dados: { nome: nome.trim(), cpf: soDigitos(cpf), nascimento: dataIso(nasc), email: email.trim(), celular: soDigitos(cel), termos: true } },
+                  "📝 Enviei meus dados de cadastro",
+                ),
+              )
+            }
+          >
+            Criar cadastro
+          </Botao>
+        </>
+      )}
+      <p className="text-[10px] text-muted-foreground">🔒 Seus dados não aparecem na conversa e ficam protegidos (LGPD).</p>
+    </div>
+  );
+};
+
+const CodigoEmail = ({ acao, travado, exec, fn }: { acao: any; travado: boolean; exec: (f: () => Promise<unknown>) => void; fn: AcoesAgendamento }) => {
+  const [codigo, setCodigo] = useState("");
+  const enviar = (c: string) => exec(() => fn.identificar({ acao: "verificar_codigo", codigo: c, continuar: acao.continuar }, "🔢 Digitei o código"));
+  return (
+    <div className="space-y-1.5">
+      <input
+        value={codigo}
+        disabled={travado}
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        placeholder="••••••"
+        onChange={(e) => {
+          const v = soDigitos(e.target.value).slice(0, 6);
+          setCodigo(v);
+          if (v.length === 6) enviar(v);
+        }}
+        className="w-full rounded-lg border bg-white px-2.5 py-2 text-center font-mono text-lg tracking-[0.5em] outline-none focus:border-brand"
+      />
+      <Botao primario className="w-full" disabled={travado || codigo.length !== 6} onClick={() => enviar(codigo)}>
+        Confirmar
+      </Botao>
+      <p className="text-[10px] text-muted-foreground">
+        Não chegou? Veja o spam ou{" "}
+        <button type="button" disabled={travado} className="underline" onClick={() => fn.mostrar("Sem problemas! Confirme seus dados que eu envio outro código:", { tipo: "identificar", modo: "entrar", continuar: acao.continuar })}>
+          pedir de novo
+        </button>
+        .
+      </p>
+    </div>
+  );
+};
 
 const CampoTexto = ({ rotulo, travado, onEnviar }: { rotulo: string; travado: boolean; onEnviar: (v: string) => void }) => {
   const [v, setV] = useState("");

@@ -13,6 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { modeloIA, segredo } from "../_shared/integracoes.ts";
 import { ipDentroDoLimite, MSG_LIMITE } from "../_shared/limite.ts";
 import { gerarEmbeddings, vetorTexto } from "../_shared/embeddings.ts";
+import { cadastrar, identificar, informarEmail, verificarCodigo } from "./identificacao.ts";
 import {
   aplicar, anexarDocumento, confirmarPedido, gerarPagamento, modosAtendimento, proximoPasso, type Rascunho,
 } from "./agendamento.ts";
@@ -91,7 +92,7 @@ const HABILIDADE_DA_FERRAMENTA: Record<string, string> = {
 };
 const habil = (cfg: any, h: string) => cfg?.habilidades?.[h] !== false;
 /** Antes de qualificar, só estas ferramentas funcionam. */
-const ANTES_DE_QUALIFICAR = new Set(["qualificar_atendimento", "listar_unidades", "contato_atendimento", "registrar_pergunta_sem_resposta", "consultar_base_conhecimento"]);
+const ANTES_DE_QUALIFICAR = new Set(["identificar_paciente", "qualificar_atendimento", "listar_unidades", "contato_atendimento", "registrar_pergunta_sem_resposta", "consultar_base_conhecimento"]);
 const precisaQualificar = (cfg: any, conversa: any) => cfg?.qualificar_obrigatorio !== false && !!conversa && !conversa.qualificado_em;
 const TAREFAS = new Set(["meus_resultados", "reagendar_pedido", "cancelar_pedido", "link_pagamento"]);
 const ferramentasAtivas = (cfg: any, conversa: any = null) =>
@@ -103,7 +104,7 @@ const ferramentasAtivas = (cfg: any, conversa: any = null) =>
   });
 
 type Qualif = { pendente: boolean; pedir: string[]; conhecidos: string; unidade: string | null };
-const SISTEMA = (hoje: string, logado: string | null, cfg: any, voz = false, q: Qualif | null = null) => {
+const SISTEMA = (hoje: string, logado: string | null, cfg: any, voz = false, q: Qualif | null = null, perfil = "") => {
   const nome = (cfg?.nome_assistente || "Assistente Sancet").trim();
   const faq = (Array.isArray(cfg?.faq) ? cfg.faq : [])
     .filter((f: any) => f?.pergunta && f?.resposta)
@@ -128,7 +129,7 @@ const SISTEMA = (hoje: string, logado: string | null, cfg: any, voz = false, q: 
   ];
   return `Você é ${nome}, assistente virtual da Sancet Medicina Diagnóstica (laboratório de análises clínicas). Fale em português do Brasil, de forma ${TOM[cfg?.tom] ?? TOM.acolhedor}. Respostas ${TAMANHO[cfg?.tamanho_resposta] ?? TAMANHO.curta}.${cfg?.usar_emojis === false ? " Não use emojis." : ""}
 
-Hoje é ${hoje} (horário de Brasília). ${logado ? `O paciente está logado como ${logado}.` : "O visitante NÃO está logado."}
+Hoje é ${hoje} (horário de Brasília). ${logado ? `O paciente está IDENTIFICADO (logado) como ${logado}. O sistema já tem o cadastro dele: NÃO peça de novo nome, CPF, nascimento, telefone, e-mail, convênio salvo nem documentos que ele já enviou antes.${perfil ? `\nO que o sistema sabe dele (use para ajudar; não leia tudo de uma vez):\n${perfil}` : ""}` : "O visitante ainda NÃO está identificado. Para qualquer coisa ligada a ele (agendar, ver pedidos/resultados, reagendar, cancelar, pagar), primeiro chame identificar_paciente: o chat mostra um cartão seguro (CPF + data de nascimento + código enviado ao e-mail do cadastro; quem é novo se cadastra ali mesmo, sem sair do chat). Assim ele não precisa cadastrar nada de novo."}
 ${q?.pendente ? `
 PRIMEIRO PASSO OBRIGATÓRIO (antes de responder qualquer outra coisa): cumprimente e peça, de forma simpática e em UMA mensagem, ${q.pedir.join(", ")}. Explique que é para direcionar o atendimento para a equipe da unidade. Se o paciente não souber a unidade, ofereça a lista (listar_unidades) e ajude a escolher pela cidade/bairro. Se o paciente JÁ informou esses dados (nesta mensagem ou em anteriores), NÃO peça de novo nem peça confirmação: chame qualificar_atendimento imediatamente com o que ele disse (a ferramenta avisa se faltar algo). Só depois disso responda as dúvidas dele.${q.conhecidos ? ` Dados que já temos (não pergunte de novo): ${q.conhecidos}.` : ""}
 ` : q?.unidade ? `
@@ -139,7 +140,7 @@ O que você faz:
 - AGENDA PELO PRÓPRIO CHAT, do começo ao fim: quando o paciente quiser agendar/marcar exames, chame iniciar_agendamento. O chat mostra cartões para cada etapa (login, convênio, plano, carteirinha, unidade, data, documentos, confirmação e pagamento). Você só orienta e responde dúvidas; se o paciente responder por texto (ex.: "dia 24 de manhã", "meu convênio é Unimed"), chame definir_agendamento. NUNCA peça documentos, CPF ou dados de pagamento por texto: os cartões cuidam disso. Nunca diga que o pedido foi enviado: só o cartão de confirmação envia. Se o paciente disser que errou ou quer trocar algo (convênio, plano, carteirinha, data, documentos...), chame definir_agendamento com refazer=<item> (e o novo valor, se ele já disse); os cartões também têm "Voltar" e "Alterar".
 - ${cfg?._modos ? `Modos de atendimento online AGORA: ${[cfg._modos.convenio ? "convênio: SIM" : "convênio: NÃO", cfg._modos.particular ? "particular: SIM" : "particular: NÃO (não agende nem monte carrinho particular; se pedirem, diga que o particular é feito direto na unidade/telefones e ofereça o convênio)", cfg._modos.casa ? "coleta em casa: SIM" : "coleta em casa: NÃO", cfg._modos.somenteMatriz ? "agendamento online só na unidade Matriz" : "qualquer unidade"].join("; ")}.` : ""}
 - Documentos para agendar: pedido médico e documento com foto (RG ou CNH, frente e verso); no convênio também a carteirinha.
-- Informa o andamento dos pedidos do paciente logado (meus_pedidos) e se o resultado já saiu (meus_resultados). Se não estiver logado, peça para entrar em sancet.vercel.app/entrar.
+- Informa o andamento dos pedidos do paciente logado (meus_pedidos) e se o resultado já saiu (meus_resultados). Se não estiver identificado, chame identificar_paciente.
 - Faz pelo chat, para o paciente LOGADO: reagendar (reagendar_pedido), cancelar (cancelar_pedido) e mandar o link de pagamento (link_pagamento). Para reagendar, consulte datas_agendamento na unidade do pedido. Antes de reagendar ou cancelar, repita protocolo e o que vai mudar e peça confirmação EXPLÍCITA ("sim"); só então chame com confirmado=true.
 - Se a pergunta do paciente não for coberta pelas ferramentas nem pelas perguntas frequentes, chame registrar_pergunta_sem_resposta (para a equipe ensinar você) e ofereça falar com um atendente.
 
@@ -151,7 +152,7 @@ Regras OBRIGATÓRIAS:
 - NUNCA dê orientação médica, diagnóstico, interpretação de resultado ou indicação de exame. Nesses casos, recomende procurar o médico.
 - Preço só existe para particular. No convênio, a cobertura depende do plano (a equipe confirma).
 - Agendamento: o primeiro dia disponível segue a regra do laboratório (datas_agendamento informa). Domingo e dias em que a unidade fecha não têm atendimento.
-- Não peça CPF, senha ou dados de cartão no chat.
+- NUNCA peça CPF, data de nascimento, senha ou dados de cartão por texto: a identificação é pelo cartão (identificar_paciente). Se o paciente digitar o CPF na conversa, não repita o número; chame identificar_paciente.
 - montar_carrinho só aceita códigos vindos de buscar_exames ou da leitura do pedido (linhas "[Exames citados: ...]" do histórico). NUNCA invente código: se não tiver, chame buscar_exames antes. Ponha TODOS os exames numa única chamada.
 - Ao confirmar o carrinho, cite SOMENTE os exames da lista "adicionados" do resultado; se houver "nao_encontrados", avise o paciente.
 - Use a Base de conhecimento (trechos enviados junto da conversa e a ferramenta consultar_base_conhecimento) para dúvidas sobre o laboratório: políticas, pagamentos, prazos, estrutura, serviços.
@@ -255,6 +256,14 @@ const FERRAMENTAS = [
       name: "link_pagamento",
       description: "Link para pagar um pedido particular que está aguardando pagamento (paciente LOGADO).",
       parameters: { type: "object", properties: { protocolo: { type: "string" } }, required: ["protocolo"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "identificar_paciente",
+      description: "Mostra no chat o cartão seguro de identificação (CPF + data de nascimento + código no e-mail; ou cadastro rápido para quem é novo). Use quando o paciente ainda não está identificado e quer algo ligado a ele.",
+      parameters: { type: "object", properties: { depois: { type: "string", enum: ["agendar", "conversa"], description: "agendar = continuar o agendamento depois; conversa = continuar a conversa (pedidos, resultados...)" } } },
     },
   },
   {
@@ -467,7 +476,7 @@ Deno.serve(async (req) => {
           session: {
             type: "realtime",
             model: await modeloIA("voz", "gpt-realtime"),
-            instructions: SISTEMA(hoje, paciente?.nome ?? null, cfg, true, qualif(cfg, conversa, paciente)),
+            instructions: SISTEMA(hoje, paciente?.nome ?? null, cfg, true, qualif(cfg, conversa, paciente), await perfilPaciente(admin, paciente).catch(() => "")),
             audio: {
               input: {
                 transcription: { model: await modeloIA("transcricao", "gpt-4o-mini-transcribe"), language: "pt" },
@@ -635,6 +644,46 @@ Deno.serve(async (req) => {
       return json({ conversa_id: conversaId, token: tokenNovo, ok: true });
     }
 
+    // ---- Identificação do paciente pelo chat (CPF + nascimento + código no e-mail) ----
+    if (acao === "identificar" || acao === "verificar_codigo") {
+      if (sandbox) return json({ error: "No teste do painel a identificação é simulada: entre no site como paciente para testar." }, 400);
+      const continuar = body.continuar === "agendar" ? "agendar" : "mensagem";
+      const salvarMsg = (autor: string, texto: string, card?: any) =>
+        admin.from("chat_mensagens").insert({ conversa_id: conversaId, autor, texto, meta: { ...(card ? { acoes: [card] } : {}), identificacao: true } });
+      let r;
+      try {
+        if (acao === "verificar_codigo") {
+          r = await verificarCodigo(admin, req, conversaId, String(body.codigo ?? ""));
+        } else {
+          const modo = String(body.modo ?? "entrar");
+          // Nada de CPF no histórico: só o que o paciente fez.
+          await salvarMsg("paciente", modo === "cadastro" ? "📝 Enviei meus dados de cadastro" : modo === "email" ? "📧 Informei meu e-mail" : "🔐 Informei CPF e data de nascimento");
+          r = modo === "cadastro"
+            ? await cadastrar(admin, req, conversaId, body.dados)
+            : modo === "email"
+              ? await informarEmail(admin, req, conversaId, String(body.cpf ?? ""), String(body.nascimento ?? ""), String(body.email ?? ""))
+              : await identificar(admin, req, conversaId, String(body.cpf ?? ""), String(body.nascimento ?? ""));
+        }
+      } catch (e) {
+        r = { ok: false, erro: (e as Error).message };
+      }
+      if (r.ok && r.token_hash) {
+        const primeiro = String(r.nome ?? "").trim().split(/\s+/)[0];
+        await admin.from("chat_mensagens").insert({
+          conversa_id: conversaId, autor: "sistema", texto: `🔐 Paciente identificado pelo chat${r.nome ? `: ${r.nome}` : ""}`,
+          meta: { evento: "identificado", paciente_id: r.paciente_id },
+        });
+        return json({
+          conversa_id: conversaId, token: tokenNovo, identificado: true, token_hash: r.token_hash, email: r.email, continuar,
+          resposta: `Prontinho${primeiro ? `, ${primeiro}` : ""}! ✅ Identifiquei você.`,
+        });
+      }
+      const card = r.acao ? { ...r.acao, continuar } : null;
+      const texto = r.ok ? r.texto! : r.erro!;
+      if (r.ok || card) await salvarMsg("assistente", texto, r.ok ? { ...r.acao, continuar } : card);
+      return json({ conversa_id: conversaId, token: tokenNovo, resposta: texto, acoes: (r.ok ? [{ ...r.acao, continuar }] : card ? [card] : []), ...(r.ok || card ? {} : { error: texto }) });
+    }
+
     // ---- Agendamento pelos cartões do chat (determinístico, sem IA) ----
     if (acao === "agendar" || acao === "agendar_documento" || acao === "agendar_confirmar" || acao === "agendar_pagar") {
       const modos = await modosAtendimento(admin);
@@ -663,7 +712,7 @@ Deno.serve(async (req) => {
       }
 
       if (acao === "agendar_documento") {
-        if (!paciente) return responder("Entre na sua conta para enviar documentos.", { tipo: "login" });
+        if (!paciente) return responder("Antes, preciso confirmar quem é você:", { tipo: "identificar", modo: "entrar", continuar: "agendar" });
         const chave = String(body.documento ?? "");
         const doc = body.anexo as { base64?: string; mime?: string; nome?: string } | undefined;
         const mime = String(doc?.mime ?? "").split(";")[0].toLowerCase();
@@ -718,7 +767,7 @@ Deno.serve(async (req) => {
       }
 
       if (acao === "agendar_confirmar") {
-        if (!paciente || !jwt) return responder("Entre na sua conta para enviar o pedido.", { tipo: "login" });
+        if (!paciente || !jwt) return responder("Antes, preciso confirmar quem é você:", { tipo: "identificar", modo: "entrar", continuar: "agendar" });
         if (body.termos !== true) return json({ error: "É preciso aceitar os termos de uso." }, 400);
         if (body.deficiencias !== undefined) await aplicar(admin, r, modos, "deficiencias", body.deficiencias, paciente);
         if (body.tipo_documento) await aplicar(admin, r, modos, "tipo_documento", body.tipo_documento, paciente);
@@ -937,7 +986,7 @@ Deno.serve(async (req) => {
     const sp = agoraSP();
     const hoje = `${DIAS[sp.getDay()]}, ${sp.toLocaleDateString("pt-BR")} ${String(sp.getHours()).padStart(2, "0")}:${String(sp.getMinutes()).padStart(2, "0")}`;
     cfg._modos = await modosAtendimento(admin);
-    const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null, cfg, false, qualif(cfg, conversa, paciente)) }];
+    const mensagens: any[] = [{ role: "system", content: SISTEMA(hoje, paciente?.nome ?? null, cfg, false, qualif(cfg, conversa, paciente), await perfilPaciente(admin, paciente).catch(() => "")) }];
     // Base de conhecimento: trechos relevantes para a última mensagem do paciente.
     const ultimaPac = [texto, transcricao].filter(Boolean).join(" ").trim();
     const baseTrechos = ultimaPac
@@ -1277,7 +1326,7 @@ async function executar(
       };
     }
     case "meus_pedidos": {
-      if (!paciente) return { erro: "O paciente não está logado. Peça para entrar em sancet.vercel.app/entrar." };
+      if (!paciente) return pedirIdentificacao(acoes);
       const { data } = await admin
         .from("pedidos")
         .select("protocolo, status, tipo_solicitacao, modalidade_coleta, unidade_nome, data_agendamento, periodo_agendamento, itens, valor_total_centavos, created_at, convenio_nome")
@@ -1307,7 +1356,7 @@ async function executar(
       }));
     }
     case "meus_resultados": {
-      if (!paciente || !ctx.jwt) return { erro: "O paciente não está logado. Peça para entrar em sancet.vercel.app/entrar." };
+      if (!paciente || !ctx.jwt) return pedirIdentificacao(acoes);
       const { data, error } = await comoPaciente(ctx.jwt).rpc("resultados_do_paciente_auth");
       if (error) return { erro: "Não consegui consultar os resultados agora." };
       const site = await siteUrl(admin);
@@ -1323,7 +1372,7 @@ async function executar(
       };
     }
     case "reagendar_pedido": {
-      if (!paciente || !ctx.jwt) return { erro: "O paciente precisa estar logado para reagendar. Peça para entrar em sancet.vercel.app/entrar." };
+      if (!paciente || !ctx.jwt) return pedirIdentificacao(acoes);
       const protocolo = String(a.protocolo ?? "").trim().toUpperCase();
       const data = String(a.data ?? "").slice(0, 10);
       const periodo = a.periodo === "tarde" ? "tarde" : "manha";
@@ -1355,7 +1404,7 @@ async function executar(
       return { ok: true, instrucao: "Confirme ao paciente e lembre que a equipe vai rever o pedido." };
     }
     case "cancelar_pedido": {
-      if (!paciente || !ctx.jwt) return { erro: "O paciente precisa estar logado para cancelar. Peça para entrar em sancet.vercel.app/entrar." };
+      if (!paciente || !ctx.jwt) return pedirIdentificacao(acoes);
       const protocolo = String(a.protocolo ?? "").trim().toUpperCase();
       const { data: ped } = await admin.from("pedidos").select("protocolo, status, paciente_id").eq("protocolo", protocolo).maybeSingle();
       if (!ped || ped.paciente_id !== paciente.id) return { erro: "Pedido não encontrado para este paciente." };
@@ -1374,12 +1423,16 @@ async function executar(
       return { ok: true };
     }
     case "link_pagamento": {
-      if (!paciente) return { erro: "O paciente precisa estar logado. Peça para entrar em sancet.vercel.app/entrar." };
+      if (!paciente) return pedirIdentificacao(acoes);
       const protocolo = String(a.protocolo ?? "").trim().toUpperCase();
       const { data: ped } = await admin.from("pedidos").select("protocolo, status, paciente_id, valor_total_centavos").eq("protocolo", protocolo).maybeSingle();
       if (!ped || ped.paciente_id !== paciente.id) return { erro: "Pedido não encontrado para este paciente." };
       if (ped.status !== "aguardando_pagamento") return { erro: `Este pedido não está aguardando pagamento (situação: ${STATUS[ped.status] ?? ped.status}).` };
       return { link: `${await siteUrl(admin)}/pagamento/${protocolo}`, valor: ped.valor_total_centavos ? brl(ped.valor_total_centavos / 100) : null };
+    }
+    case "identificar_paciente": {
+      if (paciente) return { ja_identificado: true, nome: paciente.nome };
+      return pedirIdentificacao(acoes, a.depois === "agendar" ? "agendar" : "mensagem");
     }
     case "iniciar_agendamento":
     case "definir_agendamento": {
@@ -1808,4 +1861,34 @@ function buscarPorPalavras<T>(lista: T[], termo: string, nome: (x: T) => string)
     .filter((o) => o.p >= 0)
     .sort((a, b) => a.p - b.p || nome(a.x).length - nome(b.x).length || nome(a.x).localeCompare(nome(b.x)))
     .map((o) => o.x);
+}
+
+/** Paciente não identificado: mostra o cartão de identificação no chat. */
+function pedirIdentificacao(acoes: any[], continuar: "agendar" | "mensagem" = "mensagem") {
+  if (!acoes.some((x) => x?.tipo === "identificar")) acoes.push({ tipo: "identificar", modo: "entrar", continuar });
+  return {
+    erro: "Paciente ainda não identificado.",
+    instrucao: "O cartão de identificação já apareceu no chat. Diga em UMA frase que é só informar CPF e data de nascimento ali (ou se cadastrar, se for a primeira vez) e que você continua logo em seguida. NÃO peça esses dados por texto.",
+  };
+}
+
+/** O que o sistema já sabe do paciente identificado (sem CPF), para a IA não pedir de novo. */
+async function perfilPaciente(admin: any, paciente: any) {
+  if (!paciente) return "";
+  const [{ data: convs }, { data: peds }] = await Promise.all([
+    admin.from("paciente_convenios").select("convenio_nome, plano_descricao, numero_carteirinha, principal").eq("paciente_id", paciente.id).order("principal", { ascending: false }).limit(3),
+    admin.from("pedidos").select("protocolo, status, tipo_solicitacao, convenio_nome, unidade_nome, data_agendamento, periodo_agendamento, created_at")
+      .eq("paciente_id", paciente.id).order("created_at", { ascending: false }).limit(5),
+  ]);
+  const linhas: string[] = [];
+  if (paciente.celular) linhas.push(`- Celular cadastrado: ${paciente.celular}`);
+  if (paciente.email) linhas.push(`- E-mail cadastrado: ${paciente.email}`);
+  (convs ?? []).forEach((c: any) =>
+    linhas.push(`- Convênio salvo${c.principal ? " (principal)" : ""}: ${c.convenio_nome}${c.plano_descricao ? `, plano ${c.plano_descricao}` : ""}${c.numero_carteirinha ? `, carteirinha final ${String(c.numero_carteirinha).replace(/\D/g, "").slice(-4)}` : ""}`));
+  const abertos = (peds ?? []).filter((p: any) => !["concluido", "cancelado"].includes(p.status));
+  abertos.forEach((p: any) =>
+    linhas.push(`- Pedido ${p.protocolo}: ${STATUS[p.status] ?? p.status}, ${p.tipo_solicitacao === "convenio" ? `convênio ${p.convenio_nome ?? ""}` : "particular"}${p.unidade_nome ? `, ${p.unidade_nome}` : ""}${p.data_agendamento ? `, ${String(p.data_agendamento).split("-").reverse().join("/")} ${p.periodo_agendamento === "tarde" ? "tarde" : "manhã"}` : ""}`));
+  if (!abertos.length && (peds ?? []).length) linhas.push(`- Sem pedidos em aberto (último: ${peds[0].protocolo}, ${STATUS[peds[0].status] ?? peds[0].status})`);
+  if (!(peds ?? []).length) linhas.push("- Ainda não tem pedidos na Sancet");
+  return linhas.join("\n");
 }
