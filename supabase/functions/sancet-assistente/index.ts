@@ -1023,6 +1023,17 @@ Deno.serve(async (req) => {
     // (depois da qualificação, se ainda faltar).
     const querAgendar = /\b(agend\w*|marcar|marca[cç][aã]o|quero fazer (os |meus )?exames?)\b/i.test(ultimaPac) && !conversa.contexto?.agendamento?.tipo;
     let forcarAgendar = querAgendar;
+    // Perguntas que a IA tende a responder "de cabeça": o servidor obriga a consulta.
+    const obrigatorias: string[] = [];
+    if (/\b(jejum|preparo|prepara\w*)\b/i.test(ultimaPac)) obrigatorias.push("preparo_exames");
+    if (/\b(aceit\w*|credenciad\w*|cobre|cobertura|atende\w* (pelo|o|a)|conv[eê]nios?)\b/i.test(ultimaPac)) {
+      const { data: cs } = await admin.from("convenios_cache").select("nome").eq("ativo", true);
+      const so = (t: string) => normalizar(t).replace(/[^A-Z0-9]+/g, " ").trim();
+      const msgN = ` ${so(ultimaPac)} `;
+      const citaConvenio = /conv[eê]nio/i.test(ultimaPac) ||
+        (cs ?? []).some((c: any) => { const w = so(String(c.nome)).split(" ")[0]; return w.length >= 4 && msgN.includes(` ${w} `); });
+      if (citaConvenio) obrigatorias.push("buscar_convenios");
+    }
     if (baseTrechos.length) trace.push({ ferramenta: "base_conhecimento (automático)", args: { pergunta: ultimaPac.slice(0, 120) }, resultado: baseTrechos.map((t) => t.titulo).join(" | ") });
     // Paciente já mandou celular ou nome de unidade e ainda não está qualificado:
     // a 1ª ação da IA é obrigatoriamente registrar (o modelo às vezes insiste em pedir de novo).
@@ -1052,7 +1063,12 @@ Deno.serve(async (req) => {
             ? { tool_choice: { type: "function", function: { name: "qualificar_atendimento" } } }
             : forcarAgendar && !precisaQualificar(cfg, conversa) && !trace.some((t) => t.ferramenta === "iniciar_agendamento")
               ? { tool_choice: { type: "function", function: { name: "iniciar_agendamento" } } }
-              : {}),
+              : (() => {
+                  if (precisaQualificar(cfg, conversa)) return {};
+                  const ativas = new Set(ferramentasAtivas(cfg, conversa).map((f) => f.function.name));
+                  const falta = obrigatorias.find((n) => ativas.has(n) && !trace.some((t) => t.ferramenta === n));
+                  return falta ? { tool_choice: { type: "function", function: { name: falta } } } : {};
+                })()),
           temperature: 0.3,
           max_tokens: 900,
         }),
@@ -1201,7 +1217,7 @@ async function executar(
         if (a.assunto) await definirAssunto(admin, conversaId, String(a.assunto), ctx.cfg?._assuntos).catch(() => null);
       }
       if (ctx.conversa) Object.assign(ctx.conversa, upd);
-      return { ok: true, unidade: un?.nome ?? null, instrucao: "Agradeça e pergunte (ou responda) como pode ajudar." };
+      return { ok: true, unidade: un?.nome ?? null, instrucao: "Agradeça. Se o paciente já fez perguntas, responda agora usando as ferramentas (preparo_exames, buscar_convenios, buscar_exames, consultar_base_conhecimento...), nunca de memória. Senão, pergunte como pode ajudar." };
     }
     case "buscar_exames": {
       const termo = limparBusca(a.termo);
