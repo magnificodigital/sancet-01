@@ -11,6 +11,7 @@ import {
   Palette,
   ShieldCheck,
   Smile,
+  Tags,
   UserCheck,
   Users,
   Zap,
@@ -22,6 +23,7 @@ import { ConfigAssistente } from "../ConfigAssistente";
 import { PainelQualidade } from "../PainelQualidade";
 import { BaseConhecimento } from "./BaseConhecimento";
 import { TestarAgente } from "./TestarAgente";
+import { AssuntosEtiquetas } from "./AssuntosEtiquetas";
 
 const db = supabase as any;
 
@@ -37,7 +39,8 @@ type Secao =
   | "qualificacao"
   | "voz"
   | "humano"
-  | "rapidas";
+  | "rapidas"
+  | "assuntos";
 
 const GRUPOS: { titulo: string; itens: { id: Secao; label: string; icone: typeof Bot; desc: string }[] }[] = [
   { titulo: "", itens: [{ id: "visao", label: "Visão geral", icone: LayoutDashboard, desc: "Liberação no site e resumo do agente" }] },
@@ -70,6 +73,7 @@ const GRUPOS: { titulo: string; itens: { id: Secao; label: string; icone: typeof
     itens: [
       { id: "humano", label: "Atendimento humano", icone: Users, desc: "Horário, fila, avaliação, avisos" },
       { id: "rapidas", label: "Respostas rápidas", icone: Zap, desc: "Textos prontos da equipe" },
+      { id: "assuntos", label: "Assuntos e etiquetas", icone: Tags, desc: "Direcionamento por assunto e etiquetas das conversas" },
     ],
   },
 ];
@@ -189,6 +193,7 @@ export const AbaAgenteIA = ({ podeEditar, userId }: { podeEditar: boolean; userI
           {secao === "visao" && <Resumo onIr={ir} onLacunas={() => setLacunasAbertas(true)} />}
           {secao === "conhecimento" && <BaseConhecimento podeEditar={podeEditar} />}
           {secao === "testar" && <TestarAgente podeEditar={podeEditar} />}
+          {secao === "assuntos" && <AssuntosEtiquetas podeEditar={podeEditar} />}
           {SECAO_CONFIG[secao] && <ConfigAssistente podeEditar={podeEditar} secao={SECAO_CONFIG[secao]} />}
         </div>
       </div>

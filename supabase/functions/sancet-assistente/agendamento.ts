@@ -13,6 +13,7 @@ export type Rascunho = {
   carteirinha?: string | null;
   carteirinha_salva_url?: string | null; // foto já salva na conta
   salvar_convenio?: boolean;
+  convenio_salvo_id?: string | null; // escolheu um convênio já salvo na conta
   itens?: any[];
   modalidade?: "unidade" | "domicilio";
   unidade?: { codigo_shift: string; nome: string } | null;
@@ -136,6 +137,7 @@ export function resumo(r: Rascunho, paciente: any) {
     documentos: docsObrigatorios(r).filter((d) => d.ok).map((d) => d.rotulo + (d.qtd && d.qtd > 1 ? ` (${d.qtd})` : "")),
     tipo_documento: r.tipo_documento ?? "rg",
     salvar_convenio: !!r.salvar_convenio,
+    convenio_ja_salvo: !!r.convenio_salvo_id && !r.documentos?.carteirinha,
     // Itens que o paciente pode alterar (os automáticos, como a unidade só Matriz, não).
     editaveis: ["tipo", "convenio", "plano", "carteirinha", "modalidade", "unidade", "data", "endereco"]
       .filter((c) => preenchido(r, c) && !(r._auto ?? []).includes(c))
@@ -265,6 +267,8 @@ export async function aplicar(admin: any, r: Rascunho, modos: Modos, campo: stri
       r.plano = s.plano_codigo ? { codigo: s.plano_codigo, descricao: s.plano_descricao ?? s.plano_codigo } : null;
       r.carteirinha = s.numero_carteirinha;
       r.carteirinha_salva_url = s.url_carteirinha ?? null;
+      r.convenio_salvo_id = s.id;
+      r.salvar_convenio = false;
       return null;
     }
     case "convenio": {
@@ -273,6 +277,7 @@ export async function aplicar(admin: any, r: Rascunho, modos: Modos, campo: stri
       r.convenio = { id: c.id, nome: c.nome, codigo_shift: c.codigo_shift ?? null };
       r.plano = null;
       r.carteirinha_salva_url = null;
+      r.convenio_salvo_id = null;
       r.salvar_convenio = true;
       return null;
     }
@@ -281,11 +286,13 @@ export async function aplicar(admin: any, r: Rascunho, modos: Modos, campo: stri
       const { data: p } = await admin.from("convenios_planos").select("codigo_item, descricao").eq("convenio_id", r.convenio.id).eq("codigo_item", String(valor)).eq("ativo", true).maybeSingle();
       if (!p) return "Plano não encontrado para esse convênio.";
       r.plano = { codigo: p.codigo_item, descricao: p.descricao };
+      r.convenio_salvo_id = null;
       return null;
     }
     case "carteirinha": {
       const n = String(valor ?? "").replace(/[^\dA-Za-z.\- ]/g, "").trim().slice(0, 40);
       if (n.replace(/\D/g, "").length < 4) return "Número da carteirinha inválido.";
+      if (r.convenio_salvo_id && n !== r.carteirinha) r.convenio_salvo_id = null;
       r.carteirinha = n;
       return null;
     }
@@ -438,7 +445,11 @@ export async function confirmarPedido(admin: any, jwt: string, paciente: any, r:
 
   // Mesmos passos do site depois de criar (melhor esforço).
   if (r.exames_ia?.length) await cli.rpc("registrar_exames_ia_auth", { p_protocolo: protocolo, p_exames: r.exames_ia }).then(() => {}, () => {});
-  if (ehConvenio && r.salvar_convenio && r.convenio && r.carteirinha) {
+  const { count: jaTem } = ehConvenio && r.convenio && r.carteirinha
+    ? await admin.from("paciente_convenios").select("id", { count: "exact", head: true })
+      .eq("paciente_id", pac.id).eq("convenio_id", r.convenio.id).eq("numero_carteirinha", r.carteirinha)
+    : { count: 0 };
+  if (ehConvenio && r.salvar_convenio && r.convenio && r.carteirinha && !jaTem) {
     await admin.from("paciente_convenios").insert({
       paciente_id: pac.id, convenio_id: r.convenio.id, convenio_nome: r.convenio.nome, convenio_codigo_shift: r.convenio.codigo_shift,
       plano_codigo: r.plano?.codigo ?? null, plano_descricao: r.plano?.descricao ?? null, numero_carteirinha: r.carteirinha,
@@ -492,10 +503,10 @@ export function campoAnterior(r: Rascunho, cartaoAtual: string): string | null {
 export function limparCampo(r: Rascunho, campo: string) {
   switch (campo) {
     case "tipo":
-      Object.assign(r, { tipo: undefined, convenio: null, plano: null, carteirinha: null, carteirinha_salva_url: null });
+      Object.assign(r, { tipo: undefined, convenio: null, plano: null, carteirinha: null, carteirinha_salva_url: null, convenio_salvo_id: null });
       break;
     case "convenio":
-      Object.assign(r, { convenio: null, plano: null, carteirinha: null, carteirinha_salva_url: null });
+      Object.assign(r, { convenio: null, plano: null, carteirinha: null, carteirinha_salva_url: null, convenio_salvo_id: null });
       break;
     case "plano":
       r.plano = null;

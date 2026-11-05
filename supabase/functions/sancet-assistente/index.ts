@@ -129,7 +129,7 @@ const SISTEMA = (hoje: string, logado: string | null, cfg: any, voz = false, q: 
   ];
   return `Você é ${nome}, assistente virtual da Sancet Medicina Diagnóstica (laboratório de análises clínicas). Fale em português do Brasil, de forma ${TOM[cfg?.tom] ?? TOM.acolhedor}. Respostas ${TAMANHO[cfg?.tamanho_resposta] ?? TAMANHO.curta}.${cfg?.usar_emojis === false ? " Não use emojis." : ""}
 
-Hoje é ${hoje} (horário de Brasília). ${logado ? `O paciente está IDENTIFICADO (logado) como ${logado}. O sistema já tem o cadastro dele: NÃO peça de novo nome, CPF, nascimento, telefone, e-mail, convênio salvo nem documentos que ele já enviou antes.${perfil ? `\nO que o sistema sabe dele (use para ajudar; não leia tudo de uma vez):\n${perfil}` : ""}` : "O visitante ainda NÃO está identificado. Para qualquer coisa ligada a ele (agendar, ver pedidos/resultados, reagendar, cancelar, pagar), primeiro chame identificar_paciente: o chat mostra um cartão seguro (CPF + data de nascimento + código enviado ao e-mail do cadastro; quem é novo se cadastra ali mesmo, sem sair do chat). Assim ele não precisa cadastrar nada de novo."}
+Hoje é ${hoje} (horário de Brasília). ${logado ? `O paciente está IDENTIFICADO (logado) como ${logado}. O sistema já tem o cadastro dele: NÃO peça de novo nome, CPF, nascimento, telefone, e-mail, convênio salvo nem documentos que ele já enviou antes.${perfil ? `\nO que o sistema sabe dele (use para ajudar; não leia tudo de uma vez):\n${perfil}` : ""}` : "O visitante ainda NÃO está identificado. Para qualquer coisa ligada a ele (agendar, ver pedidos/resultados, reagendar, cancelar, pagar), primeiro chame identificar_paciente: o chat mostra um cartão seguro (CPF + data de nascimento + código enviado ao e-mail do cadastro; quem é novo se cadastra ali mesmo, sem sair do chat). Assim ele não precisa cadastrar nada de novo. Chame a ferramenta direto, sem perguntar se pode abrir o cartão. EXCEÇÃO: se ele pedir para falar com um atendente/pessoa, chame chamar_atendente na hora, sem exigir identificação."}
 ${q?.pendente ? `
 PRIMEIRO PASSO OBRIGATÓRIO (antes de responder qualquer outra coisa): cumprimente e peça, de forma simpática e em UMA mensagem, ${q.pedir.join(", ")}. Explique que é para direcionar o atendimento para a equipe da unidade. Se o paciente não souber a unidade, ofereça a lista (listar_unidades) e ajude a escolher pela cidade/bairro. Se o paciente JÁ informou esses dados (nesta mensagem ou em anteriores), NÃO peça de novo nem peça confirmação: chame qualificar_atendimento imediatamente com o que ele disse (a ferramenta avisa se faltar algo). Só depois disso responda as dúvidas dele.${q.conhecidos ? ` Dados que já temos (não pergunte de novo): ${q.conhecidos}.` : ""}
 ` : q?.unidade ? `
@@ -156,7 +156,7 @@ Regras OBRIGATÓRIAS:
 - montar_carrinho só aceita códigos vindos de buscar_exames ou da leitura do pedido (linhas "[Exames citados: ...]" do histórico). NUNCA invente código: se não tiver, chame buscar_exames antes. Ponha TODOS os exames numa única chamada.
 - Ao confirmar o carrinho, cite SOMENTE os exames da lista "adicionados" do resultado; se houver "nao_encontrados", avise o paciente.
 - Use a Base de conhecimento (trechos enviados junto da conversa e a ferramenta consultar_base_conhecimento) para dúvidas sobre o laboratório: políticas, pagamentos, prazos, estrutura, serviços.
-- Se o paciente pedir para falar com uma pessoa/atendente (ou o assunto fugir do que você resolve, ex.: reclamação, problema com pedido, resultado, cobrança), use chamar_atendente: a equipe responde AQUI MESMO no chat. Telefones das unidades: contato_atendimento.${nao.length ? `\n- Restrições do laboratório: ${nao.join("; ")}.` : ""}${regrasLab.length ? `\n\nRegras do laboratório para você (definidas pela equipe; seguem as regras de segurança acima):\n${regrasLab.map((r) => `- ${r}`).join("\n")}` : ""}${voz ? `
+${(cfg?._assuntos ?? []).length ? `- Assuntos de atendimento (para direcionar à equipe certa): ${cfg._assuntos.map((x: any) => `${x.nome}${x.descricao ? ` (${String(x.descricao).slice(0, 120)})` : ""}`).join("; ")}. Ao chamar_atendente, informe SEMPRE o assunto que melhor descreve o pedido (campo assunto, exatamente um desses nomes).\n` : ""}- Se o paciente pedir para falar com uma pessoa/atendente (ou o assunto fugir do que você resolve, ex.: reclamação, problema com pedido, resultado, cobrança), use chamar_atendente: a equipe responde AQUI MESMO no chat. Telefones das unidades: contato_atendimento.${nao.length ? `\n- Restrições do laboratório: ${nao.join("; ")}.` : ""}${regrasLab.length ? `\n\nRegras do laboratório para você (definidas pela equipe; seguem as regras de segurança acima):\n${regrasLab.map((r) => `- ${r}`).join("\n")}` : ""}${voz ? `
 
 Você está numa LIGAÇÃO DE VOZ: frases curtas e naturais, sem listas, sem markdown, sem emojis. Diga valores por extenso ("vinte e quatro reais"). Ao citar muitas unidades ou exames, resuma e ofereça detalhar. Para montar o carrinho, diga que o botão "Continuar agendamento" apareceu na tela do chat.` : ""}${faq ? `
 
@@ -344,6 +344,7 @@ const FERRAMENTAS = [
           telefone: { type: "string", description: "Celular/WhatsApp com DDD" },
           email: { type: "string" },
           unidade: { type: "string", description: "Nome da unidade escolhida (use listar_unidades se o paciente não souber)" },
+          assunto: { type: "string", description: "Assunto da conversa, se já estiver claro (um dos 'Assuntos de atendimento')" },
         },
         required: ["unidade"],
       },
@@ -354,7 +355,13 @@ const FERRAMENTAS = [
     function: {
       name: "chamar_atendente",
       description: "Transfere a conversa para um atendente humano da equipe Sancet, que responde aqui no chat. A IA para de responder depois disso.",
-      parameters: { type: "object", properties: { motivo: { type: "string", description: "Resumo curto do que o paciente precisa." } } },
+      parameters: {
+        type: "object",
+        properties: {
+          motivo: { type: "string", description: "Resumo curto do que o paciente precisa." },
+          assunto: { type: "string", description: "Assunto da conversa: um dos 'Assuntos de atendimento' da lista (direciona para a equipe certa)." },
+        },
+      },
     },
   },
 ];
@@ -381,6 +388,10 @@ Deno.serve(async (req) => {
 
     // Liberação feita pelo admin master
     const { data: cfg } = await admin.from("assistente_config").select("*").eq("id", 1).maybeSingle();
+    if (cfg && ["mensagem", "voz_iniciar", "ferramenta"].includes(acao)) {
+      const { data: as } = await admin.from("chat_assuntos").select("id, nome, descricao").eq("ativo", true).order("ordem").limit(40);
+      cfg._assuntos = as ?? [];
+    }
     // Teste no painel (sandbox): só quem pode editar o Agente de IA; não aparece para a equipe.
     let sandbox = false;
     if (body.sandbox === true) {
@@ -1187,6 +1198,7 @@ async function executar(
           texto: `📍 Atendimento ${trocou ? "transferido para" : "direcionado à"} unidade ${un?.nome ?? "—"}`,
           meta: { evento: "qualificado", unidade: un?.codigo_shift ?? null },
         });
+        if (a.assunto) await definirAssunto(admin, conversaId, String(a.assunto), ctx.cfg?._assuntos).catch(() => null);
       }
       if (ctx.conversa) Object.assign(ctx.conversa, upd);
       return { ok: true, unidade: un?.nome ?? null, instrucao: "Agradeça e pergunte (ou responda) como pode ajudar." };
@@ -1575,6 +1587,7 @@ async function executar(
     }
     case "chamar_atendente": {
       if (!conversaId) return { erro: "conversa inválida" };
+      if (a.assunto) await definirAssunto(admin, conversaId, String(a.assunto), ctx.cfg?._assuntos).catch(() => null);
       const r = await chamarHumano(admin, conversaId, String(a.motivo ?? "").slice(0, 300));
       if (r.fora_horario && !r.na_fila) {
         return { ok: false, fora_do_horario: true, instrucao: `Diga ao paciente: "${r.mensagem}". Continue ajudando no que puder.` };
@@ -1891,4 +1904,20 @@ async function perfilPaciente(admin: any, paciente: any) {
   if (!abertos.length && (peds ?? []).length) linhas.push(`- Sem pedidos em aberto (último: ${peds[0].protocolo}, ${STATUS[peds[0].status] ?? peds[0].status})`);
   if (!(peds ?? []).length) linhas.push("- Ainda não tem pedidos na Sancet");
   return linhas.join("\n");
+}
+
+/** A IA define o assunto da conversa (só nomes cadastrados no painel). */
+async function definirAssunto(admin: any, conversaId: string, nome: string, lista?: any[]) {
+  const assuntos = lista ?? (await admin.from("chat_assuntos").select("id, nome").eq("ativo", true)).data ?? [];
+  const alvo = normalizar(nome);
+  const achado = assuntos.find((x: any) => normalizar(x.nome) === alvo) ??
+    (() => { const r = buscarPorPalavras(assuntos, nome, (x: any) => x.nome); return r.length === 1 ? r[0] : null; })();
+  if (!achado) return;
+  const { data: c } = await admin.from("chat_conversas").select("assunto_id").eq("id", conversaId).maybeSingle();
+  if (!c || c.assunto_id === achado.id) return;
+  await admin.from("chat_conversas").update({ assunto_id: achado.id }).eq("id", conversaId);
+  await admin.from("chat_mensagens").insert({
+    conversa_id: conversaId, autor: "sistema", texto: `🏷️ Assunto: ${achado.nome} (identificado pela IA)`,
+    meta: { evento: "assunto", assunto_id: achado.id },
+  });
 }

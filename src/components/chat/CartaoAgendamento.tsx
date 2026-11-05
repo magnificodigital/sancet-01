@@ -635,7 +635,7 @@ const Confirmacao = ({ resumo, travado, exec, fn }: { resumo: any; travado: bool
         placeholder="Necessidades especiais (opcional) — ex.: cadeirante, deficiência auditiva"
         className="w-full resize-none rounded-lg border px-2 py-1.5 text-[11px] outline-none focus:border-brand"
       />
-      {resumo.tipo === "convenio" && (
+      {resumo.tipo === "convenio" && !resumo.convenio_ja_salvo && (
         <label className="flex items-start gap-1.5 text-[11px]">
           <input type="checkbox" checked={salvar} disabled={travado} onChange={(e) => setSalvar(e.target.checked)} className="mt-0.5" />
           Salvar convênio e carteirinha na minha conta para os próximos pedidos

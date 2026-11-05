@@ -24,6 +24,8 @@ import {
   MoreVertical,
   Star,
   Gauge,
+  Tag,
+  Check,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -81,7 +83,20 @@ type Conversa = {
   avaliacao_nota: number | null;
   avaliacao_comentario: string | null;
   paciente_sugerido_id: string | null;
+  assunto_id: string | null;
+  etiquetas: string[] | null;
 };
+type Assunto = { id: string; nome: string; cor: string; ativo: boolean };
+type EtiquetaCat = { nome: string; cor: string; ativo: boolean };
+const Chip = ({ cor, children, title }: { cor: string; children: React.ReactNode; title?: string }) => (
+  <span
+    title={title}
+    className="flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+    style={{ color: cor, borderColor: `${cor}55`, background: `${cor}12` }}
+  >
+    {children}
+  </span>
+);
 type ResumoPac = { situacao: "cadastrado" | "possivel" | "novo"; paciente_nome: string | null; pedidos_abertos: number; ultimo_protocolo: string | null };
 
 const SITUACAO: Record<ResumoPac["situacao"], { rotulo: string; cls: string }> = {
@@ -133,7 +148,7 @@ const STATUS_LABEL: Record<Conversa["status"], { label: string; cls: string; dot
 };
 
 const COLS_CONVERSA =
-  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo, fila_desde, resumo, resumo_em, avaliacao_nota, avaliacao_comentario, paciente_sugerido_id";
+  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo, fila_desde, resumo, resumo_em, avaliacao_nota, avaliacao_comentario, paciente_sugerido_id, assunto_id, etiquetas";
 
 const nomeConversa = (c: Conversa) =>
   c.pacientes?.nome_social || c.pacientes?.nome || c.lead_nome || `Visitante ${c.id.slice(0, 4).toUpperCase()}`;
@@ -219,6 +234,10 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
   const [filtro, setFiltro] = useState<Filtro>("fila");
   const [busca, setBusca] = useState("");
   const [unidadeFiltro, setUnidadeFiltro] = useState<string>("todas");
+  const [assuntoFiltro, setAssuntoFiltro] = useState<string>("todos");
+  const [etiquetaFiltro, setEtiquetaFiltro] = useState<string>("todas");
+  const [assuntos, setAssuntos] = useState<Assunto[]>([]);
+  const [etiquetasCat, setEtiquetasCat] = useState<EtiquetaCat[]>([]);
   const [selId, setSelId] = useState<string | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [carregandoMsgs, setCarregandoMsgs] = useState(false);
@@ -293,6 +312,8 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
     db.rpc("chat_atendentes").then(({ data }: any) => setAtendentes(data ?? []));
     db.rpc("chat_respostas_rapidas").then(({ data }: any) => setRapidas(Array.isArray(data) ? data : []));
     db.rpc("chat_fila_config").then(({ data }: any) => data && setFilaCfg(data));
+    db.from("chat_assuntos").select("id, nome, cor, ativo").order("ordem").then(({ data }: any) => setAssuntos(data ?? []));
+    db.from("chat_etiquetas").select("nome, cor, ativo").order("ordem").then(({ data }: any) => setEtiquetasCat(data ?? []));
     db.from("ia_lacunas").select("pergunta_norm").eq("status", "aberta").limit(500).then(({ data }: any) =>
       setLacunasAbertas(new Set((data ?? []).map((x: any) => x.pergunta_norm)).size),
     );
@@ -372,13 +393,17 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                 : c.status === "encerrada";
       if (!ok) return false;
       if (unidadeFiltro !== "todas" && (c.unidade_codigo_shift ?? "_sem") !== unidadeFiltro) return false;
+      if (assuntoFiltro !== "todos" && (c.assunto_id ?? "_sem") !== assuntoFiltro) return false;
+      if (etiquetaFiltro !== "todas" && !(c.etiquetas ?? []).includes(etiquetaFiltro)) return false;
       if (!q) return true;
       return [nomeConversa(c), c.ultima_msg_texto ?? "", c.pacientes?.celular ?? "", c.pacientes?.email ?? "", c.lead_telefone ?? "", c.pedido_protocolo ?? ""]
         .join(" ")
         .toLowerCase()
         .includes(q);
     });
-  }, [conversas, filtro, busca, userId, unidadeFiltro]);
+  }, [conversas, filtro, busca, userId, unidadeFiltro, assuntoFiltro, etiquetaFiltro]);
+  const assuntoDe = (id: string | null) => assuntos.find((a) => a.id === id) ?? null;
+  const corEtiqueta = (nome: string) => etiquetasCat.find((e) => e.nome === nome)?.cor ?? "#64748b";
   const listaOrdenada = useMemo(
     () =>
       filtro === "fila"
@@ -718,6 +743,38 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                 </SelectContent>
               </Select>
             )}
+            {(assuntos.length > 0 || etiquetasCat.length > 0) && (
+              <div className="grid grid-cols-2 gap-1.5">
+                <Select value={assuntoFiltro} onValueChange={setAssuntoFiltro}>
+                  <SelectTrigger className="h-8 rounded-full text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os assuntos</SelectItem>
+                    {assuntos.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.nome}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="_sem">Sem assunto</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={etiquetaFiltro} onValueChange={setEtiquetaFiltro}>
+                  <SelectTrigger className="h-8 rounded-full text-xs">
+                    <Tag className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas as etiquetas</SelectItem>
+                    {etiquetasCat.map((e) => (
+                      <SelectItem key={e.nome} value={e.nome}>
+                        {e.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {carregando ? (
@@ -769,6 +826,12 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                       <div className="mt-1.5 flex flex-wrap items-center gap-1">
                         <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", STATUS_LABEL[c.status].cls)}>{STATUS_LABEL[c.status].label}</span>
                         <EtiquetaPaciente r={resumoPac[c.id]} compacta />
+                        {assuntoDe(c.assunto_id) && <Chip cor={assuntoDe(c.assunto_id)!.cor}>{assuntoDe(c.assunto_id)!.nome}</Chip>}
+                        {(c.etiquetas ?? []).map((e) => (
+                          <Chip key={e} cor={corEtiqueta(e)}>
+                            <Tag className="h-2.5 w-2.5" /> {e}
+                          </Chip>
+                        ))}
                         {c.avaliacao_nota && (
                           <span
                             className={cn(
@@ -852,6 +915,69 @@ export const AbaConversas = ({ userId, isAdmin }: { userId: string | null; isAdm
                     </span>
                   )}
                   {!sel.pacientes && <span>Visitante</span>}
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild disabled={!podeResponder}>
+                      <button type="button" className="disabled:cursor-default" title="Assunto da conversa (direciona a fila)">
+                        {assuntoDe(sel.assunto_id) ? (
+                          <Chip cor={assuntoDe(sel.assunto_id)!.cor}>{assuntoDe(sel.assunto_id)!.nome} ▾</Chip>
+                        ) : (
+                          <span className="rounded-full border border-dashed px-2 py-0.5 text-[10px] text-muted-foreground">+ Assunto</span>
+                        )}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {assuntos.filter((a) => a.ativo).map((a) => (
+                        <DropdownMenuItem key={a.id} onClick={() => rpc("chat_definir_assunto", { _conversa: sel.id, _assunto: a.id }, `Assunto: ${a.nome}`)}>
+                          <span className="mr-2 h-2.5 w-2.5 rounded-full" style={{ background: a.cor }} /> {a.nome}
+                          {sel.assunto_id === a.id && <Check className="ml-auto h-3.5 w-3.5" />}
+                        </DropdownMenuItem>
+                      ))}
+                      {sel.assunto_id && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => rpc("chat_definir_assunto", { _conversa: sel.id, _assunto: null }, "Assunto removido.")}>Sem assunto</DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {(sel.etiquetas ?? []).map((e) => (
+                    <Chip key={e} cor={corEtiqueta(e)}>
+                      <Tag className="h-2.5 w-2.5" /> {e}
+                    </Chip>
+                  ))}
+                  {podeResponder && etiquetasCat.some((e) => e.ativo) && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="rounded-full border border-dashed px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground">
+                          <Tag className="mr-0.5 inline h-2.5 w-2.5" /> Etiquetas
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-56 space-y-0.5 p-1.5">
+                        {etiquetasCat.filter((e) => e.ativo || (sel.etiquetas ?? []).includes(e.nome)).map((e) => {
+                          const tem = (sel.etiquetas ?? []).includes(e.nome);
+                          return (
+                            <button
+                              key={e.nome}
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted"
+                              onClick={() =>
+                                rpc("chat_definir_etiquetas", {
+                                  _conversa: sel.id,
+                                  _etiquetas: tem ? (sel.etiquetas ?? []).filter((x) => x !== e.nome) : [...(sel.etiquetas ?? []), e.nome],
+                                })
+                              }
+                            >
+                              <Tag className="h-3.5 w-3.5" style={{ color: e.cor }} />
+                              <span className="flex-1">{e.nome}</span>
+                              {tem && <Check className="h-3.5 w-3.5" />}
+                            </button>
+                          );
+                        })}
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
