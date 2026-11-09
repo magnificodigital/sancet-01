@@ -5,7 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "npm:unpdf@0.12.1";
 import { unzipSync, strFromU8 } from "npm:fflate@0.8.2";
-import { modeloIA, segredo } from "../_shared/integracoes.ts";
+import { modeloIA, PRIVACIDADE_IA, segredo } from "../_shared/integracoes.ts";
 import { gerarEmbeddings, vetorTexto } from "../_shared/embeddings.ts";
 
 const cors = {
@@ -96,6 +96,7 @@ async function lerComIA(bytes: Uint8Array, mime: string, nome: string) {
     method: "POST",
     headers: { Authorization: `Bearer ${chave}`, "Content-Type": "application/json", "X-Title": "Sancet Base de Conhecimento" },
     body: JSON.stringify({
+      ...PRIVACIDADE_IA,
       model: await modeloIA("receita", "google/gemini-2.5-flash"),
       temperature: 0,
       max_tokens: 8000,

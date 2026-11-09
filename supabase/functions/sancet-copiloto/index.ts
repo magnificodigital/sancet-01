@@ -1,7 +1,7 @@
 // Copiloto da equipe no chat: resumo da conversa e sugestão de resposta.
 // Só equipe; a conversa é lida com o login de quem pede (respeita unidade/RLS).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { modeloIA, segredo } from "../_shared/integracoes.ts";
+import { modeloIA, PRIVACIDADE_IA, segredo } from "../_shared/integracoes.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +22,7 @@ async function ia(apiKey: string, modelo: string, sistema: string, usuario: stri
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Title": "Sancet Copiloto" },
     body: JSON.stringify({
+      ...PRIVACIDADE_IA,
       model: modelo,
       temperature: 0.3,
       max_tokens: max,

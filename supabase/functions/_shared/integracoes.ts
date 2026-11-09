@@ -29,3 +29,10 @@ export async function modeloIA(funcao: "chat" | "receita" | "voz" | "transcricao
   const v = String(c?.modelos?.[`modelo_${funcao}`] ?? "").trim();
   return v || padrao;
 }
+
+/**
+ * Política de dados da IA (OpenRouter), em TODA chamada: só provedores que não
+ * guardam os dados enviados (zero retenção) e não os usam para treinar modelos.
+ * Mensagens do chat e fotos de pedido médico são dados de saúde (LGPD).
+ */
+export const PRIVACIDADE_IA = { provider: { data_collection: "deny" } } as const;

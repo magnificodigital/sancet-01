@@ -1,5 +1,5 @@
 import { dentroDoLimite, ipDentroDoLimite, MSG_LIMITE } from "../_shared/limite.ts";
-import { modeloIA, segredo } from "../_shared/integracoes.ts";
+import { modeloIA, PRIVACIDADE_IA, segredo } from "../_shared/integracoes.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +123,7 @@ Responda SOMENTE com um JSON válido, sem markdown, sem explicações:
           "HTTP-Referer": "https://sancet.com.br",
           "X-Title": "Sancet Leitor de Receitas",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...PRIVACIDADE_IA, ...body }),
       });
       if (!res.ok) {
         const errText = await res.text();

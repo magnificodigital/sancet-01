@@ -10,7 +10,7 @@
 //   gera uma chave temporária; as ferramentas da voz rodam AQUI (acao
 //   "ferramenta") e a transcrição fica na mesma conversa (acao "transcricao").
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { modeloIA, segredo } from "../_shared/integracoes.ts";
+import { modeloIA, PRIVACIDADE_IA, segredo } from "../_shared/integracoes.ts";
 import { ipDentroDoLimite, MSG_LIMITE } from "../_shared/limite.ts";
 import { gerarEmbeddings, vetorTexto } from "../_shared/embeddings.ts";
 import { cadastrar, identificar, informarEmail, verificarCodigo } from "./identificacao.ts";
@@ -759,7 +759,7 @@ Deno.serve(async (req) => {
           const catalogo = await catalogoParaLeitura(admin, tipoCat);
           const lido = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sancet-ler-receita`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" },
+            headers: chamadaInterna(),
             body: JSON.stringify({ fileBase64: doc.base64, mimeType: mime, catalogo }),
           }).then((x) => x.json()).catch(() => null);
           const cods: string[] = Array.isArray(lido?.encontrados) ? lido.encontrados.map(String) : [];
@@ -890,27 +890,39 @@ Deno.serve(async (req) => {
 
     // Leitura do pedido médico enviado no chat (reaproveita a função de leitura)
     let notaAnexo = "";
+    let erroLeitura: string | null = null;
+    let leituraBruta: unknown = null;
     if (anexo?.base64 && !audioPaciente && iaResponde) {
-      const tipoCtx = (conversa.contexto?.tipo as string) || "particular";
+      // Mesmo catálogo que o site usaria: o do tipo escolhido; sem escolha, o do modo ligado.
+      const modosL = await modosAtendimento(admin);
+      const tipoCtx = (conversa.contexto?.agendamento?.tipo as string) || (conversa.contexto?.tipo as string) ||
+        (modosL.convenio && !modosL.particular ? "convenio" : "particular");
       const catalogo = await catalogoParaLeitura(admin, tipoCtx);
       const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sancet-ler-receita`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-          "Content-Type": "application/json",
-        },
+        headers: chamadaInterna(),
         body: JSON.stringify({ fileBase64: anexo.base64, mimeType: anexo.mime, catalogo }),
-      }).then((x) => x.json()).catch(() => null);
+      }).then((x) => x.json()).catch((e) => ({ error: String(e?.message ?? e) }));
+      if (sandbox) leituraBruta = r;
+      if (r?.error) {
+        erroLeitura = String(r.error).slice(0, 300);
+        console.error("leitura do pedido (chat):", erroLeitura);
+      }
       const encontrados: string[] = Array.isArray(r?.encontrados) ? r.encontrados.map(String) : [];
       const porCod = new Map(catalogo.map((c: any) => [String(c.codigo_shift), c.nome]));
       notaAnexo =
         `[O paciente enviou a foto do pedido médico. Leitura automática (${tipoCtx}): ` +
-        (encontrados.length
-          ? `exames encontrados no catálogo: ${encontrados.map((c) => `${porCod.get(c) ?? c} (código ${c})`).join("; ")}.`
-          : "nenhum exame do catálogo foi identificado.") +
+        (erroLeitura
+          ? "a leitura automática falhou agora; peça para o paciente dizer os nomes dos exames ou envie para a equipe."
+          : encontrados.length
+            ? `exames encontrados no catálogo: ${encontrados.map((c) => `${porCod.get(c) ?? c} (código ${c})`).join("; ")}.`
+            : "nenhum exame do catálogo foi identificado.") +
         (Array.isArray(r?.nao_encontrados) && r.nao_encontrados.length ? ` Não reconhecidos: ${r.nao_encontrados.join(", ")}.` : "") +
-        " Confirme com o paciente se é particular ou convênio antes de montar o carrinho.]";
+        (modosL.particular && modosL.convenio
+          ? " Confirme com o paciente se é particular ou convênio antes de montar o carrinho.]"
+          : modosL.convenio
+            ? " O agendamento online hoje é só por CONVÊNIO: não pergunte se é particular; siga com o agendamento pelo convênio (iniciar_agendamento).]"
+            : " O agendamento online hoje é só PARTICULAR.]");
     }
 
     const { data: minhaMsg } = await admin.from("chat_mensagens").insert({
@@ -1046,7 +1058,7 @@ Deno.serve(async (req) => {
     if (/\b(datas?|dias? (livres?|dispon\w*)|vagas?|hor[aá]rios? dispon\w*|quando (posso|tem|d[aá]))\b/i.test(textoIntencao) && !conversa.contexto?.agendamento?.unidade) obrigatorias.push("datas_agendamento");
     // Resultado/pedido DO paciente (não dúvida geral de prazo): consulta o sistema (ou pede identificação).
     if (/\b(meus?|minhas?)\s+(\S+\s+){0,3}result|\bresult\w*\s+(\S+\s+){0,4}(meus?|minhas?|saiu|sa[ií]ram|pronto|prontos)\b/i.test(textoIntencao)) obrigatorias.push("meus_resultados");
-    else if (/\b(meus?|minhas?)\s+(pedidos?|agendamentos?|protocolos?)\b|\b(andamento|status|situa[cç][aã]o) do (meu )?(pedido|agendamento)\b/i.test(textoIntencao)) obrigatorias.push("meus_pedidos");
+    else if (/\b(meus?|minhas?)\s+(pedidos?(?!\s+m[eé]dic)|agendamentos?|protocolos?)\b|\b(andamento|status|situa[cç][aã]o) do (meu )?(pedido|agendamento)\b/i.test(textoIntencao)) obrigatorias.push("meus_pedidos");
     // Convênio citado pelo nome (aceito ou desativado) ou pergunta sobre convênios: só a lista oficial responde.
     const ops = await operadoras(admin);
     const msgOps = ` ${normalizar(textoIntencao).replace(/[^A-Z0-9]+/g, " ").trim()} `;
@@ -1079,6 +1091,7 @@ Deno.serve(async (req) => {
           "X-Title": "Sancet Assistente",
         },
         body: JSON.stringify({
+          ...PRIVACIDADE_IA,
           model: modelo,
           messages: mensagens,
           tools: ferramentasAtivas(cfg, conversa),
@@ -1139,6 +1152,7 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "HTTP-Referer": "https://sancet.com.br", "X-Title": "Sancet Assistente" },
           body: JSON.stringify({
+            ...PRIVACIDADE_IA,
             model: modelo,
             temperature: 0.2,
             max_tokens: 900,
@@ -1152,7 +1166,8 @@ Deno.serve(async (req) => {
         if (novo) resposta = novo;
         // Ainda sobrou? Tira o nome da lista do texto.
         for (const w of indevidos) {
-          const re = new RegExp(`(,\\s*|\\s+e\\s+)?\\b${w}\\b[A-Za-zÀ-ú]*(\\s+(Sa[uú]de|Cross|Life|VM))?(?=[\\s,.;!?)]|$)`, "gi");
+          const nome = `\\b${w}\\b[A-Za-zÀ-ú]*(?:\\s+(?:Sa[uú]de|Cross|Life|VM))?`;
+          const re = new RegExp(`(?:,\\s*|\\s+e\\s+)${nome}(?=[\\s,.;!?)]|$)|${nome}\\s*,\\s*`, "gi");
           resposta = resposta.replace(re, "");
         }
         resposta = resposta.replace(/,\s*,/g, ",").replace(/\s+,/g, ",").replace(/como,\s*/g, "como ").replace(/\s{2,}/g, " ");
@@ -1200,7 +1215,7 @@ Deno.serve(async (req) => {
     return json({
       conversa_id: conversaId, token: tokenNovo, resposta, acoes, meu_anexo: meuAnexo,
       ...(respAudio?.url ? { resposta_audio: respAudio.url } : {}),
-      ...(body.debug && (sandbox || cfg?.chat_modo === "teste") ? { debug: { trace, ferramentas: ferramentasAtivas(cfg, conversa).map((f) => f.function.name), qualificada: !!conversa.qualificado_em } } : {}),
+      ...(body.debug && (sandbox || cfg?.chat_modo === "teste") ? { debug: { trace, ferramentas: ferramentasAtivas(cfg, conversa).map((f) => f.function.name), qualificada: !!conversa.qualificado_em, leitura: notaAnexo || null, leitura_erro: erroLeitura, leitura_bruta: leituraBruta } } : {}),
       ...(await estadoPublico(admin, conversaId)),
     });
   } catch (e) {
@@ -2044,12 +2059,14 @@ async function definirAssunto(admin: any, conversaId: string, nome: string, list
  * Operadoras (1ª palavra que identifica o convênio) aceitas e desativadas.
  * Uma operadora com algum convênio ativo conta como aceita (ex.: UNIMED).
  */
-const GENERICAS = new Set(["SAUDE", "PLANO", "PLANOS", "EMPRESA", "EMPRESAS", "REGIME", "TIPO", "CONVENIOS", "FUNDACAO", "SEGUROS", "FINALIDADE", "TEMPO", "REAL", "SANTA", "DONA", "PREV", "LIFE", "SELECT", "CASA", "GAMA", "SUL", "SAO", "CARE"]);
+const GENERICAS = new Set(["SAUDE", "PLANO", "PLANOS", "EMPRESA", "EMPRESAS", "REGIME", "TIPO", "CONVENIOS", "FUNDACAO", "SEGUROS", "FINALIDADE", "TEMPO", "REAL", "SANTA", "DONA", "PREV", "LIFE", "SELECT", "CASA", "GAMA", "SUL", "SAO", "CARE",
+  // palavras comuns em cadastros que não são operadora
+  "ATENDIMENTO", "SOLICITACAO", "AUTORIZACAO", "PROMOCAO", "BALCAO", "REGIONAL", "BASICO", "ESPECIAL", "MASTER", "PLENO", "EXCLUSIVO", "ESSENCIAL", "IDEAL", "SENIOR", "EXECUTIVO", "TUSS", "UNIVERSAL"]);
 let opsCache: { em: number; ativas: string[]; inativas: string[] } | null = null;
 async function operadoras(admin: any) {
   if (opsCache && Date.now() - opsCache.em < 5 * 60_000) return opsCache;
   const { data } = await admin.from("convenios_cache").select("nome, ativo");
-  const chave = (n: string) => normalizar(n).replace(/[^A-Z0-9]+/g, " ").trim().split(" ").find((w) => w.length >= 3 && !GENERICAS.has(w)) ?? "";
+  const chave = (n: string) => normalizar(n).replace(/[^A-Z0-9]+/g, " ").trim().split(" ").find((w) => w.length >= 4 && /^[A-Z]+$/.test(w) && !GENERICAS.has(w)) ?? "";
   const ativas = new Set<string>(), todas = new Set<string>();
   for (const c of data ?? []) {
     const k = chave(c.nome);
@@ -2079,4 +2096,14 @@ function listaOperadoras(nomes: string[]) {
   }
   const l = [...grupos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   return l.length > 1 ? `${l.slice(0, -1).join(", ")} e ${l[l.length - 1]}` : l.join("");
+}
+
+/**
+ * Cabeçalhos de uma chamada interna entre funções (com a chave de serviço).
+ * A MESMA chave em Authorization e apikey: chaves diferentes nos dois são
+ * recusadas pelo Supabase ("Conflicting API keys").
+ */
+function chamadaInterna() {
+  const k = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  return { Authorization: `Bearer ${k}`, apikey: k, "Content-Type": "application/json" };
 }
