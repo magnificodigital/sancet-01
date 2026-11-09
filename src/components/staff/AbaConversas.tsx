@@ -148,7 +148,7 @@ const STATUS_LABEL: Record<Conversa["status"], { label: string; cls: string; dot
 };
 
 const COLS_CONVERSA =
-  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo, fila_desde, resumo, resumo_em, avaliacao_nota, avaliacao_comentario, paciente_sugerido_id, assunto_id, etiquetas";
+  "id, status, ia_ativa, responsavel_id, paciente_id, canal, ultima_msg_em, ultima_msg_texto, ultima_msg_autor, nao_lidas, created_at, pacientes:pacientes!chat_conversas_paciente_id_fkey(nome, nome_social, celular, email), lead_nome, lead_telefone, lead_email, unidade_codigo_shift, unidade_nome, pedido_protocolo, fila_desde, resumo, resumo_em, avaliacao_nota, avaliacao_comentario, paciente_sugerido_id, assunto_id, etiquetas";
 
 const nomeConversa = (c: Conversa) =>
   c.pacientes?.nome_social || c.pacientes?.nome || c.lead_nome || `Visitante ${c.id.slice(0, 4).toUpperCase()}`;

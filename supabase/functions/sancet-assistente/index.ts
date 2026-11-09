@@ -14,7 +14,7 @@ import { modeloIA, segredo } from "../_shared/integracoes.ts";
 import { ipDentroDoLimite, MSG_LIMITE } from "../_shared/limite.ts";
 import { gerarEmbeddings, vetorTexto } from "../_shared/embeddings.ts";
 import { cadastrar, identificar, informarEmail, verificarCodigo } from "./identificacao.ts";
-import {
+import { conveniosDoPaciente,
   aplicar, anexarDocumento, confirmarPedido, gerarPagamento, modosAtendimento, proximoPasso, type Rascunho,
 } from "./agendamento.ts";
 
@@ -152,6 +152,7 @@ Regras OBRIGATÓRIAS:
 - NUNCA dê orientação médica, diagnóstico, interpretação de resultado ou indicação de exame. Nesses casos, recomende procurar o médico.
 - Preço só existe para particular. No convênio, a cobertura depende do plano (a equipe confirma).
 - Agendamento: o primeiro dia disponível segue a regra do laboratório (datas_agendamento informa). Domingo e dias em que a unidade fecha não têm atendimento.
+- NUNCA escolha a unidade pelo paciente: se ele não disse qual é, pergunte (ou mostre a lista). Nunca chame qualificar_atendimento com uma unidade que ele não citou.
 - NUNCA peça CPF, data de nascimento, senha ou dados de cartão por texto: a identificação é pelo cartão (identificar_paciente). Se o paciente digitar o CPF na conversa, não repita o número; chame identificar_paciente.
 - montar_carrinho só aceita códigos vindos de buscar_exames ou da leitura do pedido (linhas "[Exames citados: ...]" do histórico). NUNCA invente código: se não tiver, chame buscar_exames antes. Ponha TODOS os exames numa única chamada.
 - Ao confirmar o carrinho, cite SOMENTE os exames da lista "adicionados" do resultado; se houver "nao_encontrados", avise o paciente.
@@ -402,6 +403,9 @@ Deno.serve(async (req) => {
       const { data: pode } = await comoUsuario.rpc("tem_permissao", { _modulo: "agente", _acao: "editar" });
       sandbox = pode === true;
       if (!sandbox) return json({ error: "Sem permissão para testar o agente." }, 403);
+    } else if (body.diagnostico === true && typeof body.teste === "string" && body.teste.length > 0 && body.teste === cfg?.codigo_teste) {
+      // Diagnóstico com o código de teste: igual ao teste do painel (não aparece em Conversas).
+      sandbox = true;
     }
     const liberado =
       sandbox ||
@@ -716,6 +720,10 @@ Deno.serve(async (req) => {
         if (rotulo) {
           await admin.from("chat_mensagens").insert({ conversa_id: conversaId, autor: "paciente", texto: rotulo, meta: { agendamento: true } });
         }
+        if (campo === "iniciar" && !r.unidade && conversa.unidade_codigo_shift && !r._unidade_conversa) {
+          r._unidade_conversa = true; // unidade escolhida na qualificação (se o modo permitir)
+          await aplicar(admin, r, modos, "unidade", conversa.unidade_codigo_shift, paciente);
+        }
         const erro = campo === "iniciar" ? null : await aplicar(admin, r, modos, campo, body.valor, paciente);
         const passo = await proximoPasso(admin, r, modos, paciente);
         await salvarRascunho(admin, conversa, r);
@@ -1021,16 +1029,25 @@ Deno.serve(async (req) => {
     const trace: any[] = []; // diagnóstico (só no modo Teste com debug)
     // Pediu para agendar e não há agendamento em andamento: a IA é obrigada a iniciar
     // (depois da qualificação, se ainda faltar).
-    const querAgendar = /\b(agend\w*|marcar|marca[cç][aã]o|quero fazer (os |meus )?exames?)\b/i.test(ultimaPac) && !conversa.contexto?.agendamento?.tipo;
+    // Antes da qualificação a IA pede a unidade; a pergunta que o paciente fez antes
+    // continua valendo e é respondida (com as ferramentas) assim que ele informa a unidade.
+    const textoIntencao = precisaQualificar(cfg, conversa)
+      ? (hist ?? []).filter((m: any) => m.autor === "paciente").slice(0, 3).map((m: any) => m.texto ?? "").join(" \n ")
+      : ultimaPac;
+    const querAgendar = /\b(agend\w*|marcar|marca[cç][aã]o|quero fazer (os |meus )?exames?)\b/i.test(textoIntencao) && !conversa.contexto?.agendamento?.tipo;
     let forcarAgendar = querAgendar;
     // Perguntas que a IA tende a responder "de cabeça": o servidor obriga a consulta.
     const obrigatorias: string[] = [];
-    if (/\b(jejum|preparo|prepara\w*)\b/i.test(ultimaPac)) obrigatorias.push("preparo_exames");
-    if (/\b(aceit\w*|credenciad\w*|cobre|cobertura|atende\w* (pelo|o|a)|conv[eê]nios?)\b/i.test(ultimaPac)) {
+    if (/\b(jejum|preparo|prepara\w*)\b/i.test(textoIntencao)) obrigatorias.push("preparo_exames");
+    if (/\b(datas?|dias? (livres?|dispon\w*)|vagas?|hor[aá]rios? dispon\w*|quando (posso|tem|d[aá]))\b/i.test(textoIntencao) && !conversa.contexto?.agendamento?.unidade) obrigatorias.push("datas_agendamento");
+    // Resultado/pedido DO paciente (não dúvida geral de prazo): consulta o sistema (ou pede identificação).
+    if (/\b(meus?|minhas?)\s+(\S+\s+){0,3}result|\bresult\w*\s+(\S+\s+){0,4}(meus?|minhas?|saiu|sa[ií]ram|pronto|prontos)\b/i.test(textoIntencao)) obrigatorias.push("meus_resultados");
+    else if (/\b(meus?|minhas?)\s+(pedidos?|agendamentos?|protocolos?)\b|\b(andamento|status|situa[cç][aã]o) do (meu )?(pedido|agendamento)\b/i.test(textoIntencao)) obrigatorias.push("meus_pedidos");
+    if (/\b(aceit\w*|credenciad\w*|cobre|cobertura|atende\w* (pelo|o|a)|conv[eê]nios?)\b/i.test(textoIntencao)) {
       const { data: cs } = await admin.from("convenios_cache").select("nome").eq("ativo", true);
       const so = (t: string) => normalizar(t).replace(/[^A-Z0-9]+/g, " ").trim();
-      const msgN = ` ${so(ultimaPac)} `;
-      const citaConvenio = /conv[eê]nio/i.test(ultimaPac) ||
+      const msgN = ` ${so(textoIntencao)} `;
+      const citaConvenio = /conv[eê]nio/i.test(textoIntencao) ||
         (cs ?? []).some((c: any) => { const w = so(String(c.nome)).split(" ")[0]; return w.length >= 4 && msgN.includes(` ${w} `); });
       if (citaConvenio) obrigatorias.push("buscar_convenios");
     }
@@ -1044,7 +1061,8 @@ Deno.serve(async (req) => {
       const { data: uns } = await admin.from("unidades_cache").select("nome").eq("ativo", true);
       const alvo = normalizar(recente);
       const temUnidade = (uns ?? []).some((u: any) => normalizar(u.nome).length >= 4 && alvo.includes(normalizar(u.nome)));
-      forcarQualif = temFone || temUnidade;
+      // Só força quando o paciente citou a unidade: com só o telefone a IA "escolhia" uma unidade por ele.
+      forcarQualif = temUnidade;
     }
     for (let volta = 0; volta < 6; volta++) {
       const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -1091,6 +1109,8 @@ Deno.serve(async (req) => {
           erro: String(e?.message ?? e),
         }));
         if (c.function?.name === "montar_carrinho" && !(resultado as any)?.erro) contexto = { ...contexto, tipo: args.tipo };
+        // Informou/trocou a unidade com um agendamento começado: mostra de novo o próximo cartão.
+        if (c.function?.name === "qualificar_atendimento" && (resultado as any)?.ok && conversa.contexto?.agendamento) forcarAgendar = true;
         trace.push({ ferramenta: c.function?.name, args, resultado: JSON.stringify(resultado).slice(0, 400) });
         mensagens.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(resultado).slice(0, 12000) });
       }
@@ -1333,10 +1353,15 @@ async function executar(
       min.setHours(0, 0, 0, 0);
       min.setDate(min.getDate() + 3 + (sp.getHours() >= 16 ? 1 : 0));
       let dias: any = null;
-      if (a.unidade) {
-        const { data: uns } = await admin.from("unidades_cache").select("nome, horarios").eq("ativo", true);
-        dias = buscarPorPalavras(uns ?? [], String(a.unidade), (u: any) => u.nome)[0]?.horarios?.dias ?? null;
+      let aviso: string | null = null;
+      const modosD = ctx.cfg?._modos ?? (await modosAtendimento(admin));
+      const { data: uns } = await admin.from("unidades_cache").select("codigo_shift, nome, horarios").eq("ativo", true);
+      let un: any = a.unidade ? buscarPorPalavras(uns ?? [], String(a.unidade), (u: any) => u.nome)[0] ?? null : null;
+      if (modosD.somenteMatriz && un?.codigo_shift !== "1") {
+        if (a.unidade) aviso = `O agendamento online é só na unidade Matriz. Estas são as datas da Matriz; para a unidade ${un?.nome ?? a.unidade}, oriente o paciente a ligar para ela (contato_atendimento).`;
+        un = (uns ?? []).find((u: any) => u.codigo_shift === "1") ?? null;
       }
+      dias = un?.horarios?.dias ?? null;
       const proximos: string[] = [];
       const d = new Date(min);
       while (proximos.length < 8) {
@@ -1347,6 +1372,8 @@ async function executar(
         d.setDate(d.getDate() + 1);
       }
       return {
+        ...(aviso ? { aviso } : {}),
+        unidade: un?.nome ?? null,
         primeira_data: min.toLocaleDateString("pt-BR"),
         regra: "Dois dias livres entre o pedido e o atendimento; pedidos a partir das 16h contam como do dia seguinte; até 30 dias à frente.",
         proximos_dias: proximos,
@@ -1477,6 +1504,11 @@ async function executar(
       if (!r.itens?.length && ctx.conversa.contexto?.carrinho?.itens?.length && (!r.tipo || r.tipo === ctx.conversa.contexto.carrinho.tipo)) {
         r.itens = ctx.conversa.contexto.carrinho.itens;
       }
+      if (nome === "iniciar_agendamento" && !r.unidade && ctx.conversa.unidade_codigo_shift && !r._unidade_conversa) {
+        r._unidade_conversa = true;
+        const e = await aplicar(admin, r, modos, "unidade", ctx.conversa.unidade_codigo_shift, paciente);
+        if (e) erros.push(`${e} (no início o paciente escolheu ${ctx.conversa.unidade_nome}; explique e siga na Matriz).`);
+      }
       if (nome === "definir_agendamento" && a.refazer) await set("editar", a.refazer);
       if (nome === "definir_agendamento") {
         if (a.convenio) {
@@ -1498,9 +1530,15 @@ async function executar(
           if (exato || achados.length === 1) await set("plano", (exato ?? achados[0]).codigo_item);
           else {
             buscaCartao = { tipo: "plano", busca: String(a.plano) };
+            let outroConv = "";
+            if (!achados.length) {
+              const { data: cs2 } = await admin.from("convenios_cache").select("id, nome").eq("ativo", true);
+              const outros = buscarPorPalavras(cs2 ?? [], String(a.plano), (c: any) => c.nome).filter((c: any) => c.id !== r.convenio!.id).slice(0, 3);
+              if (outros.length) outroConv = ` "${a.plano}" parece ser o nome de OUTRO convênio: ${outros.map((c: any) => c.nome).join(", ")}. Pergunte se o convênio certo é esse; se sim, chame definir_agendamento com refazer="convenio" e convenio=<nome exato>.`;
+            }
             erros.push(achados.length
               ? `Há ${achados.length} planos parecidos (ex.: ${achados.slice(0, 6).map((p: any) => p.descricao).join("; ")}). Peça para tocar no plano exato no cartão, que já abre filtrado.`
-              : `Nenhum plano com "${a.plano}" neste convênio (${(ps ?? []).length} planos cadastrados). Peça para escolher no cartão.`);
+              : `Nenhum plano com "${a.plano}" no convênio ${r.convenio!.nome} (${(ps ?? []).length} planos cadastrados).${outroConv || " Peça para escolher no cartão."}`);
           }
         }
         if (a.carteirinha) await set("carteirinha", a.carteirinha);
@@ -1880,7 +1918,11 @@ function buscarPorPalavras<T>(lista: T[], termo: string, nome: (x: T) => string)
   if (!palavras.length) palavras = alvo.split(" ");
   const pontos = (x: T) => {
     const n = normalizar(nome(x)).replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-    if (!palavras.every((p) => n.includes(p))) return -1;
+    const junto = n.replace(/ /g, "");
+    const ws = n.split(" ");
+    // "SULAMERICA" = "SUL AMERICA"; "EMPRESARIAL" ≈ "EMPRESA"
+    const casa = (p: string) => n.includes(p) || junto.includes(p) || (p.length >= 6 && ws.some((w) => w.length >= 5 && (p.startsWith(w) || w.startsWith(p))));
+    if (!palavras.every(casa)) return -1;
     if (n === alvo) return 0;
     if (n.startsWith(alvo) || n.startsWith(palavras[0])) return 1;
     return 2;
@@ -1905,7 +1947,7 @@ function pedirIdentificacao(acoes: any[], continuar: "agendar" | "mensagem" = "m
 async function perfilPaciente(admin: any, paciente: any) {
   if (!paciente) return "";
   const [{ data: convs }, { data: peds }] = await Promise.all([
-    admin.from("paciente_convenios").select("convenio_nome, plano_descricao, numero_carteirinha, principal").eq("paciente_id", paciente.id).order("principal", { ascending: false }).limit(3),
+    conveniosDoPaciente(admin, paciente.id).then((data) => ({ data: data.slice(0, 3) })),
     admin.from("pedidos").select("protocolo, status, tipo_solicitacao, convenio_nome, unidade_nome, data_agendamento, periodo_agendamento, created_at")
       .eq("paciente_id", paciente.id).order("created_at", { ascending: false }).limit(5),
   ]);
@@ -1913,7 +1955,7 @@ async function perfilPaciente(admin: any, paciente: any) {
   if (paciente.celular) linhas.push(`- Celular cadastrado: ${paciente.celular}`);
   if (paciente.email) linhas.push(`- E-mail cadastrado: ${paciente.email}`);
   (convs ?? []).forEach((c: any) =>
-    linhas.push(`- Convênio salvo${c.principal ? " (principal)" : ""}: ${c.convenio_nome}${c.plano_descricao ? `, plano ${c.plano_descricao}` : ""}${c.numero_carteirinha ? `, carteirinha final ${String(c.numero_carteirinha).replace(/\D/g, "").slice(-4)}` : ""}`));
+    linhas.push(`- ${c.origem === "pedido" ? "Convênio usado em pedido anterior" : "Convênio salvo"}${c.principal ? " (principal)" : ""}: ${c.convenio_nome}${c.plano_descricao ? `, plano ${c.plano_descricao}` : ""}${c.numero_carteirinha ? `, carteirinha final ${String(c.numero_carteirinha).replace(/\D/g, "").slice(-4)}` : ""}`));
   const abertos = (peds ?? []).filter((p: any) => !["concluido", "cancelado"].includes(p.status));
   abertos.forEach((p: any) =>
     linhas.push(`- Pedido ${p.protocolo}: ${STATUS[p.status] ?? p.status}, ${p.tipo_solicitacao === "convenio" ? `convênio ${p.convenio_nome ?? ""}` : "particular"}${p.unidade_nome ? `, ${p.unidade_nome}` : ""}${p.data_agendamento ? `, ${String(p.data_agendamento).split("-").reverse().join("/")} ${p.periodo_agendamento === "tarde" ? "tarde" : "manhã"}` : ""}`));

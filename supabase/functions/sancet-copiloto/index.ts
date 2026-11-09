@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     // Lida COM o login de quem pediu: se não enxerga a conversa, não passa.
     const { data: c } = await usuario
       .from("chat_conversas")
-      .select("id, status, paciente_id, lead_nome, lead_telefone, unidade_nome, pedido_protocolo, ultima_msg_em, resumo, resumo_em, pacientes(nome, nome_social)")
+      .select("id, status, paciente_id, lead_nome, lead_telefone, unidade_nome, pedido_protocolo, ultima_msg_em, resumo, resumo_em, pacientes:pacientes!chat_conversas_paciente_id_fkey(nome, nome_social)")
       .eq("id", conversaId)
       .maybeSingle();
     if (!c) return json({ error: "Conversa não encontrada." }, 404);

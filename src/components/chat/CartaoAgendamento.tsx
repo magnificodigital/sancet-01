@@ -491,8 +491,11 @@ function filtrarPorPalavras<T>(lista: T[], termo: string, nome: (x: T) => string
   const palavras = norm(termo).split(/[^a-z0-9]+/).filter((w) => w.length >= 2);
   if (!palavras.length) return lista;
   return lista.filter((x) => {
-    const n = norm(nome(x));
-    return palavras.every((w) => n.includes(w));
+    const n = norm(nome(x)).replace(/[^a-z0-9]+/g, " ").trim();
+    const junto = n.replace(/ /g, "");
+    const ws = n.split(" ");
+    // "sulamerica" = "sul america"; "empresarial" ≈ "empresa"
+    return palavras.every((w) => n.includes(w) || junto.includes(w) || (w.length >= 6 && ws.some((x) => x.length >= 5 && (w.startsWith(x) || x.startsWith(w)))));
   });
 }
 

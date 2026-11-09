@@ -27,6 +27,7 @@ export type Rascunho = {
   _auto?: string[]; // preenchidos automaticamente (não entram no "voltar")
   _rever_docs?: boolean; // paciente pediu para rever/trocar documentos
   _docs_reuso?: boolean; // já tentou reaproveitar RG/CNH do último pedido
+  _unidade_conversa?: boolean; // já tentou usar a unidade escolhida na qualificação
 };
 export type Modos = { particular: boolean; convenio: boolean; casa: boolean; somenteMatriz: boolean; pularCatalogo: boolean };
 export type Passo = { texto: string; acao: any | null; completo: boolean };
@@ -173,12 +174,7 @@ async function calcularPasso(admin: any, r: Rascunho, modos: Modos, paciente: an
   }
   if (r.tipo === "convenio") {
     if (!r.convenio) {
-      const { data: salvos } = await admin
-        .from("paciente_convenios")
-        .select("id, convenio_id, convenio_nome, plano_descricao, numero_carteirinha, principal")
-        .eq("paciente_id", paciente.id)
-        .order("principal", { ascending: false })
-        .limit(5);
+      const salvos = await conveniosDoPaciente(admin, paciente.id);
       const p = (salvos ?? [])[0];
       const final = p?.numero_carteirinha ? `, carteirinha final ${String(p.numero_carteirinha).replace(/\D/g, "").slice(-4)}` : "";
       return {
@@ -261,6 +257,24 @@ export async function aplicar(admin: any, r: Rascunho, modos: Modos, campo: stri
       if (!(modos.particular && modos.convenio)) r._auto = [...new Set([...(r._auto ?? []), "tipo"])];
       return null;
     case "convenio_salvo": {
+      // Convênio usado num pedido anterior (ainda não salvo na conta): mesmos dados do pedido.
+      if (String(valor).startsWith("pedido:")) {
+        const { data: ped } = await admin
+          .from("pedidos")
+          .select("paciente_id, convenio_nome, convenio_codigo_shift, plano_codigo, plano_descricao, numero_carteirinha, url_carteirinha")
+          .eq("id", String(valor).slice(7))
+          .maybeSingle();
+        if (!ped || ped.paciente_id !== paciente?.id) return "Convênio não encontrado.";
+        const c = await convenioPorPedido(admin, ped);
+        if (!c) return "Esse convênio não está mais na lista de aceitos. Escolha na lista, por favor.";
+        r.convenio = c;
+        r.plano = ped.plano_codigo ? { codigo: ped.plano_codigo, descricao: ped.plano_descricao ?? ped.plano_codigo } : null;
+        r.carteirinha = ped.numero_carteirinha ?? null;
+        r.carteirinha_salva_url = ped.url_carteirinha ?? null;
+        r.convenio_salvo_id = null;
+        r.salvar_convenio = true; // fica salvo na conta ao enviar
+        return null;
+      }
       const { data: s } = await admin.from("paciente_convenios").select("*").eq("id", String(valor)).eq("paciente_id", paciente?.id ?? "").maybeSingle();
       if (!s) return "Convênio salvo não encontrado.";
       r.convenio = { id: s.convenio_id, nome: s.convenio_nome, codigo_shift: s.convenio_codigo_shift };
@@ -562,4 +576,37 @@ async function reaproveitarDocumento(admin: any, r: Rascunho, paciente: any) {
   r.documentos.rg_frente = { path: ult.url_rg_frente, nome: nome(ult.url_rg_frente), mime: "", origem: "pedido" };
   r.documentos.rg_verso = { path: ult.url_rg_verso, nome: nome(ult.url_rg_verso), mime: "", origem: "pedido" };
   r.tipo_documento = ult.tipo_documento_identidade === "cnh" ? "cnh" : "rg";
+}
+
+/** Convênio aceito correspondente ao de um pedido (pelo nome; senão pelo código do Shift). */
+async function convenioPorPedido(admin: any, ped: any) {
+  const { data: porNome } = await admin.from("convenios_cache").select("id, nome, codigo_shift").eq("ativo", true).eq("nome", ped.convenio_nome ?? "").limit(1);
+  if (porNome?.[0]) return { id: porNome[0].id, nome: porNome[0].nome, codigo_shift: porNome[0].codigo_shift ?? null };
+  if (!ped.convenio_codigo_shift) return null;
+  const { data: porCod } = await admin.from("convenios_cache").select("id, nome, codigo_shift").eq("ativo", true).eq("codigo_shift", ped.convenio_codigo_shift).limit(1);
+  return porCod?.[0] ? { id: porCod[0].id, nome: porCod[0].nome, codigo_shift: porCod[0].codigo_shift ?? null } : null;
+}
+
+/**
+ * Convênios que o paciente já usou: os salvos na conta e, depois, os dos
+ * pedidos anteriores (com plano e carteirinha), sem repetir.
+ */
+export async function conveniosDoPaciente(admin: any, pacienteId: string) {
+  const [{ data: salvos }, { data: peds }] = await Promise.all([
+    admin.from("paciente_convenios").select("id, convenio_id, convenio_nome, plano_descricao, numero_carteirinha, principal")
+      .eq("paciente_id", pacienteId).order("principal", { ascending: false }).limit(5),
+    admin.from("pedidos").select("id, convenio_nome, plano_descricao, numero_carteirinha, created_at")
+      .eq("paciente_id", pacienteId).eq("tipo_solicitacao", "convenio").not("convenio_nome", "is", null).neq("status", "cancelado")
+      .order("created_at", { ascending: false }).limit(10),
+  ]);
+  const lista: any[] = [...(salvos ?? [])];
+  const chave = (n: string, c: string | null) => `${String(n).toUpperCase()}|${String(c ?? "").replace(/\D/g, "")}`;
+  const vistos = new Set(lista.map((x) => chave(x.convenio_nome, x.numero_carteirinha)));
+  for (const p of peds ?? []) {
+    const k = chave(p.convenio_nome, p.numero_carteirinha);
+    if (vistos.has(k) || lista.length >= 5) continue;
+    vistos.add(k);
+    lista.push({ id: `pedido:${p.id}`, convenio_nome: p.convenio_nome, plano_descricao: p.plano_descricao, numero_carteirinha: p.numero_carteirinha, principal: false, origem: "pedido" });
+  }
+  return lista;
 }
