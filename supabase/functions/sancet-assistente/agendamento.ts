@@ -118,7 +118,7 @@ const docsObrigatorios = (r: Rascunho) => {
 };
 
 const totalParticular = (r: Rascunho) =>
-  (r.itens ?? []).reduce((s, i) => s + (Number(i.precoParticular) || 0), 0);
+  (r.itens ?? []).reduce((s, i) => s + (i.precoParticular != null ? Number(i.precoParticular) : i.precoCentavos != null ? Number(i.precoCentavos) / 100 : 0), 0);
 
 /** Resumo para o cartão de confirmação. */
 export function resumo(r: Rascunho, paciente: any) {
